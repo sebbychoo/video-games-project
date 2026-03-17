@@ -1359,6 +1359,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9f627f689c4da4e45be363c9b1b0ab36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
+  playerPosition: {x: 0, y: 0, z: 0}
 --- !u!4 &981996154
 Transform:
   m_ObjectHideFlags: 0
