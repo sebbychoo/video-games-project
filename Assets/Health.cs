@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Runtime.CompilerServices;
+using UnityEditor.Build.Content;
 using UnityEngine;
 
 public class Health : MonoBehaviour
@@ -13,7 +15,7 @@ public class Health : MonoBehaviour
     public void TakeDamage(int amount)
     {
         currentHealth -= amount;
-        Debug.Log(gameObject.name + "-" + amount + ". Current HP:" + currentHealth); // fix name issue
+        Debug.Log(gameObject.name + "-" + amount + ". Current HP:" + currentHealth); 
 
         if (currentHealth <= 0)
         {
@@ -22,8 +24,11 @@ public class Health : MonoBehaviour
     }
     private void Die()
     { 
-        Debug.Log(gameObject.name + "Dead");
-        //for now js destroy the character
-        Destroy(gameObject);
+        Debug.Log(gameObject.name + " has been defeated");
+
+        SceneLoader.Instance.enemyDefeated = true; // set global flag that the enemy was defeated.
+        
+        Destroy(gameObject); // destroys the enemy.
+        SceneLoader.Instance.LoadExploration();
     }
 }

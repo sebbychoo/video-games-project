@@ -5,8 +5,9 @@ using System.Collections; // needed for IEnumerator
 public class SceneLoader : MonoBehaviour
 {
     public static SceneLoader Instance;
-
     public Vector3 playerPosition;
+
+    public bool enemyDefeated = false; // new flag to track if enemy was defeated. Global flag.
     
 
     private void Awake()
@@ -68,6 +69,7 @@ public class SceneLoader : MonoBehaviour
     public void LoadExploration()
         
     {
+         enemyDefeated = true;
          SceneManager.LoadScene("Explorationscene");
     }
 }

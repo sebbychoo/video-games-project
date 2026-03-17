@@ -636,7 +636,7 @@ GameObject:
   - component: {fileID: 497950614}
   m_Layer: 0
   m_Name: Enemy_Trigger
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1360,6 +1360,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   playerPosition: {x: 0, y: 0, z: 0}
+  enemyDefeated: 0
 --- !u!4 &981996154
 Transform:
   m_ObjectHideFlags: 0

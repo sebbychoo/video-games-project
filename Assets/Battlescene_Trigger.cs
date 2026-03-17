@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class Battlescene_Trigger : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
@@ -10,5 +9,11 @@ public class Battlescene_Trigger : MonoBehaviour
             SceneLoader.Instance.LoadBattle();
         }
     }
-
+    private void Start()
+    {
+        if (SceneLoader.Instance.enemyDefeated) // if the enemy was defeated in battle, destroy it right away
+        {
+            Destroy(gameObject); // remove the enemy from the exploration scene
+        }
+    }
 }
