@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 154aa4f86be312148af124d3aa7065b5, type: 3}
   m_Name: New Card Data
   m_EditorClassIdentifier: Assembly-CSharp::CardBattle.CardData
-  cardName: 
+  cardName: Attack!
   energyCost: 0
-  description: 
+  description: attacks
   cardType: 0
-  effectValue: 0
+  effectValue: 10

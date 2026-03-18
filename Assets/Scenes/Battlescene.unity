@@ -131,7 +131,6 @@ GameObject:
   - component: {fileID: 490539483}
   - component: {fileID: 490539482}
   - component: {fileID: 490539481}
-  - component: {fileID: 490539486}
   - component: {fileID: 490539487}
   - component: {fileID: 490539489}
   - component: {fileID: 490539488}
@@ -236,20 +235,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &490539486
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 490539479}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 64fa39d433dc03a4a892391206014619, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Attack
-  projectilePrefab: {fileID: 1724649681}
-  firePoint: {fileID: 1418006425}
 --- !u!114 &490539487
 MonoBehaviour:
   m_ObjectHideFlags: 0
