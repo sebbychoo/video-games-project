@@ -636,6 +636,8 @@ GameObject:
   - component: {fileID: 497950614}
   - component: {fileID: 497950619}
   - component: {fileID: 497950620}
+  - component: {fileID: 497950621}
+  - component: {fileID: 497950622}
   m_Layer: 0
   m_Name: EnemyTrigger
   m_TagString: Enemy
@@ -761,11 +763,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b99ccbb2df72bf48918b4aec3d49f70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyFollow
-  Player: {fileID: 696290547}
-  speed: 4
-  maxDistance: 10
-  wanderRadius: 5
-  wanderInterval: 3
 --- !u!54 &497950620
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -793,6 +790,35 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &497950621
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 497950613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20ec57ebf7a41e943a2747275113a422, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Battlescene_Trigger
+--- !u!114 &497950622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 497950613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff1feecfcd5f5a146a7739a93e2fe652, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyFollow
+  player: {fileID: 1363543970}
+  speed: 3
+  chaseRange: 10
+  wanderRadius: 5
+  wanderInterval: 3
 --- !u!1 &628604219
 GameObject:
   m_ObjectHideFlags: 0
@@ -1044,11 +1070,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 90}
---- !u!4 &696290547 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 5126527961139664760, guid: 035bf1ba97d19214580cfe6f5a29fdc3, type: 3}
-  m_PrefabInstance: {fileID: 832903147}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &734300533
 GameObject:
   m_ObjectHideFlags: 0
@@ -1279,8 +1300,51 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7094977340588366727, guid: 035bf1ba97d19214580cfe6f5a29fdc3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 832903150}
+    - targetCorrespondingSourceObject: {fileID: 5126527961139664765, guid: 035bf1ba97d19214580cfe6f5a29fdc3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 832903151}
   m_SourcePrefab: {fileID: 100100000, guid: 035bf1ba97d19214580cfe6f5a29fdc3, type: 3}
+--- !u!1 &832903148 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7094977340588366727, guid: 035bf1ba97d19214580cfe6f5a29fdc3, type: 3}
+  m_PrefabInstance: {fileID: 832903147}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &832903149 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5126527961139664765, guid: 035bf1ba97d19214580cfe6f5a29fdc3, type: 3}
+  m_PrefabInstance: {fileID: 832903147}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &832903150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 832903148}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f18b367eafb4a7418e073745d78a8f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SavePosition
+--- !u!114 &832903151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 832903149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28f87c1279e49de42a0635b7f9002a45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraManager
+  explorationFOV: 60
+  battleFOV: 45
+  isBattleScene: 0
 --- !u!1 &893938989
 GameObject:
   m_ObjectHideFlags: 0
@@ -1403,6 +1467,7 @@ GameObject:
   m_Component:
   - component: {fileID: 981996154}
   - component: {fileID: 981996153}
+  - component: {fileID: 981996155}
   m_Layer: 0
   m_Name: SceneManager
   m_TagString: Untagged
@@ -1422,8 +1487,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9f627f689c4da4e45be363c9b1b0ab36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  playerPosition: {x: 0, y: 0, z: 0}
-  enemyDefeated: 0
 --- !u!4 &981996154
 Transform:
   m_ObjectHideFlags: 0
@@ -1439,6 +1502,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &981996155
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 981996152}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1865a09625d1717488ce98443ab90ad5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
+  playerPosition: {x: 0, y: 0, z: 0}
+  enemyDefeated: 0
 --- !u!1 &986236368
 GameObject:
   m_ObjectHideFlags: 0
@@ -1690,6 +1767,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &1363543970 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 937451010987979973, guid: 035bf1ba97d19214580cfe6f5a29fdc3, type: 3}
+  m_PrefabInstance: {fileID: 832903147}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1534198308
 GameObject:
   m_ObjectHideFlags: 0
