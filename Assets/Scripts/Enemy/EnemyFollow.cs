@@ -15,8 +15,10 @@ public class EnemyFollow : MonoBehaviour
     private Vector3 wanderTarget;
     private float wanderTimer;
 
+
     private void Start()
     {
+        
         wanderTarget = transform.position;
     }
 
@@ -37,6 +39,7 @@ public class EnemyFollow : MonoBehaviour
         // Keep enemy on same Y level as itself (don't fly up to player)
         Vector3 target = new Vector3(player.position.x, transform.position.y, player.position.z);
         transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+        
     }
 
     void Wander()
@@ -51,5 +54,6 @@ public class EnemyFollow : MonoBehaviour
         }
 
         transform.position = Vector3.MoveTowards(transform.position, wanderTarget, speed * 0.5f * Time.deltaTime);
+       
     }
 }
