@@ -33,6 +33,17 @@ namespace CardBattle
 
         // ── helpers ──────────────────────────────────────────────────────────
 
+        /// <summary>Stop all running card animations and clear tracking.</summary>
+        public void StopAll()
+        {
+            foreach (var kvp in _active)
+            {
+                if (kvp.Value != null)
+                    StopCoroutine(kvp.Value);
+            }
+            _active.Clear();
+        }
+
         private void StopCard(CardInstance card)
         {
             if (_active.TryGetValue(card, out Coroutine c) && c != null)
@@ -94,6 +105,8 @@ namespace CardBattle
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
 
+            if (card == null || card.RectTransform == null) yield break;
+
             RectTransform rt = card.RectTransform;
 
             Vector2 startPos = target.anchoredPosition + Vector2.up * startHeightOffset;
@@ -109,6 +122,8 @@ namespace CardBattle
             float elapsed = 0f;
             while (elapsed < entranceDuration)
             {
+                if (card == null || rt == null) yield break;
+
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / entranceDuration);
                 // Use inspector curve if set, otherwise use built-in slam curve
@@ -121,6 +136,7 @@ namespace CardBattle
                 yield return null;
             }
 
+            if (card == null || rt == null) yield break;
             rt.anchoredPosition = endPos;
             rt.localEulerAngles = endRot;
             _active.Remove(card);

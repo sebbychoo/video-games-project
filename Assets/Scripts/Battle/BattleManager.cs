@@ -24,6 +24,9 @@ namespace CardBattle
         [SerializeField] DeckManager         deckManager;
         [SerializeField] HandManager         handManager;
         [SerializeField] CardAnimator        cardAnimator;
+        [SerializeField] BattleAnimations    battleAnimations;
+        [SerializeField] PlayerHPStack       playerHPStack;
+        [SerializeField] EnemyHPBar          enemyHPBar;
         [SerializeField] List<CardData>      startingDeck;
         [SerializeField] List<EnemyAction>   enemyActions;
 
@@ -82,11 +85,18 @@ namespace CardBattle
             enemyHealth.maxHealth         = startingEnemyHealth;
             enemyHealth.currentHealth     = startingEnemyHealth;
 
+            // Lock physics during battle — no gravity drift
+            Rigidbody enemyRb = enemyHealth.GetComponent<Rigidbody>();
+            if (enemyRb != null) enemyRb.isKinematic = true;
+
             if (playerHealth != null)
             {
                 playerHealth.suppressSceneLoad = true;
                 playerHealth.maxHealth         = startingPlayerHealth;
                 playerHealth.currentHealth     = startingPlayerHealth;
+
+                Rigidbody playerRb = playerHealth.GetComponent<Rigidbody>();
+                if (playerRb != null) playerRb.isKinematic = true;
             }
 
             deckManager.Initialize(startingDeck);
@@ -98,6 +108,12 @@ namespace CardBattle
                 if (card != null) openingHand.Add(card);
             }
             handManager.AddCards(openingHand);
+
+            // Initialize HP UI
+            if (playerHPStack != null)
+                playerHPStack.Initialize(startingPlayerHealth, startingPlayerHealth);
+            if (enemyHPBar != null)
+                enemyHPBar.Initialize(startingEnemyHealth, startingEnemyHealth);
 
             CurrentTurn = TurnState.PlayerTurn;
         }
@@ -136,11 +152,22 @@ namespace CardBattle
         }
 
         /// <summary>Called by the End Turn UI button.</summary>
+        private int _lastEndTurnFrame = -1;
+
         public void EndTurn()
         {
             if (CurrentTurn != TurnState.PlayerTurn) return;
 
+            // Guard against double-fire from UI in same frame
+            if (Time.frameCount == _lastEndTurnFrame) return;
+            _lastEndTurnFrame = Time.frameCount;
+
+            // Discard all cards in hand back to the deck manager before destroying them
+            foreach (CardInstance card in handManager.Cards)
+                deckManager.Discard(card.Data);
+
             handManager.DiscardAll();
+
             CurrentTurn = TurnState.EnemyTurn;
             ExecuteEnemyTurn();
         }
@@ -181,29 +208,22 @@ namespace CardBattle
             switch (data.cardType)
             {
                 case CardType.Attack:
-                    targetHealth.TakeDamage(data.effectValue);
-
-                    // Update tracked health values
-                    if (targetHealth == enemyHealth)
-                        EnemyHealth = enemyHealth.currentHealth;
-                    else if (targetHealth == playerHealth)
-                        PlayerHealth = playerHealth.currentHealth;
-
-                    if (BattleEventBus.Instance != null)
+                    // Dash player toward target, then deal damage + shake
+                    if (battleAnimations != null && playerHealth != null && targetHealth != null)
                     {
-                        BattleEventBus.Instance.Raise(new DamageEvent
-                        {
-                            Source = gameObject,
-                            Target = targetHealth.gameObject,
-                            Amount = data.effectValue
-                        });
+                        battleAnimations.PlayAttackDash(
+                            playerHealth.transform,
+                            targetHealth.transform,
+                            () =>
+                            {
+                                DealAttackDamage(data, targetHealth);
+                                battleAnimations.PlayHitShake(targetHealth.transform);
+                            });
                     }
-
-                    // Check defeat conditions
-                    if (targetHealth == enemyHealth && enemyHealth.currentHealth <= 0)
-                        OnEnemyDefeated();
-                    else if (targetHealth == playerHealth && playerHealth.currentHealth <= 0)
-                        OnPlayerDefeated();
+                    else
+                    {
+                        DealAttackDamage(data, targetHealth);
+                    }
                     break;
 
                 case CardType.Skill:
@@ -217,6 +237,39 @@ namespace CardBattle
             }
         }
 
+        private void DealAttackDamage(CardData data, Health targetHealth)
+        {
+            targetHealth.TakeDamage(data.effectValue);
+
+            if (targetHealth == enemyHealth)
+            {
+                EnemyHealth = enemyHealth.currentHealth;
+                if (enemyHPBar != null)
+                    enemyHPBar.UpdateHP(EnemyHealth, startingEnemyHealth);
+            }
+            else if (targetHealth == playerHealth)
+            {
+                PlayerHealth = playerHealth.currentHealth;
+                if (playerHPStack != null)
+                    playerHPStack.UpdateHP(PlayerHealth, startingPlayerHealth);
+            }
+
+            if (BattleEventBus.Instance != null)
+            {
+                BattleEventBus.Instance.Raise(new DamageEvent
+                {
+                    Source = gameObject,
+                    Target = targetHealth.gameObject,
+                    Amount = data.effectValue
+                });
+            }
+
+            if (targetHealth == enemyHealth && enemyHealth.currentHealth <= 0)
+                OnEnemyDefeated();
+            else if (targetHealth == playerHealth && playerHealth.currentHealth <= 0)
+                OnPlayerDefeated();
+        }
+
         private void ExecuteEnemyTurn()
         {
             if (enemyActions == null || enemyActions.Count == 0)
@@ -225,13 +278,43 @@ namespace CardBattle
                 return;
             }
 
+            // Start enemy turn with a delay so player sees the empty hand
+            StartCoroutine(EnemyTurnRoutine());
+        }
+
+        private System.Collections.IEnumerator EnemyTurnRoutine()
+        {
+            // Wait a moment so player sees their cards are gone
+            yield return new WaitForSeconds(0.5f);
+
             EnemyAction action = enemyActions[_enemyActionIndex % enemyActions.Count];
             _enemyActionIndex++;
 
             switch (action.actionType)
             {
                 case EnemyActionType.DealDamage:
+                    // Enemy dashes toward player, then shakes player on hit
+                    bool dashDone = false;
+                    if (battleAnimations != null && enemyHealth != null && playerHealth != null)
+                    {
+                        battleAnimations.PlayAttackDash(
+                            enemyHealth.transform,
+                            playerHealth.transform,
+                            () =>
+                            {
+                                battleAnimations.PlayHitShake(playerHealth.transform);
+                                dashDone = true;
+                            });
+                        // Wait for dash to finish
+                        while (!dashDone)
+                            yield return null;
+                    }
+
                     PlayerHealth -= action.value;
+                    Debug.Log($"Enemy deals {action.value} damage! Player HP: {PlayerHealth}");
+
+                    if (playerHPStack != null)
+                        playerHPStack.UpdateHP(PlayerHealth, startingPlayerHealth);
 
                     if (BattleEventBus.Instance != null)
                     {
@@ -246,13 +329,16 @@ namespace CardBattle
                     if (PlayerHealth <= 0)
                     {
                         OnPlayerDefeated();
-                        return;
+                        yield break;
                     }
                     break;
 
                 case EnemyActionType.ApplyStatus:
                     break;
             }
+
+            // Wait after attack before drawing new cards
+            yield return new WaitForSeconds(0.5f);
 
             FinishEnemyTurn();
         }
@@ -262,19 +348,34 @@ namespace CardBattle
             CurrentTurn = TurnState.PlayerTurn;
             Energy      = energyPerTurn;
 
+            var drawn = new List<CardData>();
             for (int i = 0; i < drawPerTurn; i++)
             {
                 CardData card = deckManager.Draw();
                 if (card != null)
-                    handManager.AddCard(card);
+                    drawn.Add(card);
             }
+            if (drawn.Count > 0)
+                handManager.AddCards(drawn);
         }
 
         private void OnEnemyDefeated()
         {
             CurrentTurn = TurnState.BattleOver;
 
-            if (SceneLoader.Instance != null)
+            if (battleAnimations != null && enemyHealth != null)
+            {
+                battleAnimations.PlayDeath(enemyHealth.transform, () =>
+                {
+                    if (SceneLoader.Instance != null)
+                    {
+                        SceneLoader.Instance.enemyDefeated = true;
+                        SceneLoader.Instance.useDefaultSpawn = false;
+                        SceneLoader.Instance.LoadExploration();
+                    }
+                });
+            }
+            else if (SceneLoader.Instance != null)
             {
                 SceneLoader.Instance.enemyDefeated = true;
                 SceneLoader.Instance.useDefaultSpawn = false;
@@ -286,7 +387,18 @@ namespace CardBattle
         {
             CurrentTurn = TurnState.BattleOver;
 
-            if (!useLoseScreen && SceneLoader.Instance != null)
+            if (battleAnimations != null && playerHealth != null)
+            {
+                battleAnimations.PlayDeath(playerHealth.transform, () =>
+                {
+                    if (!useLoseScreen && SceneLoader.Instance != null)
+                    {
+                        SceneLoader.Instance.useDefaultSpawn = true;
+                        SceneLoader.Instance.LoadExploration();
+                    }
+                });
+            }
+            else if (!useLoseScreen && SceneLoader.Instance != null)
             {
                 SceneLoader.Instance.useDefaultSpawn = true;
                 SceneLoader.Instance.LoadExploration();

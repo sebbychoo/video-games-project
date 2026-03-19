@@ -61,6 +61,7 @@ namespace CardBattle
         public void DiscardAll()
         {
             if (_cards.Count == 0) return;
+            animator.StopAll();
             for (int i = _cards.Count - 1; i >= 0; i--)
                 Destroy(_cards[i].gameObject);
             _cards.Clear();
