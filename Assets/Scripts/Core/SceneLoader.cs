@@ -1,6 +1,7 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Collections;
+using static CardBattle.BattleManager;
 
 /// <summary>
 /// Singleton that persists across scenes.
@@ -12,6 +13,9 @@ public class SceneLoader : MonoBehaviour
 
     public Vector3 playerPosition;
     public bool enemyDefeated = false;
+    public bool useDefaultSpawn = false;
+
+    public Transform defaultSpawnPoint;
 
     private void Awake()
     {
@@ -26,25 +30,58 @@ public class SceneLoader : MonoBehaviour
             Destroy(gameObject);
         }
     }
-
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "Explorationscene")
-            StartCoroutine(SetPlayerPositionNextFrame());
+        if (scene.name == "ExplorationScene")
+        {
+            StartCoroutine(SetSpawn());
+        }
     }
 
-    private IEnumerator SetPlayerPositionNextFrame()
+    private IEnumerator SetSpawn()
     {
         yield return null;
+        GameObject player = GameObject.FindWithTag("PLayer");
 
-        GameObject player = GameObject.FindWithTag("Player");
-        if (player == null || playerPosition == Vector3.zero) yield break;
+        if (player == null)
+        {
+            Debug.LogError("player not found");
+            yield break;
+        }
 
-        CharacterController cc = player.GetComponent<CharacterController>();
-        if (cc != null) cc.enabled = false;
-        player.transform.position = playerPosition;
-        if (cc != null) cc.enabled = true;
+        if (useDefaultSpawn)
+        {
+            if (defaultSpawnPoint != null)
+            {
+                player.transform.position = defaultSpawnPoint.position;
+            }
+            useDefaultSpawn = false;
+        }
+        else
+        {
+            player.transform.position = playerPosition;
+        }
     }
+
+
+    //private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    //{
+    //    if (scene.name == "Explorationscene")
+    //        StartCoroutine(SetPlayerPositionNextFrame()); // SetPlayerPositionNextFrame
+    //}
+
+
+    //private IEnumerator SetPlayerPositionNextFrame()
+    //{
+    //    yield return null; // wait 1 frame
+
+    //    GameObject player = GameObject.FindWithTag("Player");
+    //    if (player == null || playerPosition == Vector3.zero) yield break;
+    //        CharacterController cc = player.GetComponent<CharacterController>();
+    //    if (cc != null) cc.enabled = false;
+    //    player.transform.position = playerPosition;
+    //    if (cc != null) cc.enabled = true;
+    //}
 
     public void LoadBattle()
     {
@@ -61,12 +98,9 @@ public class SceneLoader : MonoBehaviour
 
     public void LoadExploration()
     {
-        enemyDefeated = true;
-
         // Re-lock cursor for 3D exploration
         Cursor.lockState = CursorLockMode.Confined;
         Cursor.visible   = false;
-
         SceneManager.LoadScene("Explorationscene");
     }
 }

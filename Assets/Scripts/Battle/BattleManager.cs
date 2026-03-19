@@ -7,6 +7,8 @@ namespace CardBattle
     {
         public static BattleManager Instance { get; private set; }
 
+        
+
         // ── Config ────────────────────────────────────────────────────────────
         [SerializeField] int  startingPlayerHealth = 50;
         [SerializeField] int  startingEnemyHealth  = 30;

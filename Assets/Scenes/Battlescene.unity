@@ -1089,7 +1089,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6931d3a41ea421443b5e161cb3901aef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CardBattle.BattleManager
-  startingPlayerHealth: 50
+  startingPlayerHealth: 30
   startingEnemyHealth: 30
   startingEnergy: 3
   energyPerTurn: 3
