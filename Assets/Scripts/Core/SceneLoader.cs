@@ -24,6 +24,7 @@ public class SceneLoader : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
             SceneManager.sceneLoaded += OnSceneLoaded;
+            playerPosition = defaultSpawnPoint.position;
         }
         else
         {
@@ -32,7 +33,7 @@ public class SceneLoader : MonoBehaviour
     }
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "ExplorationScene")
+        if (scene.name == "Explorationscene")
         {
             StartCoroutine(SetSpawn());
         }
@@ -41,27 +42,67 @@ public class SceneLoader : MonoBehaviour
     private IEnumerator SetSpawn()
     {
         yield return null;
-        GameObject player = GameObject.FindWithTag("PLayer");
 
+        GameObject player = GameObject.FindWithTag("Player");
         if (player == null)
         {
-            Debug.LogError("player not found");
+            Debug.LogError("Player not found");
             yield break;
         }
 
+        CharacterController cc = player.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+
         if (useDefaultSpawn)
         {
+            // LOST: spawn at default
             if (defaultSpawnPoint != null)
             {
                 player.transform.position = defaultSpawnPoint.position;
+                Debug.Log("Spawned at DEFAULT (lost fight)");
             }
-            useDefaultSpawn = false;
+            else
+            {
+                Debug.LogWarning("Default spawn point not assigned!");
+            }
         }
         else
         {
+            // WON: spawn where player was
             player.transform.position = playerPosition;
+            Debug.Log("Spawned at SAVED position (won fight): " + playerPosition);
         }
+
+        // reset for next time
+        useDefaultSpawn = false;
+
+        if (cc != null) cc.enabled = true;
     }
+
+    //private IEnumerator SetSpawn()
+    //{
+    //    yield return null;
+    //    GameObject player = GameObject.FindWithTag("Player");
+
+    //    if (player == null)
+    //    {
+    //        Debug.LogError("player not found");
+    //        yield break;
+    //    }
+
+    //    if (useDefaultSpawn)
+    //    {
+    //        if (defaultSpawnPoint != null)
+    //        {
+    //            player.transform.position = defaultSpawnPoint.position;
+    //        }
+    //        useDefaultSpawn = false;
+    //    }
+    //    else
+    //    {
+    //        player.transform.position = playerPosition;
+    //    }
+    //}
 
 
     //private void OnSceneLoaded(Scene scene, LoadSceneMode mode)

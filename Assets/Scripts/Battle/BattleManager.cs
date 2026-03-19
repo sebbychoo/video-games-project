@@ -277,6 +277,7 @@ namespace CardBattle
             if (SceneLoader.Instance != null)
             {
                 SceneLoader.Instance.enemyDefeated = true;
+                SceneLoader.Instance.useDefaultSpawn = false;
                 SceneLoader.Instance.LoadExploration();
             }
         }
@@ -286,7 +287,10 @@ namespace CardBattle
             CurrentTurn = TurnState.BattleOver;
 
             if (!useLoseScreen && SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.useDefaultSpawn = true;
                 SceneLoader.Instance.LoadExploration();
+            }
         }
     }
 }
