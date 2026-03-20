@@ -14,6 +14,8 @@ namespace CardBattle
     {
         [SerializeField] float arcRadius        = 800f;
         [SerializeField] float maxAngleSpread   = 30f;
+        [SerializeField] float anglePerCard     = 5f;
+        [SerializeField] float minCardSpacing   = 160f; // minimum pixel gap between card centers
         [SerializeField] float depthOffsetScale = 10f;
         [SerializeField] Vector2 arcCenter;
         [SerializeField] float neighborSeparation = 40f;
@@ -33,8 +35,16 @@ namespace CardBattle
                 };
             }
 
+            // Scale spread based on card count so fewer cards stay tight
+            float spread = Mathf.Min((count - 1) * anglePerCard, maxAngleSpread);
+
+            // Ensure minimum spacing — convert minCardSpacing to angle at this radius
+            float minAnglePerGap = Mathf.Rad2Deg * (minCardSpacing / arcRadius);
+            float minSpread = (count - 1) * minAnglePerGap;
+            spread = Mathf.Clamp(spread, minSpread, maxAngleSpread);
+
             float t     = (float)index / (count - 1);
-            float angle = Mathf.Lerp(-maxAngleSpread / 2f, maxAngleSpread / 2f, t);
+            float angle = Mathf.Lerp(-spread / 2f, spread / 2f, t);
 
             // Convert angle to radians; arc opens upward from arcCenter
             float rad = angle * Mathf.Deg2Rad;

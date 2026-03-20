@@ -29,6 +29,11 @@ namespace CardBattle
         [SerializeField] float shakeDuration  = 0.3f;
         [SerializeField] float shakeMagnitude = 8f;
 
+        [Header("Select Pop")]
+        [SerializeField] float selectScale     = 1.4f;
+        [SerializeField] float selectShakeDur  = 0.25f;
+        [SerializeField] float selectShakeMag  = 6f;
+
         private readonly Dictionary<CardInstance, Coroutine> _active = new Dictionary<CardInstance, Coroutine>();
 
         // ── helpers ──────────────────────────────────────────────────────────
@@ -96,6 +101,14 @@ namespace CardBattle
         public void PlayRejection(CardInstance card)
         {
             Run(card, RejectionRoutine(card));
+        }
+
+        /// <summary>
+        /// Scale card up and shake it briefly to show it's selected.
+        /// </summary>
+        public void PlaySelectPop(CardInstance card)
+        {
+            Run(card, SelectPopRoutine(card));
         }
 
         // ── coroutines ───────────────────────────────────────────────────────
@@ -240,6 +253,40 @@ namespace CardBattle
                 yield return null;
             }
 
+            rt.anchoredPosition = origin;
+            _active.Remove(card);
+        }
+
+        private IEnumerator SelectPopRoutine(CardInstance card)
+        {
+            RectTransform rt = card.RectTransform;
+            Vector2 origin = rt.anchoredPosition;
+            Vector3 startScale = rt.localScale;
+            Vector3 endScale = Vector3.one * selectScale;
+
+            // Quick scale up
+            float elapsed = 0f;
+            float popDur = 0.1f;
+            while (elapsed < popDur)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / popDur);
+                rt.localScale = Vector3.Lerp(startScale, endScale, t);
+                yield return null;
+            }
+            rt.localScale = endScale;
+
+            // Shake
+            elapsed = 0f;
+            while (elapsed < selectShakeDur)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / selectShakeDur;
+                float decay = 1f - t;
+                float offset = Mathf.Sin(t * Mathf.PI * 8f) * selectShakeMag * decay;
+                rt.anchoredPosition = origin + Vector2.right * offset;
+                yield return null;
+            }
             rt.anchoredPosition = origin;
             _active.Remove(card);
         }

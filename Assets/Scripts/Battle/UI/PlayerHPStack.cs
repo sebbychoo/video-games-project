@@ -50,10 +50,14 @@ namespace CardBattle
                 return;
             }
 
-            // Each paper's thickness = container height / max HP
-            _paperThickness = paperContainer.rect.height / maxHP;
+            // Each paper's thickness = container height / maxPapers
+            _paperThickness = paperContainer.rect.height / maxPapers;
 
-            for (int i = 0; i < currentHP; i++)
+            int paperCount = Mathf.Clamp(
+                Mathf.CeilToInt((float)currentHP / maxHP * maxPapers),
+                0, maxPapers);
+
+            for (int i = 0; i < paperCount; i++)
                 SpawnPaper(i);
 
             UpdateText(currentHP);

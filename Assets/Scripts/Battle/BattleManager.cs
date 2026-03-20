@@ -311,6 +311,8 @@ namespace CardBattle
                     }
 
                     PlayerHealth -= action.value;
+                    if (playerHealth != null)
+                        playerHealth.currentHealth = PlayerHealth;
                     Debug.Log($"Enemy deals {action.value} damage! Player HP: {PlayerHealth}");
 
                     if (playerHPStack != null)

@@ -57,11 +57,22 @@ namespace CardBattle
                 CancelSelection();
                 return;
             }
+
+            // Deselect the previous card first
+            if (SelectedCard != null)
+            {
+                HandManager hm = FindObjectOfType<HandManager>();
+                hm?.OnCardDeselected(SelectedCard);
+                SelectedCard.IsSelected = false;
+            }
+
             SelectedCard = card;
             card.IsSelected = true;
 
-            HandManager hm = FindObjectOfType<HandManager>();
-            hm?.OnCardSelected(card);
+            {
+                HandManager hm = FindObjectOfType<HandManager>();
+                hm?.OnCardSelected(card);
+            }
         }
 
         /// <summary>Called when a target is clicked while a card is selected.</summary>

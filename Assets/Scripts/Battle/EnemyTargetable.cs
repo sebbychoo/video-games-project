@@ -7,7 +7,7 @@ namespace CardBattle
     /// Shows a red outline on hover when a card is selected. Click to play the card on this enemy.
     /// Requires an OutlineEffect component on the same GameObject.
     /// </summary>
-    [RequireComponent(typeof(OutlineEffect))]
+    [RequireComponent(typeof(Collider))]
     public class EnemyTargetable : MonoBehaviour
     {
         [SerializeField] Color outlineColor = Color.red;

@@ -18,8 +18,9 @@ namespace CardBattle
             if (BattleManager.Instance == null) return;
             if (BattleManager.Instance.CurrentTurn != TurnState.PlayerTurn) return;
 
-            // Don't allow hovering a different card while one is already selected
-            if (CardTargetingManager.Instance != null && CardTargetingManager.Instance.HasSelectedCard)
+            // If a card is already selected, don't do anything on hover
+            if (CardTargetingManager.Instance != null
+                && CardTargetingManager.Instance.HasSelectedCard)
                 return;
 
             Card.IsHovered = true;
@@ -30,9 +31,7 @@ namespace CardBattle
                 IReadOnlyList<CardInstance> cards = HandManager.Cards;
                 int index = -1;
                 for (int i = 0; i < cards.Count; i++)
-                {
                     if (cards[i] == Card) { index = i; break; }
-                }
                 HandManager.OnCardHoverEnter(Card, index);
             }
         }
@@ -41,6 +40,11 @@ namespace CardBattle
         {
             if (BattleManager.Instance == null) return;
             if (BattleManager.Instance.CurrentTurn != TurnState.PlayerTurn) return;
+
+            // If a card is selected, ignore hover exit
+            if (CardTargetingManager.Instance != null
+                && CardTargetingManager.Instance.HasSelectedCard)
+                return;
 
             Card.IsHovered = false;
             CardTargetingManager.Instance?.ClearHoveredCard(Card);

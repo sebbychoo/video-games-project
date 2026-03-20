@@ -55,7 +55,14 @@ namespace CardBattle
         {
             _cards.Remove(card);
             Destroy(card.gameObject);
-            RefreshAllArcTargets();
+            // Animate remaining cards smoothly to new centered positions
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                CardTransformTarget target = layout.GetTargetTransform(i, _cards.Count);
+                _cards[i].ArcTarget = target;
+                _cards[i].IsSelected = false;
+                animator.PlayHoverExit(_cards[i], target);
+            }
         }
 
         public void DiscardAll()
@@ -91,11 +98,34 @@ namespace CardBattle
             layout.RefreshLayout(_cards, -1);
         }
 
-        /// <summary>Called by CardTargetingManager when a card is selected — keeps it lifted.</summary>
+        /// <summary>Called by CardTargetingManager when a card is clicked — pops bigger + shakes. Lifts first if not already hovered.</summary>
         public void OnCardSelected(CardInstance card)
         {
             card.IsSelected = true;
-            // Keep the card at its hovered (lifted) position — no animation needed
+            int index = _cards.IndexOf(card);
+            if (index < 0) return;
+            CardTransformTarget target = layout.GetTargetTransform(index, _cards.Count);
+            card.ArcTarget = target;
+
+            if (card.IsHovered)
+            {
+                // Already lifted from hover — just pop
+                animator.PlaySelectPop(card);
+            }
+            else
+            {
+                // Not hovered — lift first, then pop
+                animator.PlayHoverEnter(card, target);
+                StartCoroutine(DelayedSelectPop(card, 0.15f));
+                layout.RefreshLayout(_cards, index);
+            }
+        }
+
+        private System.Collections.IEnumerator DelayedSelectPop(CardInstance card, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (card != null && card.IsSelected)
+                animator.PlaySelectPop(card);
         }
 
         /// <summary>Called by CardTargetingManager when selection is cancelled.</summary>
