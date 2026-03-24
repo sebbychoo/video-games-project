@@ -846,6 +846,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20ec57ebf7a41e943a2747275113a422, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battlescene_Trigger
+  encounterData: {fileID: 11400000, guid: 5743242e83fe708408d0f439a8de05e0, type: 2}
 --- !u!114 &497950622
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,42 +8,65 @@ namespace CardBattle
     {
         public static BattleManager Instance { get; private set; }
 
-        
+        // ── Subsystem References ──────────────────────────────────────────────
+        [Header("Subsystems")]
+        [SerializeField] TurnPhaseController   turnPhaseController;
+        [SerializeField] OvertimeMeter         overtimeMeter;
+        [SerializeField] OverflowBuffer        overflowBuffer;
+        [SerializeField] BlockSystem           blockSystem;
+        [SerializeField] StatusEffectSystem    statusEffectSystem;
+        [SerializeField] CardEffectResolver    cardEffectResolver;
+        [SerializeField] DeckManager           deckManager;
+        [SerializeField] HandManager           handManager;
 
-        // ── Config ────────────────────────────────────────────────────────────
-        [SerializeField] int  startingPlayerHealth = 50;
-        [SerializeField] int  startingEnemyHealth  = 30;
-        [SerializeField] int  startingEnergy       = 3;
-        [SerializeField] int  energyPerTurn        = 3;
-        [SerializeField] int  openingHandSize      = 6;
-        [SerializeField] int  drawPerTurn          = 2;
-        [SerializeField] bool useLoseScreen        = false;
+        [Header("Config")]
+        [SerializeField] GameConfig            gameConfig;
 
-        // ── References ────────────────────────────────────────────────────────
-        [SerializeField] Health              playerHealth;
-        [SerializeField] Health              enemyHealth;
-        [SerializeField] DeckManager         deckManager;
-        [SerializeField] HandManager         handManager;
-        [SerializeField] CardAnimator        cardAnimator;
-        [SerializeField] BattleAnimations    battleAnimations;
-        [SerializeField] PlayerHPStack       playerHPStack;
-        [SerializeField] EnemyHPBar          enemyHPBar;
-        [SerializeField] List<CardData>      startingDeck;
-        [SerializeField] List<EnemyAction>   enemyActions;
+        [Header("Fallback (for testing without RunState)")]
+        [SerializeField] EncounterData         fallbackEncounter;
+        [SerializeField] List<CardData>        fallbackDeck;
+
+        [Header("Animation")]
+        [SerializeField] CardAnimator          cardAnimator;
+        [SerializeField] BattleAnimations      battleAnimations;
+
+        [Header("UI")]
+        [SerializeField] PlayerHPStack         playerHPStack;
+
+        [Header("Spawning")]
+        [SerializeField] GameObject            enemyPrefab;
+        [SerializeField] Transform[]           enemySpawnPoints;
+
+        [Header("Player")]
+        [SerializeField] GameObject            playerObject;
+        [SerializeField] Health                playerHealth;
 
         // ── State ─────────────────────────────────────────────────────────────
-        public int       PlayerHealth { get; private set; }
-        public int       EnemyHealth  { get; private set; }
-        public int       Energy       { get; private set; }
-        public TurnState CurrentTurn  { get; private set; }
+        private List<EnemyCombatant>    _enemies = new List<EnemyCombatant>();
+        private List<EnemyHPBar>        _enemyHPBars = new List<EnemyHPBar>();
+        private List<EnemyIntentDisplay> _enemyIntents = new List<EnemyIntentDisplay>();
+        private int                  _handSize;
+        private int                  _lastEndTurnFrame = -1;
+        private bool                 _encounterActive;
+
+        // Stores the target while the exit animation plays
+        private GameObject _pendingTarget;
+
+        /// <summary>Current turn phase — used by CardInteractionHandler and CardTargetingManager.</summary>
+        public TurnPhase CurrentTurn => turnPhaseController != null
+            ? turnPhaseController.CurrentPhase
+            : TurnPhase.Play;
+
+        public bool IsBattleOver => !_encounterActive;
 
         public int DeckCount    => deckManager != null ? deckManager.DeckCount    : 0;
         public int DiscardCount => deckManager != null ? deckManager.DiscardCount : 0;
 
-        private int _enemyActionIndex = 0;
+        /// <summary>Read-only list of living enemies in the current encounter.</summary>
+        public IReadOnlyList<EnemyCombatant> Enemies => _enemies;
 
-        // Stores the target while the exit animation plays
-        private GameObject _pendingTarget;
+        /// <summary>The HandManager subsystem for this battle.</summary>
+        public HandManager HandManager => handManager;
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -54,91 +78,147 @@ namespace CardBattle
                 return;
             }
             Instance = this;
-
-            if (deckManager == null)
-            {
-                Debug.LogError("BattleManager: deckManager reference is null.", this);
-                enabled = false;
-                return;
-            }
-            if (handManager == null)
-            {
-                Debug.LogError("BattleManager: handManager reference is null.", this);
-                enabled = false;
-                return;
-            }
-            if (enemyHealth == null)
-            {
-                Debug.LogError("BattleManager: enemyHealth reference is null.", this);
-                enabled = false;
-                return;
-            }
-        }
-
-        private void Start()
-        {
-            PlayerHealth = startingPlayerHealth;
-            EnemyHealth  = startingEnemyHealth;
-            Energy       = startingEnergy;
-
-            enemyHealth.suppressSceneLoad = true;
-            enemyHealth.maxHealth         = startingEnemyHealth;
-            enemyHealth.currentHealth     = startingEnemyHealth;
-
-            // Lock physics during battle — no gravity drift
-            Rigidbody enemyRb = enemyHealth.GetComponent<Rigidbody>();
-            if (enemyRb != null) enemyRb.isKinematic = true;
-
-            if (playerHealth != null)
-            {
-                playerHealth.suppressSceneLoad = true;
-                playerHealth.maxHealth         = startingPlayerHealth;
-                playerHealth.currentHealth     = startingPlayerHealth;
-
-                Rigidbody playerRb = playerHealth.GetComponent<Rigidbody>();
-                if (playerRb != null) playerRb.isKinematic = true;
-            }
-
-            deckManager.Initialize(startingDeck);
-
-            var openingHand = new List<CardData>();
-            for (int i = 0; i < openingHandSize; i++)
-            {
-                CardData card = deckManager.Draw();
-                if (card != null) openingHand.Add(card);
-            }
-            handManager.AddCards(openingHand);
-
-            // Initialize HP UI
-            if (playerHPStack != null)
-                playerHPStack.Initialize(startingPlayerHealth, startingPlayerHealth);
-            if (enemyHPBar != null)
-                enemyHPBar.Initialize(startingEnemyHealth, startingEnemyHealth);
-
-            CurrentTurn = TurnState.PlayerTurn;
         }
 
         private void OnDestroy()
         {
             if (Instance == this)
+            {
+                if (BattleEventBus.Instance != null)
+                {
+                    BattleEventBus.Instance.OnRageBurst -= OnRageBurstEvent;
+                    BattleEventBus.Instance.OnOverflow -= OnOverflowEvent;
+                }
                 Instance = null;
+            }
+        }
+
+        private void OnRageBurstEvent(RageBurstEvent e)
+        {
+            if (battleAnimations != null)
+                battleAnimations.PlayRageBurstFlash();
+        }
+
+        private void OnOverflowEvent(OverflowEvent e)
+        {
+            if (battleAnimations == null) return;
+            if (e.NewTotal > 0)
+                battleAnimations.StartOverflowGlow();
+            else
+                battleAnimations.StopOverflowGlow();
+        }
+
+        private void Start()
+        {
+            // Ensure CardTargetingManager exists
+            if (CardTargetingManager.Instance == null)
+            {
+                CardTargetingManager existing = FindObjectOfType<CardTargetingManager>();
+                if (existing == null)
+                    gameObject.AddComponent<CardTargetingManager>();
+            }
+
+            // Subscribe to events for visual effects
+            if (BattleEventBus.Instance != null)
+            {
+                BattleEventBus.Instance.OnRageBurst += OnRageBurstEvent;
+                BattleEventBus.Instance.OnOverflow += OnOverflowEvent;
+            }
+
+            // If an EncounterData is available via a static handoff, start it.
+            // Otherwise try fallback encounter for scene testing.
+            if (_pendingEncounter != null)
+            {
+                StartEncounter(_pendingEncounter);
+                _pendingEncounter = null;
+            }
+            else if (fallbackEncounter != null)
+            {
+                StartEncounter(fallbackEncounter);
+            }
+        }
+
+        // ── Static encounter handoff ──────────────────────────────────────────
+        private static EncounterData _pendingEncounter;
+
+        /// <summary>Set encounter data before loading the battle scene.</summary>
+        public static void SetPendingEncounter(EncounterData data)
+        {
+            _pendingEncounter = data;
         }
 
         // ── Public API ────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Initialize all subsystems and start a new encounter.
+        /// Called from Start() via pending encounter or externally.
+        /// </summary>
+        public void StartEncounter(EncounterData encounter)
+        {
+            if (encounter == null || encounter.enemies == null || encounter.enemies.Count == 0)
+            {
+                Debug.LogError("BattleManager: EncounterData is null or has no enemies.");
+                return;
+            }
+
+            _encounterActive = true;
+
+            // Determine hand size from config + tool modifiers
+            _handSize = gameConfig != null ? gameConfig.baseHandSize : 5;
+            int otMax = gameConfig != null ? gameConfig.overtimeMaxCapacity : 10;
+            int otRegen = gameConfig != null ? gameConfig.overtimeRegenPerTurn : 2;
+
+            // Initialize subsystems
+            if (overflowBuffer == null) { Debug.LogError("BattleManager: OverflowBuffer not assigned!"); return; }
+            if (overtimeMeter == null) { Debug.LogError("BattleManager: OvertimeMeter not assigned!"); return; }
+            if (blockSystem == null) { Debug.LogError("BattleManager: BlockSystem not assigned!"); return; }
+            if (statusEffectSystem == null) { Debug.LogError("BattleManager: StatusEffectSystem not assigned!"); return; }
+            if (cardEffectResolver == null) { Debug.LogError("BattleManager: CardEffectResolver not assigned!"); return; }
+            if (deckManager == null) { Debug.LogError("BattleManager: DeckManager not assigned!"); return; }
+            if (handManager == null) { Debug.LogError("BattleManager: HandManager not assigned!"); return; }
+            if (turnPhaseController == null) { Debug.LogError("BattleManager: TurnPhaseController not assigned!"); return; }
+
+            overflowBuffer.Initialize();
+            overtimeMeter.Initialize(otMax, otRegen, overflowBuffer);
+            blockSystem.Initialize();
+            statusEffectSystem.Initialize();
+
+            // Apply Tool modifiers from RunState
+            ApplyToolModifiers();
+
+            // Initialize player HP
+            InitializePlayerHP();
+
+            // Spawn enemies
+            SpawnEnemies(encounter);
+
+            // Initialize deck from RunState or fallback
+            InitializeDeck();
+
+            // Initialize turn phase controller
+            if (playerObject == null)
+                playerObject = gameObject;
+            turnPhaseController.Initialize(statusEffectSystem, playerObject);
+
+            // Draw opening hand and begin
+            DrawHand();
+            turnPhaseController.AdvancePhase(); // Draw → Play (or Draw → Discard if stunned)
+        }
+
         /// <summary>Called by CardTargetingManager when the player clicks a target.</summary>
         public void TryPlayCard(CardInstance card, GameObject target)
         {
-            if (CurrentTurn != TurnState.PlayerTurn) return;
+            if (!_encounterActive) return;
+            if (CurrentTurn != TurnPhase.Play) return;
 
-            if (Energy < card.Data.energyCost)
+            // Validate OT cost
+            if (!overtimeMeter.Spend(card.Data.overtimeCost))
             {
                 if (cardAnimator != null)
                     cardAnimator.PlayRejection(card);
                 return;
             }
 
-            Energy -= card.Data.energyCost;
             _pendingTarget = target;
 
             if (cardAnimator != null)
@@ -152,27 +232,28 @@ namespace CardBattle
         }
 
         /// <summary>Called by the End Turn UI button.</summary>
-        private int _lastEndTurnFrame = -1;
-
         public void EndTurn()
         {
-            if (CurrentTurn != TurnState.PlayerTurn) return;
+            if (!_encounterActive) return;
+            if (CurrentTurn != TurnPhase.Play) return;
 
             // Guard against double-fire from UI in same frame
             if (Time.frameCount == _lastEndTurnFrame) return;
             _lastEndTurnFrame = Time.frameCount;
 
-            // Discard all cards in hand back to the deck manager before destroying them
+            // Discard remaining hand
             foreach (CardInstance card in handManager.Cards)
                 deckManager.Discard(card.Data);
-
             handManager.DiscardAll();
 
-            CurrentTurn = TurnState.EnemyTurn;
-            ExecuteEnemyTurn();
+            // Advance to Discard phase, then Enemy phase
+            turnPhaseController.AdvancePhase(); // Play → Discard
+            turnPhaseController.AdvancePhase(); // Discard → Enemy
+
+            StartCoroutine(EnemyPhaseRoutine());
         }
 
-        // ── Private helpers ───────────────────────────────────────────────────
+        // ── Card resolution callback ──────────────────────────────────────────
 
         private void OnCardExitComplete(CardInstance card)
         {
@@ -180,178 +261,532 @@ namespace CardBattle
             GameObject target = _pendingTarget;
             _pendingTarget = null;
 
-            deckManager.Discard(data);
-            handManager.RemoveCard(card);
+            // Get living enemies list for AoE resolution
+            List<EnemyCombatant> livingEnemies = GetLivingEnemies();
 
-            ApplyCardEffect(data, target);
+            // Delegate resolution to CardEffectResolver
+            cardEffectResolver.Resolve(card, playerObject ?? gameObject, target, livingEnemies);
 
-            if (BattleEventBus.Instance != null)
+            // Play hit animations on targets for Attack cards
+            if (data.cardType == CardType.Attack && battleAnimations != null)
             {
-                BattleEventBus.Instance.Raise(new CardPlayedEvent
+                if (data.targetMode == TargetMode.AllEnemies)
                 {
-                    Card   = data,
-                    Source = gameObject,
-                    Target = target
-                });
-            }
-        }
-
-        private void ApplyCardEffect(CardData data, GameObject target)
-        {
-            // Try to get a Health component from the target
-            Health targetHealth = target != null ? target.GetComponent<Health>() : null;
-
-            // Fall back to enemy if no Health found on target
-            if (targetHealth == null)
-                targetHealth = enemyHealth;
-
-            switch (data.cardType)
-            {
-                case CardType.Attack:
-                    // Dash player toward target, then deal damage + shake
-                    if (battleAnimations != null && playerHealth != null && targetHealth != null)
+                    // For AoE, just shake all enemies (no dash)
+                    foreach (var enemy in livingEnemies)
                     {
-                        battleAnimations.PlayAttackDash(
-                            playerHealth.transform,
-                            targetHealth.transform,
-                            () =>
-                            {
-                                DealAttackDamage(data, targetHealth);
-                                battleAnimations.PlayHitShake(targetHealth.transform);
-                            });
+                        if (enemy != null && enemy.IsAlive)
+                        {
+                            battleAnimations.PlayHitShake(enemy.transform);
+                            UpdateEnemyHPBar(enemy);
+                        }
                     }
-                    else
-                    {
-                        DealAttackDamage(data, targetHealth);
-                    }
-                    break;
-
-                case CardType.Skill:
-                    for (int i = 0; i < drawPerTurn; i++)
-                    {
-                        CardData drawn = deckManager.Draw();
-                        if (drawn != null)
-                            handManager.AddCard(drawn);
-                    }
-                    break;
-            }
-        }
-
-        private void DealAttackDamage(CardData data, Health targetHealth)
-        {
-            targetHealth.TakeDamage(data.effectValue);
-
-            if (targetHealth == enemyHealth)
-            {
-                EnemyHealth = enemyHealth.currentHealth;
-                if (enemyHPBar != null)
-                    enemyHPBar.UpdateHP(EnemyHealth, startingEnemyHealth);
-            }
-            else if (targetHealth == playerHealth)
-            {
-                PlayerHealth = playerHealth.currentHealth;
-                if (playerHPStack != null)
-                    playerHPStack.UpdateHP(PlayerHealth, startingPlayerHealth);
-            }
-
-            if (BattleEventBus.Instance != null)
-            {
-                BattleEventBus.Instance.Raise(new DamageEvent
+                }
+                else if (target != null)
                 {
-                    Source = gameObject,
-                    Target = targetHealth.gameObject,
-                    Amount = data.effectValue
-                });
+                    // Single target: dash player toward enemy, then shake enemy
+                    Transform playerT = playerObject != null ? playerObject.transform : transform;
+                    battleAnimations.PlayAttackDash(playerT, target.transform, () =>
+                    {
+                        if (target != null)
+                            battleAnimations.PlayHitShake(target.transform);
+                    });
+                    EnemyCombatant ec = target.GetComponent<EnemyCombatant>();
+                    if (ec != null) UpdateEnemyHPBar(ec);
+                }
             }
 
-            if (targetHealth == enemyHealth && enemyHealth.currentHealth <= 0)
-                OnEnemyDefeated();
-            else if (targetHealth == playerHealth && playerHealth.currentHealth <= 0)
-                OnPlayerDefeated();
-        }
-
-        private void ExecuteEnemyTurn()
-        {
-            if (enemyActions == null || enemyActions.Count == 0)
+            // Update enemy HP bars for non-attack cards that might deal damage (burn via effects, etc.)
+            if (data.cardType != CardType.Attack)
             {
-                FinishEnemyTurn();
-                return;
+                foreach (var enemy in GetLivingEnemies())
+                    UpdateEnemyHPBar(enemy);
             }
 
-            // Start enemy turn with a delay so player sees the empty hand
-            StartCoroutine(EnemyTurnRoutine());
+            // Check for enemy deaths after card resolution
+            CheckEnemyDeaths();
+
+            // Check victory
+            if (GetLivingEnemies().Count == 0)
+            {
+                OnVictory();
+            }
         }
 
-        private System.Collections.IEnumerator EnemyTurnRoutine()
+        // ── Enemy Phase ────────────────────────────────────────────────────────
+
+        private IEnumerator EnemyPhaseRoutine()
         {
-            // Wait a moment so player sees their cards are gone
             yield return new WaitForSeconds(0.5f);
 
-            EnemyAction action = enemyActions[_enemyActionIndex % enemyActions.Count];
-            _enemyActionIndex++;
+            List<EnemyCombatant> living = GetLivingEnemies();
 
-            switch (action.actionType)
+            for (int i = 0; i < living.Count; i++)
             {
-                case EnemyActionType.DealDamage:
-                    // Enemy dashes toward player, then shakes player on hit
-                    bool dashDone = false;
-                    if (battleAnimations != null && enemyHealth != null && playerHealth != null)
+                EnemyCombatant enemy = living[i];
+                if (!enemy.IsAlive) continue;
+
+                // Reset enemy Block at start of their turn (even if stunned)
+                blockSystem.Reset(enemy.gameObject);
+
+                // Process Burn at start of enemy's turn
+                int burnDamage = statusEffectSystem.ProcessBurn(enemy.gameObject);
+                if (burnDamage > 0)
+                {
+                    // Apply Bleed bonus to burn damage
+                    int bleedBonus = statusEffectSystem.GetBleedBonus(enemy.gameObject);
+                    int totalBurn = burnDamage + bleedBonus;
+
+                    int remainingBurn = blockSystem.AbsorbDamage(totalBurn, enemy.gameObject);
+                    if (remainingBurn > 0)
                     {
-                        battleAnimations.PlayAttackDash(
-                            enemyHealth.transform,
-                            playerHealth.transform,
-                            () =>
-                            {
-                                battleAnimations.PlayHitShake(playerHealth.transform);
-                                dashDone = true;
-                            });
-                        // Wait for dash to finish
-                        while (!dashDone)
-                            yield return null;
+                        Health enemyHP = enemy.GetComponent<Health>();
+                        if (enemyHP != null)
+                            enemyHP.TakeDamage(remainingBurn);
                     }
-
-                    PlayerHealth -= action.value;
-                    if (playerHealth != null)
-                        playerHealth.currentHealth = PlayerHealth;
-                    Debug.Log($"Enemy deals {action.value} damage! Player HP: {PlayerHealth}");
-
-                    if (playerHPStack != null)
-                        playerHPStack.UpdateHP(PlayerHealth, startingPlayerHealth);
 
                     if (BattleEventBus.Instance != null)
                     {
                         BattleEventBus.Instance.Raise(new DamageEvent
                         {
-                            Source = enemyHealth != null ? enemyHealth.gameObject : null,
-                            Target = gameObject,
-                            Amount = action.value
+                            Source = enemy.gameObject,
+                            Target = enemy.gameObject,
+                            Amount = totalBurn
                         });
                     }
 
-                    if (PlayerHealth <= 0)
+                    // Update enemy HP bar
+                    UpdateEnemyHPBar(enemy);
+
+                    if (!enemy.IsAlive)
                     {
-                        OnPlayerDefeated();
+                        CheckEnemyDeaths();
+                        if (GetLivingEnemies().Count == 0)
+                        {
+                            OnVictory();
+                            yield break;
+                        }
+                        continue;
+                    }
+                }
+
+                // Check stun — skip action if stunned
+                if (statusEffectSystem.IsStunned(enemy.gameObject))
+                {
+                    yield return new WaitForSeconds(0.3f);
+                    continue;
+                }
+
+                // Execute enemy action
+                EnemyActionResult result = enemy.ExecuteAction();
+                if (result.WasSkipped)
+                {
+                    yield return new WaitForSeconds(0.3f);
+                    continue;
+                }
+
+                yield return StartCoroutine(ProcessEnemyAction(enemy, result));
+
+                if (!_encounterActive) yield break;
+
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            // Tick status effects for all enemies
+            foreach (EnemyCombatant enemy in GetLivingEnemies())
+                statusEffectSystem.Tick(enemy.gameObject);
+
+            // Tick player status effects
+            statusEffectSystem.Tick(playerObject ?? gameObject);
+
+            // Finish enemy phase → advance to Draw
+            FinishEnemyPhase();
+        }
+
+        private IEnumerator ProcessEnemyAction(EnemyCombatant enemy, EnemyActionResult result)
+        {
+            GameObject playerGO = playerObject ?? gameObject;
+
+            switch (result.ActionType)
+            {
+                case EnemyActionType.DealDamage:
+                    // Play attack dash animation
+                    bool dashDone = false;
+                    if (battleAnimations != null && playerHealth != null)
+                    {
+                        battleAnimations.PlayAttackDash(
+                            enemy.transform,
+                            playerHealth.transform,
+                            () =>
+                            {
+                                if (battleAnimations != null && playerHealth != null)
+                                    battleAnimations.PlayHitShake(playerHealth.transform);
+                                dashDone = true;
+                            });
+                        while (!dashDone)
+                            yield return null;
+                    }
+
+                    // Apply Bleed bonus from player
+                    int bleedBonus = statusEffectSystem.GetBleedBonus(playerGO);
+                    int totalDamage = result.DamageValue + bleedBonus;
+
+                    // Absorb through player Block
+                    int remaining = blockSystem.AbsorbDamage(totalDamage, playerGO);
+
+                    int hpBefore = playerHealth != null ? playerHealth.currentHealth : 0;
+
+                    if (remaining > 0 && playerHealth != null)
+                        playerHealth.TakeDamage(remaining);
+
+                    int hpAfter = playerHealth != null ? playerHealth.currentHealth : 0;
+                    int actualHPLost = hpBefore - hpAfter;
+
+                    // Gain OT from damage taken
+                    if (actualHPLost > 0 && playerHealth != null)
+                        overtimeMeter.GainFromDamage(actualHPLost, playerHealth.maxHealth);
+
+                    // Update player HP UI
+                    if (playerHPStack != null && playerHealth != null)
+                        playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+
+                    // Raise DamageEvent
+                    if (BattleEventBus.Instance != null)
+                    {
+                        BattleEventBus.Instance.Raise(new DamageEvent
+                        {
+                            Source = enemy.gameObject,
+                            Target = playerGO,
+                            Amount = totalDamage
+                        });
+                    }
+
+                    // Check player defeat
+                    if (playerHealth != null && playerHealth.currentHealth <= 0)
+                    {
+                        OnDefeat();
                         yield break;
                     }
+
+                    // Screen shake proportional to damage
+                    if (battleAnimations != null && playerHealth != null)
+                        battleAnimations.PlayScreenShake(totalDamage, playerHealth.maxHealth);
+
                     break;
 
                 case EnemyActionType.ApplyStatus:
+                    if (!string.IsNullOrEmpty(result.StatusEffectId))
+                    {
+                        statusEffectSystem.Apply(playerGO, new StatusEffectInstance
+                        {
+                            effectId = result.StatusEffectId,
+                            duration = result.StatusDuration,
+                            value = result.StatusValue
+                        });
+                    }
+                    break;
+
+                case EnemyActionType.Defend:
+                    // Block is already applied inside EnemyCombatant.ExecuteAction()
+                    break;
+
+                case EnemyActionType.Buff:
+                    // Placeholder for buff handling
+                    break;
+
+                case EnemyActionType.Special:
+                    // Placeholder for special enemy actions
                     break;
             }
-
-            // Wait after attack before drawing new cards
-            yield return new WaitForSeconds(0.5f);
-
-            FinishEnemyTurn();
         }
 
-        private void FinishEnemyTurn()
+        private void FinishEnemyPhase()
         {
-            CurrentTurn = TurnState.PlayerTurn;
-            Energy      = energyPerTurn;
+            if (!_encounterActive) return;
 
-            var drawn = new List<CardData>();
-            for (int i = 0; i < drawPerTurn; i++)
+            // Advance from Enemy → Draw (increments turn number)
+            turnPhaseController.AdvancePhase();
+
+            // Reset player Block at start of new turn
+            blockSystem.Reset(playerObject ?? gameObject);
+
+            // Process player Burn at start of player's turn
+            GameObject playerGO = playerObject ?? gameObject;
+            int burnDamage = statusEffectSystem.ProcessBurn(playerGO);
+            if (burnDamage > 0)
+            {
+                int bleedBonus = statusEffectSystem.GetBleedBonus(playerGO);
+                int totalBurn = burnDamage + bleedBonus;
+
+                int remainingBurn = blockSystem.AbsorbDamage(totalBurn, playerGO);
+
+                int hpBefore = playerHealth != null ? playerHealth.currentHealth : 0;
+
+                if (remainingBurn > 0 && playerHealth != null)
+                    playerHealth.TakeDamage(remainingBurn);
+
+                int hpAfter = playerHealth != null ? playerHealth.currentHealth : 0;
+                int actualHPLost = hpBefore - hpAfter;
+
+                // OT gain from burn is capped at 1 per tick
+                if (actualHPLost > 0 && playerHealth != null)
+                    overtimeMeter.GainFromDamage(actualHPLost, playerHealth.maxHealth, isStatusTick: true);
+
+                if (playerHPStack != null && playerHealth != null)
+                    playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+
+                if (BattleEventBus.Instance != null)
+                {
+                    BattleEventBus.Instance.Raise(new DamageEvent
+                    {
+                        Source = playerGO,
+                        Target = playerGO,
+                        Amount = totalBurn
+                    });
+                }
+
+                if (playerHealth != null && playerHealth.currentHealth <= 0)
+                {
+                    OnDefeat();
+                    return;
+                }
+            }
+
+            // Regenerate OT (turn 2 onward)
+            if (turnPhaseController.TurnNumber >= 2)
+                overtimeMeter.Regenerate();
+
+            // Draw new hand
+            DrawHand();
+
+            // Advance from Draw → Play (or Draw → Discard if stunned)
+            turnPhaseController.AdvancePhase();
+
+            // If player is stunned, auto-advance through Discard → Enemy
+            if (CurrentTurn == TurnPhase.Discard)
+            {
+                // Player was stunned — skip Play phase
+                // Discard the hand we just drew
+                foreach (CardInstance card in handManager.Cards)
+                    deckManager.Discard(card.Data);
+                handManager.DiscardAll();
+
+                turnPhaseController.AdvancePhase(); // Discard → Enemy
+                StartCoroutine(EnemyPhaseRoutine());
+            }
+        }
+
+        // ── Initialization helpers ────────────────────────────────────────────
+
+        private void ApplyToolModifiers()
+        {
+            // Query RunState for tool IDs and load ToolData assets
+            RunState runState = FindRunState();
+            if (runState == null || runState.toolIds == null) return;
+
+            foreach (string toolId in runState.toolIds)
+            {
+                ToolData tool = Resources.Load<ToolData>(toolId);
+                if (tool == null) continue;
+
+                foreach (ToolModifier mod in tool.modifiers)
+                {
+                    switch (mod.modifierType)
+                    {
+                        case ToolModifierType.OvertimeRegen:
+                            overtimeMeter.ApplyRegenModifier(mod.value);
+                            break;
+                        case ToolModifierType.HandSize:
+                            _handSize += mod.value;
+                            break;
+                        // BlockBonus, DamageBonus, etc. are applied at resolution time
+                        // by the respective subsystems or CardEffectResolver
+                    }
+                }
+            }
+        }
+
+        private RunState FindRunState()
+        {
+            // Try to find a RunState from a SaveManager or similar source
+            // For now, return null — will be wired when SaveManager is implemented
+            return null;
+        }
+
+        private void InitializePlayerHP()
+        {
+            if (playerObject == null)
+            {
+                GameObject found = GameObject.FindWithTag("Player");
+                playerObject = found != null ? found : gameObject;
+            }
+
+            if (playerHealth == null)
+                playerHealth = playerObject.GetComponent<Health>();
+
+            if (playerHealth != null)
+            {
+                int maxHP = gameConfig != null ? gameConfig.playerBaseHP : 80;
+                playerHealth.maxHealth = maxHP;
+                playerHealth.currentHealth = maxHP;
+                playerHealth.suppressSceneLoad = true;
+
+                Rigidbody rb = playerHealth.GetComponent<Rigidbody>();
+                if (rb != null) rb.isKinematic = true;
+            }
+
+            if (playerHPStack != null && playerHealth != null)
+            {
+                playerHPStack.SetTrackedHealth(playerHealth);
+                playerHPStack.Initialize(playerHealth.currentHealth, playerHealth.maxHealth);
+            }
+        }
+
+        private void SpawnEnemies(EncounterData encounter)
+        {
+            // Clean up any existing managed enemies
+            foreach (EnemyCombatant existing in _enemies)
+            {
+                if (existing != null)
+                    Destroy(existing.gameObject);
+            }
+            _enemies.Clear();
+            _enemyHPBars.Clear();
+            _enemyIntents.Clear();
+
+            // If no enemy prefab is set, try to use existing scene enemies
+            if (enemyPrefab == null)
+            {
+                // Find pre-placed enemies in the scene
+                Health[] sceneEnemies = FindObjectsOfType<Health>();
+                List<GameObject> candidateEnemies = new List<GameObject>();
+                foreach (Health h in sceneEnemies)
+                {
+                    // Skip the player
+                    if (h.gameObject == playerObject) continue;
+                    if (h.CompareTag("Player")) continue;
+                    candidateEnemies.Add(h.gameObject);
+                }
+
+                for (int i = 0; i < encounter.enemies.Count && i < candidateEnemies.Count; i++)
+                {
+                    EnemyCombatantData enemyData = encounter.enemies[i];
+                    if (enemyData == null) continue;
+
+                    GameObject enemyGO = candidateEnemies[i];
+                    PrepareEnemyForBattle(enemyGO, enemyData);
+                }
+                return;
+            }
+
+            for (int i = 0; i < encounter.enemies.Count && i < 4; i++)
+            {
+                EnemyCombatantData enemyData = encounter.enemies[i];
+                if (enemyData == null) continue;
+
+                // Determine spawn position
+                Vector3 spawnPos = Vector3.zero;
+                if (enemySpawnPoints != null && i < enemySpawnPoints.Length && enemySpawnPoints[i] != null)
+                    spawnPos = enemySpawnPoints[i].position;
+
+                GameObject enemyGO = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+                PrepareEnemyForBattle(enemyGO, enemyData);
+            }
+        }
+
+        private void PrepareEnemyForBattle(GameObject enemyGO, EnemyCombatantData enemyData)
+        {
+            EnemyCombatant combatant = enemyGO.GetComponent<EnemyCombatant>();
+            if (combatant == null)
+                combatant = enemyGO.AddComponent<EnemyCombatant>();
+
+            // Ensure Health component exists
+            Health health = enemyGO.GetComponent<Health>();
+            if (health == null)
+                enemyGO.AddComponent<Health>();
+
+            combatant.Initialize(enemyData, blockSystem, statusEffectSystem);
+
+            // Lock physics and disable exploration AI during battle
+            Rigidbody rb = enemyGO.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+
+            EnemyFollow follow = enemyGO.GetComponent<EnemyFollow>();
+            if (follow != null) follow.enabled = false;
+
+            // Disable Battlescene_Trigger if present (exploration-only script)
+            Battlescene_Trigger trigger = enemyGO.GetComponent<Battlescene_Trigger>();
+            if (trigger != null) trigger.enabled = false;
+
+            // Freeze NavMeshAgent if present
+            UnityEngine.AI.NavMeshAgent agent = enemyGO.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent != null) agent.enabled = false;
+
+            _enemies.Add(combatant);
+
+            // Set up HP bar if available on the prefab
+            EnemyHPBar hpBar = enemyGO.GetComponentInChildren<EnemyHPBar>();
+            if (hpBar != null)
+            {
+                hpBar.Initialize(combatant);
+                _enemyHPBars.Add(hpBar);
+            }
+
+            // Set up intent display if available on the prefab
+            EnemyIntentDisplay intentDisplay = enemyGO.GetComponentInChildren<EnemyIntentDisplay>();
+            if (intentDisplay != null)
+            {
+                intentDisplay.Initialize(combatant);
+                _enemyIntents.Add(intentDisplay);
+            }
+        }
+
+        private void InitializeDeck()
+        {
+            // Try to load deck from RunState; fallback to inspector deck
+            RunState runState = FindRunState();
+            List<CardData> deckCards = new List<CardData>();
+
+            if (runState != null && runState.deckCardIds != null)
+            {
+                foreach (string cardId in runState.deckCardIds)
+                {
+                    CardData card = Resources.Load<CardData>(cardId);
+                    if (card != null)
+                        deckCards.Add(card);
+                }
+            }
+
+            // Use fallback deck if RunState didn't provide cards
+            if (deckCards.Count == 0 && fallbackDeck != null && fallbackDeck.Count > 0)
+            {
+                deckCards.AddRange(fallbackDeck);
+                // If deck is too small for a full hand, duplicate cards
+                while (deckCards.Count < _handSize && fallbackDeck.Count > 0)
+                {
+                    foreach (CardData c in fallbackDeck)
+                    {
+                        deckCards.Add(c);
+                        if (deckCards.Count >= _handSize * 2) break;
+                    }
+                }
+            }
+
+            if (deckCards.Count > 0)
+                deckManager.Initialize(deckCards);
+            // If no cards loaded, assume DeckManager was already initialized externally
+        }
+
+        private void DrawHand()
+        {
+            List<CardData> drawn = new List<CardData>();
+            for (int i = 0; i < _handSize; i++)
             {
                 CardData card = deckManager.Draw();
                 if (card != null)
@@ -361,23 +796,78 @@ namespace CardBattle
                 handManager.AddCards(drawn);
         }
 
-        private void OnEnemyDefeated()
-        {
-            CurrentTurn = TurnState.BattleOver;
+        // ── Enemy management ──────────────────────────────────────────────────
 
-            if (battleAnimations != null && enemyHealth != null)
+        private List<EnemyCombatant> GetLivingEnemies()
+        {
+            List<EnemyCombatant> living = new List<EnemyCombatant>();
+            foreach (EnemyCombatant enemy in _enemies)
             {
-                battleAnimations.PlayDeath(enemyHealth.transform, () =>
-                {
-                    if (SceneLoader.Instance != null)
-                    {
-                        SceneLoader.Instance.enemyDefeated = true;
-                        SceneLoader.Instance.useDefaultSpawn = false;
-                        SceneLoader.Instance.LoadExploration();
-                    }
-                });
+                if (enemy != null && enemy.IsAlive)
+                    living.Add(enemy);
             }
-            else if (SceneLoader.Instance != null)
+            return living;
+        }
+
+        private void CheckEnemyDeaths()
+        {
+            for (int i = _enemies.Count - 1; i >= 0; i--)
+            {
+                EnemyCombatant enemy = _enemies[i];
+                if (enemy != null && !enemy.IsAlive)
+                {
+                    // Hide intent display for dead enemy
+                    EnemyIntentDisplay intent = enemy.GetComponentInChildren<EnemyIntentDisplay>();
+                    if (intent != null)
+                        intent.Hide();
+                    // Play death animation
+                    if (battleAnimations != null)
+                    {
+                        Transform t = enemy.transform;
+                        battleAnimations.PlayDeath(t, () =>
+                        {
+                            if (t != null)
+                                Destroy(t.gameObject);
+                        });
+                    }
+                    else
+                    {
+                        Destroy(enemy.gameObject);
+                    }
+
+                    // Clear status effects for dead enemy
+                    statusEffectSystem.ClearAll(enemy.gameObject);
+
+                    _enemies.RemoveAt(i);
+                }
+            }
+        }
+
+        private void UpdateEnemyHPBar(EnemyCombatant enemy)
+        {
+            int idx = _enemies.IndexOf(enemy);
+            if (idx >= 0 && idx < _enemyHPBars.Count && _enemyHPBars[idx] != null)
+                _enemyHPBars[idx].UpdateHP(enemy.CurrentHP, enemy.MaxHP);
+        }
+
+        // ── Victory / Defeat ──────────────────────────────────────────────────
+
+        private void OnVictory()
+        {
+            _encounterActive = false;
+
+            // Stop visual effects
+            if (battleAnimations != null)
+                battleAnimations.StopOverflowGlow();
+
+            // Clear player status effects on encounter end
+            statusEffectSystem.ClearAll(playerObject ?? gameObject);
+
+            // Award Hours from defeated enemies
+            // (Will be wired to RunState/VictoryScreen when those are implemented)
+
+            // Return to exploration
+            if (SceneLoader.Instance != null)
             {
                 SceneLoader.Instance.enemyDefeated = true;
                 SceneLoader.Instance.useDefaultSpawn = false;
@@ -385,22 +875,30 @@ namespace CardBattle
             }
         }
 
-        private void OnPlayerDefeated()
+        private void OnDefeat()
         {
-            CurrentTurn = TurnState.BattleOver;
+            _encounterActive = false;
 
+            // Stop visual effects
+            if (battleAnimations != null)
+                battleAnimations.StopOverflowGlow();
+
+            // Clear player status effects
+            statusEffectSystem.ClearAll(playerObject ?? gameObject);
+
+            // Play death animation then return to exploration with run reset
             if (battleAnimations != null && playerHealth != null)
             {
                 battleAnimations.PlayDeath(playerHealth.transform, () =>
                 {
-                    if (!useLoseScreen && SceneLoader.Instance != null)
+                    if (SceneLoader.Instance != null)
                     {
                         SceneLoader.Instance.useDefaultSpawn = true;
                         SceneLoader.Instance.LoadExploration();
                     }
                 });
             }
-            else if (!useLoseScreen && SceneLoader.Instance != null)
+            else if (SceneLoader.Instance != null)
             {
                 SceneLoader.Instance.useDefaultSpawn = true;
                 SceneLoader.Instance.LoadExploration();

@@ -1,4 +1,4 @@
 namespace CardBattle
 {
-    public enum TurnState { PlayerTurn, EnemyTurn, BattleOver }
+    public enum TurnPhase { Draw, Play, Discard, Enemy }
 }

@@ -11,6 +11,12 @@ namespace CardBattle
         public int DeckCount    => _deck.Count;
         public int DiscardCount => _discard.Count;
 
+        /// <summary>Read-only view of the draw pile contents (for UI inspection).</summary>
+        public IReadOnlyList<CardData> DrawPile => _deck;
+
+        /// <summary>Read-only view of the discard pile contents (for UI inspection).</summary>
+        public IReadOnlyList<CardData> DiscardPile => _discard;
+
         /// <summary>Copies cards into the internal deck and shuffles.</summary>
         public void Initialize(List<CardData> cards)
         {
@@ -44,6 +50,17 @@ namespace CardBattle
         /// <summary>Adds a card to the discard pile.</summary>
         public void Discard(CardData card)
         {
+            _discard.Add(card);
+        }
+
+        /// <summary>
+        /// Adds a new card to the discard pile for mid-run deck additions.
+        /// The card enters the cycle naturally and will be shuffled into the draw pile
+        /// when the discard is next reshuffled.
+        /// </summary>
+        public void AddCard(CardData card)
+        {
+            if (card == null) return;
             _discard.Add(card);
         }
 

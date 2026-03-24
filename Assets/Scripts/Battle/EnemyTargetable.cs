@@ -36,6 +36,14 @@ namespace CardBattle
             if (!CardTargetingManager.Instance.HasSelectedCard) return;
 
             _outline.HideOutline();
+
+            // If in AoE confirmation mode, clicking an enemy confirms the AoE
+            if (CardTargetingManager.Instance.IsAoEConfirmMode)
+            {
+                CardTargetingManager.Instance.ConfirmAoE();
+                return;
+            }
+
             CardTargetingManager.Instance.PlayOnTarget(gameObject);
         }
     }

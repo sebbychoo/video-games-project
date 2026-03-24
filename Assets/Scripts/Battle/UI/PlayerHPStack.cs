@@ -36,6 +36,39 @@ namespace CardBattle
         private int _maxHP;
         private float _paperThickness; // calculated: container height / maxHP
 
+        // ── Event-driven auto-refresh ─────────────────────────────────────────
+        private Health _trackedHealth;
+
+        /// <summary>
+        /// Set the Health component to track. When damage events arrive for this
+        /// target, the stack auto-refreshes without BattleManager calling UpdateHP.
+        /// </summary>
+        public void SetTrackedHealth(Health health)
+        {
+            _trackedHealth = health;
+        }
+
+        private void OnEnable()
+        {
+            if (BattleEventBus.Instance != null)
+                BattleEventBus.Instance.OnDamageReceived += HandleDamageReceived;
+        }
+
+        private void OnDisable()
+        {
+            if (BattleEventBus.Instance != null)
+                BattleEventBus.Instance.OnDamageReceived -= HandleDamageReceived;
+        }
+
+        private void HandleDamageReceived(DamageEvent e)
+        {
+            if (_trackedHealth == null) return;
+
+            // Only refresh when the damage target is the player we're tracking
+            if (e.Target == _trackedHealth.gameObject)
+                UpdateHP(_trackedHealth.currentHealth, _trackedHealth.maxHealth);
+        }
+
         public void Initialize(int currentHP, int maxHP)
         {
             _maxHP = maxHP;

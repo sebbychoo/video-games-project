@@ -1,4 +1,5 @@
 using UnityEngine;
+using CardBattle;
 
 /// <summary>
 /// Triggers the battle scene when the player walks into this collider.
@@ -7,6 +8,8 @@ using UnityEngine;
 /// </summary>
 public class Battlescene_Trigger : MonoBehaviour
 {
+    [SerializeField] EncounterData encounterData;
+
     private void Start()
     {
         if (SceneLoader.Instance != null && SceneLoader.Instance.enemyDefeated)
@@ -16,6 +19,12 @@ public class Battlescene_Trigger : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
+        {
+            // Pass encounter data to BattleManager before loading the scene
+            if (encounterData != null)
+                BattleManager.SetPendingEncounter(encounterData);
+
             SceneLoader.Instance.LoadBattle();
+        }
     }
 }

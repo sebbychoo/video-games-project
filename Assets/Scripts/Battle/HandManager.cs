@@ -8,8 +8,30 @@ namespace CardBattle
         [SerializeField] CardLayoutController layout;
         [SerializeField] CardAnimator         animator;
         [SerializeField] GameObject           cardPrefab;
+        [SerializeField] CardEffectPreview    effectPreview;
+        [SerializeField] Transform            handContainer;
 
         private readonly List<CardInstance> _cards = new List<CardInstance>();
+
+        private void Awake()
+        {
+            if (layout == null) layout = GetComponent<CardLayoutController>();
+            if (animator == null) animator = GetComponent<CardAnimator>();
+        }
+
+        /// <summary>The parent transform where cards are spawned. Falls back to HandContainer in scene.</summary>
+        private Transform CardParent
+        {
+            get
+            {
+                if (handContainer != null) return handContainer;
+                // Try to find HandContainer in the scene
+                GameObject hc = GameObject.Find("HandContainer");
+                if (hc == null) hc = GameObject.Find("HandContainer ");
+                if (hc != null) handContainer = hc.transform;
+                return handContainer != null ? handContainer : transform;
+            }
+        }
 
         public IReadOnlyList<CardInstance> Cards => _cards;
 
@@ -53,6 +75,7 @@ namespace CardBattle
 
         public void RemoveCard(CardInstance card)
         {
+            if (animator != null) animator.StopSelectedIdle(card);
             _cards.Remove(card);
             Destroy(card.gameObject);
             // Animate remaining cards smoothly to new centered positions
@@ -61,14 +84,19 @@ namespace CardBattle
                 CardTransformTarget target = layout.GetTargetTransform(i, _cards.Count);
                 _cards[i].ArcTarget = target;
                 _cards[i].IsSelected = false;
-                animator.PlayHoverExit(_cards[i], target);
+                if (animator != null) animator.PlayHoverExit(_cards[i], target);
             }
         }
 
         public void DiscardAll()
         {
             if (_cards.Count == 0) return;
-            animator.StopAll();
+            if (animator != null)
+            {
+                foreach (var card in _cards)
+                    animator.StopSelectedIdle(card);
+                animator.StopAll();
+            }
             for (int i = _cards.Count - 1; i >= 0; i--)
                 Destroy(_cards[i].gameObject);
             _cards.Clear();
@@ -110,12 +138,12 @@ namespace CardBattle
             if (card.IsHovered)
             {
                 // Already lifted from hover — just pop
-                animator.PlaySelectPop(card);
+                if (animator != null) animator.PlaySelectPop(card);
             }
             else
             {
                 // Not hovered — lift first, then pop
-                animator.PlayHoverEnter(card, target);
+                if (animator != null) animator.PlayHoverEnter(card, target);
                 StartCoroutine(DelayedSelectPop(card, 0.15f));
                 layout.RefreshLayout(_cards, index);
             }
@@ -131,12 +159,15 @@ namespace CardBattle
         /// <summary>Called by CardTargetingManager when selection is cancelled.</summary>
         public void OnCardDeselected(CardInstance card)
         {
+            if (card == null) return;
             card.IsSelected = false;
+            if (animator != null) animator.StopSelectedIdle(card);
             int index = _cards.IndexOf(card);
             if (index < 0) return;
+            if (layout == null) return;
             CardTransformTarget target = layout.GetTargetTransform(index, _cards.Count);
             card.ArcTarget = target;
-            animator.PlayHoverExit(card, target);
+            if (animator != null) animator.PlayHoverExit(card, target);
             layout.RefreshLayout(_cards, -1);
         }
 
@@ -144,7 +175,7 @@ namespace CardBattle
 
         private CardInstance SpawnCard(CardData data)
         {
-            GameObject go = Instantiate(cardPrefab, transform);
+            GameObject go = Instantiate(cardPrefab, CardParent);
             CardInstance instance = go.GetComponent<CardInstance>();
             instance.Data = data;
 
@@ -153,6 +184,7 @@ namespace CardBattle
             {
                 handler.Card        = instance;
                 handler.HandManager = this;
+                handler.EffectPreview = effectPreview;
             }
             _cards.Add(instance);
             return instance;

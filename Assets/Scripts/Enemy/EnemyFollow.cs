@@ -26,6 +26,10 @@ public class EnemyFollow : MonoBehaviour
     {
         if (player == null) return;
 
+        // Don't move during battle
+        if (CardBattle.BattleManager.Instance != null && !CardBattle.BattleManager.Instance.IsBattleOver)
+            return;
+
         float distance = Vector3.Distance(transform.position, player.position);
 
         if (distance < chaseRange)

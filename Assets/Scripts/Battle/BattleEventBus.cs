@@ -21,12 +21,39 @@ namespace CardBattle
         public GameObject Target;
         public string EffectName;
         public int Duration;
+        public bool IsRemoval;
     }
 
     public struct EntityTransformedEvent
     {
         public GameObject Entity;
         public string NewFormId;
+    }
+
+    public struct OverflowEvent
+    {
+        public int Amount;
+        public int NewTotal;
+    }
+
+    public struct BlockEvent
+    {
+        public GameObject Target;
+        public int Amount;
+        public int NewTotal;
+    }
+
+    public struct TurnPhaseChangedEvent
+    {
+        public TurnPhase NewPhase;
+        public int TurnNumber;
+    }
+
+    public struct RageBurstEvent
+    {
+        public int OverflowConsumed;
+        public float BonusPercent;
+        public int BonusDamage;
     }
 
     public class BattleEventBus : MonoBehaviour
@@ -39,6 +66,10 @@ namespace CardBattle
         public event System.Action<StatusEffectEvent> OnStatusEffectApplied;
         public event System.Action<StatusEffectEvent> OnStatusEffectRemoved;
         public event System.Action<EntityTransformedEvent> OnEntityTransformed;
+        public event System.Action<OverflowEvent> OnOverflow;
+        public event System.Action<BlockEvent> OnBlockChanged;
+        public event System.Action<TurnPhaseChangedEvent> OnTurnPhaseChanged;
+        public event System.Action<RageBurstEvent> OnRageBurst;
 
         private void Awake()
         {
@@ -62,7 +93,17 @@ namespace CardBattle
             OnDamageDealt?.Invoke(e);
             OnDamageReceived?.Invoke(e);
         }
-        public void Raise(StatusEffectEvent e) => OnStatusEffectApplied?.Invoke(e);
+        public void Raise(StatusEffectEvent e)
+        {
+            if (e.IsRemoval)
+                OnStatusEffectRemoved?.Invoke(e);
+            else
+                OnStatusEffectApplied?.Invoke(e);
+        }
         public void Raise(EntityTransformedEvent e) => OnEntityTransformed?.Invoke(e);
+        public void Raise(OverflowEvent e) => OnOverflow?.Invoke(e);
+        public void Raise(BlockEvent e) => OnBlockChanged?.Invoke(e);
+        public void Raise(TurnPhaseChangedEvent e) => OnTurnPhaseChanged?.Invoke(e);
+        public void Raise(RageBurstEvent e) => OnRageBurst?.Invoke(e);
     }
 }

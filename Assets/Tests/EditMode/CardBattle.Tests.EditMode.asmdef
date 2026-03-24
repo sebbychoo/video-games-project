@@ -1,0 +1,22 @@
+{
+    "name": "CardBattle.Tests.EditMode",
+    "rootNamespace": "CardBattle.Tests",
+    "references": [
+        "GUID:a3d802ce6970f2f40923c0b9ae56f4ba"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

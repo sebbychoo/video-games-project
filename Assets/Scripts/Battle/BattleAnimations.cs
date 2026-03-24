@@ -24,6 +24,28 @@ namespace CardBattle
         [SerializeField] float deathSinkDuration = 0.8f;
         [SerializeField] float deathSinkDepth = 3f;
 
+        [Header("Screen Shake (Damage)")]
+        [SerializeField] float screenShakeDuration = 0.4f;
+        [SerializeField] float screenShakeMaxMagnitude = 0.3f;
+        [SerializeField] float screenShakeDamageThreshold = 0.2f; // 20% of max HP
+
+        [Header("Rage Burst Flash")]
+        [SerializeField] float ragePulseDuration = 0.3f;
+        [SerializeField] Color ragePulseColor = new Color(1f, 0.4f, 0f, 0.4f);
+
+        [Header("Overflow Glow")]
+        [SerializeField] Color overflowGlowColor = new Color(1f, 0.3f, 0f, 0.15f);
+        [SerializeField] float overflowGlowPulseSpeed = 2f;
+
+        /// <summary>Optional full-screen overlay image for flash/glow effects.</summary>
+        [Header("Screen Overlay")]
+        [SerializeField] UnityEngine.UI.Image screenOverlay;
+
+        private Coroutine _screenShakeRoutine;
+        private Coroutine _ragePulseRoutine;
+        private Coroutine _overflowGlowRoutine;
+        private bool _overflowGlowActive;
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(this); return; }
@@ -58,6 +80,54 @@ namespace CardBattle
                 StartCoroutine(DeathRoutine(target, onComplete));
             else
                 onComplete?.Invoke();
+        }
+
+        /// <summary>
+        /// Shake the camera proportional to damage when damage exceeds 20% of max HP.
+        /// </summary>
+        public void PlayScreenShake(int damage, int maxHP)
+        {
+            if (maxHP <= 0) return;
+            float ratio = (float)damage / maxHP;
+            if (ratio <= screenShakeDamageThreshold) return;
+
+            // Scale magnitude by how far above threshold
+            float intensity = Mathf.Clamp01((ratio - screenShakeDamageThreshold) / (1f - screenShakeDamageThreshold));
+            float magnitude = screenShakeMaxMagnitude * intensity;
+
+            if (_screenShakeRoutine != null)
+                StopCoroutine(_screenShakeRoutine);
+            _screenShakeRoutine = StartCoroutine(ScreenShakeRoutine(magnitude));
+        }
+
+        /// <summary>Flash the screen on Rage Burst activation.</summary>
+        public void PlayRageBurstFlash()
+        {
+            if (screenOverlay == null) return;
+            if (_ragePulseRoutine != null)
+                StopCoroutine(_ragePulseRoutine);
+            _ragePulseRoutine = StartCoroutine(RagePulseRoutine());
+        }
+
+        /// <summary>Start the subtle screen edge glow while Overflow > 0.</summary>
+        public void StartOverflowGlow()
+        {
+            if (screenOverlay == null || _overflowGlowActive) return;
+            _overflowGlowActive = true;
+            _overflowGlowRoutine = StartCoroutine(OverflowGlowRoutine());
+        }
+
+        /// <summary>Stop the overflow glow.</summary>
+        public void StopOverflowGlow()
+        {
+            _overflowGlowActive = false;
+            if (_overflowGlowRoutine != null)
+            {
+                StopCoroutine(_overflowGlowRoutine);
+                _overflowGlowRoutine = null;
+            }
+            if (screenOverlay != null)
+                screenOverlay.color = Color.clear;
         }
 
         private IEnumerator HitShakeRoutine(Transform target)
@@ -160,6 +230,65 @@ namespace CardBattle
             target.localPosition = endPos;
 
             onComplete?.Invoke();
+        }
+
+        private IEnumerator ScreenShakeRoutine(float magnitude)
+        {
+            Camera cam = Camera.main;
+            if (cam == null) yield break;
+
+            Transform camTransform = cam.transform;
+            Vector3 originalPos = camTransform.localPosition;
+
+            float elapsed = 0f;
+            while (elapsed < screenShakeDuration)
+            {
+                elapsed += Time.deltaTime;
+                float decay = 1f - (elapsed / screenShakeDuration);
+                float x = Random.Range(-1f, 1f) * magnitude * decay;
+                float y = Random.Range(-1f, 1f) * magnitude * decay;
+                camTransform.localPosition = originalPos + new Vector3(x, y, 0f);
+                yield return null;
+            }
+            camTransform.localPosition = originalPos;
+            _screenShakeRoutine = null;
+        }
+
+        private IEnumerator RagePulseRoutine()
+        {
+            screenOverlay.gameObject.SetActive(true);
+            screenOverlay.color = ragePulseColor;
+
+            float elapsed = 0f;
+            Color startColor = ragePulseColor;
+            Color endColor = new Color(ragePulseColor.r, ragePulseColor.g, ragePulseColor.b, 0f);
+
+            while (elapsed < ragePulseDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / ragePulseDuration);
+                screenOverlay.color = Color.Lerp(startColor, endColor, t);
+                yield return null;
+            }
+
+            screenOverlay.color = Color.clear;
+            _ragePulseRoutine = null;
+        }
+
+        private IEnumerator OverflowGlowRoutine()
+        {
+            screenOverlay.gameObject.SetActive(true);
+
+            while (_overflowGlowActive)
+            {
+                // Subtle pulsing glow
+                float alpha = overflowGlowColor.a * (0.5f + 0.5f * Mathf.Sin(Time.time * overflowGlowPulseSpeed));
+                screenOverlay.color = new Color(overflowGlowColor.r, overflowGlowColor.g, overflowGlowColor.b, alpha);
+                yield return null;
+            }
+
+            screenOverlay.color = Color.clear;
+            _overflowGlowRoutine = null;
         }
     }
 }

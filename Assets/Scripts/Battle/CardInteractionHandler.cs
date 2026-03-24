@@ -13,18 +13,69 @@ namespace CardBattle
         /// <summary>Set by HandManager on spawn.</summary>
         public HandManager HandManager { get; set; }
 
+        /// <summary>Optional tooltip reference — set by HandManager or found in scene.</summary>
+        public CardEffectPreview EffectPreview { get; set; }
+
+        /// <summary>How long to hover before switching from a selected card.</summary>
+        private const float SwitchHoverDelay = 0.25f;
+        private float _hoverTimer;
+        private bool _waitingToSwitch;
+
+        private void Update()
+        {
+            if (!_waitingToSwitch) return;
+
+            _hoverTimer += Time.deltaTime;
+            if (_hoverTimer >= SwitchHoverDelay)
+            {
+                _waitingToSwitch = false;
+
+                // Deselect the current card and hover this one instead
+                CardTargetingManager.Instance?.CancelSelection();
+
+                Card.IsHovered = true;
+                CardTargetingManager.Instance?.SetHoveredCard(Card);
+
+                if (EffectPreview != null)
+                    EffectPreview.Show(Card);
+
+                if (HandManager != null)
+                {
+                    IReadOnlyList<CardInstance> cards = HandManager.Cards;
+                    int index = -1;
+                    for (int i = 0; i < cards.Count; i++)
+                        if (cards[i] == Card) { index = i; break; }
+                    HandManager.OnCardHoverEnter(Card, index);
+                }
+            }
+        }
+
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (BattleManager.Instance == null) return;
-            if (BattleManager.Instance.CurrentTurn != TurnState.PlayerTurn) return;
+            if (BattleManager.Instance.CurrentTurn != TurnPhase.Play) return;
 
-            // If a card is already selected, don't do anything on hover
+            // If a different card is selected, start the switch timer
             if (CardTargetingManager.Instance != null
-                && CardTargetingManager.Instance.HasSelectedCard)
+                && CardTargetingManager.Instance.HasSelectedCard
+                && CardTargetingManager.Instance.SelectedCard != Card)
+            {
+                _hoverTimer = 0f;
+                _waitingToSwitch = true;
+                return;
+            }
+
+            // If this card is the selected one, ignore hover
+            if (CardTargetingManager.Instance != null
+                && CardTargetingManager.Instance.SelectedCard == Card)
                 return;
 
             Card.IsHovered = true;
             CardTargetingManager.Instance?.SetHoveredCard(Card);
+
+            // Show effect preview tooltip
+            if (EffectPreview != null)
+                EffectPreview.Show(Card);
 
             if (HandManager != null)
             {
@@ -38,8 +89,11 @@ namespace CardBattle
 
         public void OnPointerExit(PointerEventData eventData)
         {
+            // Cancel any pending switch
+            _waitingToSwitch = false;
+
             if (BattleManager.Instance == null) return;
-            if (BattleManager.Instance.CurrentTurn != TurnState.PlayerTurn) return;
+            if (BattleManager.Instance.CurrentTurn != TurnPhase.Play) return;
 
             // If a card is selected, ignore hover exit
             if (CardTargetingManager.Instance != null
@@ -49,6 +103,10 @@ namespace CardBattle
             Card.IsHovered = false;
             CardTargetingManager.Instance?.ClearHoveredCard(Card);
 
+            // Hide effect preview tooltip
+            if (EffectPreview != null)
+                EffectPreview.Hide();
+
             if (HandManager != null)
                 HandManager.OnCardHoverExit(Card);
         }
@@ -56,7 +114,7 @@ namespace CardBattle
         public void OnPointerClick(PointerEventData eventData)
         {
             if (BattleManager.Instance == null) return;
-            if (BattleManager.Instance.CurrentTurn != TurnState.PlayerTurn) return;
+            if (BattleManager.Instance.CurrentTurn != TurnPhase.Play) return;
 
             // Right click cancels selection
             if (eventData.button == PointerEventData.InputButton.Right)
