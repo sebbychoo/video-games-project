@@ -30,8 +30,9 @@ namespace CardBattle
         [SerializeField] Transform contentParent;
         [SerializeField] Button closeButton;
 
-        [Header("Card Entry Prefab")]
-        [SerializeField] TextMeshProUGUI cardEntryPrefab;
+        [Header("Card Display")]
+        [SerializeField] TextMeshProUGUI cardEntryPrefab; // fallback text-only
+        [SerializeField] GameObject cardPrefab;           // full card prefab (optional)
 
         private readonly List<GameObject> _spawnedEntries = new List<GameObject>();
 
@@ -52,11 +53,21 @@ namespace CardBattle
             if (closeButton != null)
                 closeButton.onClick.AddListener(HideInspectionPanel);
 
-            if (BattleEventBus.Instance != null)
-            {
-                BattleEventBus.Instance.OnCardPlayed += HandleCardPlayed;
-                BattleEventBus.Instance.OnTurnPhaseChanged += HandleTurnPhaseChanged;
-            }
+            SubscribeToBattleEvents();
+        }
+
+        private void Start()
+        {
+            SubscribeToBattleEvents();
+        }
+
+        private void SubscribeToBattleEvents()
+        {
+            if (BattleEventBus.Instance == null) return;
+            BattleEventBus.Instance.OnCardPlayed -= HandleCardPlayed;
+            BattleEventBus.Instance.OnTurnPhaseChanged -= HandleTurnPhaseChanged;
+            BattleEventBus.Instance.OnCardPlayed += HandleCardPlayed;
+            BattleEventBus.Instance.OnTurnPhaseChanged += HandleTurnPhaseChanged;
         }
 
         private void OnDisable()
@@ -84,9 +95,9 @@ namespace CardBattle
             if (deckManager == null) return;
 
             if (drawPileCountText != null)
-                drawPileCountText.text = deckManager.DeckCount.ToString();
+                drawPileCountText.text = $"INBOX {deckManager.DeckCount}";
             if (discardPileCountText != null)
-                discardPileCountText.text = deckManager.DiscardCount.ToString();
+                discardPileCountText.text = $"ARCHIVE {deckManager.DiscardCount}";
         }
 
         /// <summary>Show the draw pile contents sorted alphabetically (no order reveal).</summary>
@@ -94,13 +105,12 @@ namespace CardBattle
         {
             if (deckManager == null) return;
 
-            var cardNames = deckManager.DrawPile
+            var cards = deckManager.DrawPile
                 .Where(c => c != null)
-                .Select(c => c.cardName)
-                .OrderBy(n => n)
+                .OrderBy(c => c.cardName)
                 .ToList();
 
-            PopulateInspectionPanel("Draw Pile", cardNames);
+            PopulateInspectionPanel("INBOX", cards);
         }
 
         /// <summary>Show the discard pile contents.</summary>
@@ -108,12 +118,11 @@ namespace CardBattle
         {
             if (deckManager == null) return;
 
-            var cardNames = deckManager.DiscardPile
+            var cards = deckManager.DiscardPile
                 .Where(c => c != null)
-                .Select(c => c.cardName)
                 .ToList();
 
-            PopulateInspectionPanel("Discard Pile", cardNames);
+            PopulateInspectionPanel("ARCHIVE", cards);
         }
 
         /// <summary>Hide the inspection panel.</summary>
@@ -123,25 +132,52 @@ namespace CardBattle
                 inspectionPanel.SetActive(false);
         }
 
-        private void PopulateInspectionPanel(string title, List<string> cardNames)
+        private void PopulateInspectionPanel(string title, List<CardData> cards)
         {
             ClearEntries();
 
             if (inspectionTitleText != null)
                 inspectionTitleText.text = title;
 
-            foreach (var name in cardNames)
+            foreach (var card in cards)
             {
-                if (cardEntryPrefab == null || contentParent == null) break;
+                if (contentParent == null) break;
 
-                var entry = Instantiate(cardEntryPrefab, contentParent);
-                entry.text = name;
-                entry.gameObject.SetActive(true);
-                _spawnedEntries.Add(entry.gameObject);
+                if (cardPrefab != null)
+                {
+                    // Spawn full card prefab and initialize it
+                    GameObject go = Instantiate(cardPrefab, contentParent);
+                    go.SetActive(true);
+
+                    // Try to initialize via CardInstance if available
+                    CardInstance ci = go.GetComponent<CardInstance>();
+                    if (ci != null) ci.Data = card;
+
+                    _spawnedEntries.Add(go);
+                }
+                else if (cardEntryPrefab != null)
+                {
+                    // Fallback: text only
+                    var entry = Instantiate(cardEntryPrefab, contentParent);
+                    entry.text = card.cardName;
+                    entry.gameObject.SetActive(true);
+                    _spawnedEntries.Add(entry.gameObject);
+                }
             }
 
             if (inspectionPanel != null)
+            {
+                // Stretch to full screen
+                RectTransform rt = inspectionPanel.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchorMin = Vector2.zero;
+                    rt.anchorMax = Vector2.one;
+                    rt.offsetMin = Vector2.zero;
+                    rt.offsetMax = Vector2.zero;
+                }
                 inspectionPanel.SetActive(true);
+            }
         }
 
         private void ClearEntries()

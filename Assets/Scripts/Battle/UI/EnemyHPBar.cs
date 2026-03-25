@@ -19,6 +19,11 @@ namespace CardBattle
         [SerializeField] TextMeshProUGUI blockText;
         [SerializeField] GameObject blockPanel;
 
+        [Header("Low HP Warning")]
+        [SerializeField] TextMeshProUGUI lowHPWarningText;
+        [SerializeField] float lowHPThreshold = 0.1f;
+        [SerializeField] string lowHPMessage = "FINAL NOTICE";
+
         private float _targetFill;
         private float _currentFill;
         private bool _useFillAmount;
@@ -30,18 +35,11 @@ namespace CardBattle
 
         public void Initialize(int currentHP, int maxHP)
         {
-            _targetFill = (float)currentHP / maxHP;
+            _targetFill = Mathf.Clamp01((float)currentHP / maxHP);
             _currentFill = _targetFill;
 
             if (fillImage != null)
-            {
-                _useFillAmount = (fillImage.type == Image.Type.Filled);
-
-                if (_useFillAmount)
-                    fillImage.fillAmount = _currentFill;
-                else
-                    fillImage.rectTransform.localScale = new Vector3(_currentFill, 1f, 1f);
-            }
+                fillImage.rectTransform.localScale = new Vector3(_currentFill, 1f, 1f);
 
             UpdateText(currentHP, maxHP);
             UpdateBlockDisplay(0);
@@ -108,17 +106,22 @@ namespace CardBattle
             if (fillImage == null) return;
 
             _currentFill = Mathf.Lerp(_currentFill, _targetFill, Time.deltaTime * lerpSpeed);
-
-            if (_useFillAmount)
-                fillImage.fillAmount = _currentFill;
-            else
-                fillImage.rectTransform.localScale = new Vector3(_currentFill, 1f, 1f);
+            fillImage.rectTransform.localScale = new Vector3(_currentFill, 1f, 1f);
         }
 
         private void UpdateText(int current, int max)
         {
+            int display = Mathf.Max(current, 0);
             if (hpText != null)
-                hpText.text = $"{current} / {max}";
+                hpText.text = $"{display} / {max}";
+
+            if (lowHPWarningText != null)
+            {
+                bool showWarning = current > 0 && max > 0 && (float)current / max <= lowHPThreshold;
+                lowHPWarningText.gameObject.SetActive(showWarning);
+                if (showWarning)
+                    lowHPWarningText.text = lowHPMessage;
+            }
         }
 
         private void UpdateBlockDisplay(int blockValue)

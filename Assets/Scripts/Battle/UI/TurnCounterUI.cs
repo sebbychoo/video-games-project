@@ -13,8 +13,19 @@ namespace CardBattle
 
         private void OnEnable()
         {
-            if (BattleEventBus.Instance != null)
-                BattleEventBus.Instance.OnTurnPhaseChanged += HandlePhaseChanged;
+            SubscribeToEvents();
+        }
+
+        private void Start()
+        {
+            SubscribeToEvents();
+        }
+
+        private void SubscribeToEvents()
+        {
+            if (BattleEventBus.Instance == null) return;
+            BattleEventBus.Instance.OnTurnPhaseChanged -= HandlePhaseChanged;
+            BattleEventBus.Instance.OnTurnPhaseChanged += HandlePhaseChanged;
         }
 
         private void OnDisable()

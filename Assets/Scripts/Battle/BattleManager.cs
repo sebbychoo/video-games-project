@@ -32,6 +32,12 @@ namespace CardBattle
 
         [Header("UI")]
         [SerializeField] PlayerHPStack         playerHPStack;
+        [SerializeField] EnemyHPBar            playerHPBar;
+        [SerializeField] EnemyHPBar            screenEnemyHPBar;
+        [SerializeField] OvertimeMeterUI       overtimeMeterUI;
+        [SerializeField] DeckCounterUI         deckCounterUI;
+        [SerializeField] BlockDisplay          blockDisplay;
+        [SerializeField] TurnCounterUI         turnCounterUI;
 
         [Header("Spawning")]
         [SerializeField] GameObject            enemyPrefab;
@@ -95,17 +101,12 @@ namespace CardBattle
 
         private void OnRageBurstEvent(RageBurstEvent e)
         {
-            if (battleAnimations != null)
-                battleAnimations.PlayRageBurstFlash();
+            // Rage burst flash disabled for clean UI
         }
 
         private void OnOverflowEvent(OverflowEvent e)
         {
-            if (battleAnimations == null) return;
-            if (e.NewTotal > 0)
-                battleAnimations.StartOverflowGlow();
-            else
-                battleAnimations.StopOverflowGlow();
+            // Overflow glow disabled for clean UI
         }
 
         private void Start()
@@ -195,6 +196,16 @@ namespace CardBattle
             // Initialize deck from RunState or fallback
             InitializeDeck();
 
+            // Initialize UI components
+            if (overtimeMeterUI != null)
+                overtimeMeterUI.Initialize(overtimeMeter, overflowBuffer);
+            if (deckCounterUI != null)
+                deckCounterUI.Initialize(deckManager);
+            if (blockDisplay != null)
+                blockDisplay.Initialize(playerObject);
+            if (turnCounterUI != null)
+                turnCounterUI.Initialize();
+
             // Initialize turn phase controller
             if (playerObject == null)
                 playerObject = gameObject;
@@ -218,6 +229,10 @@ namespace CardBattle
                     cardAnimator.PlayRejection(card);
                 return;
             }
+
+            // Refresh OT UI immediately after spend
+            if (overtimeMeterUI != null)
+                overtimeMeterUI.Refresh();
 
             _pendingTarget = target;
 
@@ -302,6 +317,12 @@ namespace CardBattle
                 foreach (var enemy in GetLivingEnemies())
                     UpdateEnemyHPBar(enemy);
             }
+
+            // Refresh player HP UI after any card resolution (covers self-targeting)
+            if (playerHPStack != null && playerHealth != null)
+                playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+            if (playerHPBar != null && playerHealth != null)
+                playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
 
             // Check for enemy deaths after card resolution
             CheckEnemyDeaths();
@@ -449,6 +470,8 @@ namespace CardBattle
                     // Update player HP UI
                     if (playerHPStack != null && playerHealth != null)
                         playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+                    if (playerHPBar != null && playerHealth != null)
+                        playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
 
                     // Raise DamageEvent
                     if (BattleEventBus.Instance != null)
@@ -534,6 +557,8 @@ namespace CardBattle
 
                 if (playerHPStack != null && playerHealth != null)
                     playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+                if (playerHPBar != null && playerHealth != null)
+                    playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
 
                 if (BattleEventBus.Instance != null)
                 {
@@ -640,6 +665,8 @@ namespace CardBattle
                 playerHPStack.SetTrackedHealth(playerHealth);
                 playerHPStack.Initialize(playerHealth.currentHealth, playerHealth.maxHealth);
             }
+            if (playerHPBar != null && playerHealth != null)
+                playerHPBar.Initialize(playerHealth.currentHealth, playerHealth.maxHealth);
         }
 
         private void SpawnEnemies(EncounterData encounter)
@@ -745,6 +772,10 @@ namespace CardBattle
                 intentDisplay.Initialize(combatant);
                 _enemyIntents.Add(intentDisplay);
             }
+
+            // Initialize screen-space enemy HP bar for first enemy
+            if (screenEnemyHPBar != null && _enemies.Count == 1)
+                screenEnemyHPBar.Initialize(combatant);
         }
 
         private void InitializeDeck()
@@ -848,6 +879,10 @@ namespace CardBattle
             int idx = _enemies.IndexOf(enemy);
             if (idx >= 0 && idx < _enemyHPBars.Count && _enemyHPBars[idx] != null)
                 _enemyHPBars[idx].UpdateHP(enemy.CurrentHP, enemy.MaxHP);
+
+            // Update screen-space enemy HP bar (shows first enemy)
+            if (screenEnemyHPBar != null && _enemies.Count > 0 && _enemies[0] == enemy)
+                screenEnemyHPBar.UpdateHP(enemy.CurrentHP, enemy.MaxHP);
         }
 
         // ── Victory / Defeat ──────────────────────────────────────────────────

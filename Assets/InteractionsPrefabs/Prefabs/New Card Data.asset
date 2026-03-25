@@ -13,7 +13,15 @@ MonoBehaviour:
   m_Name: New Card Data
   m_EditorClassIdentifier: Assembly-CSharp::CardBattle.CardData
   cardName: Attack!
-  energyCost: 0
+  overtimeCost: 1
   description: attacks
   cardType: 0
+  cardRarity: 0
   effectValue: 10
+  blockValue: 0
+  targetMode: 0
+  cardSprite: {fileID: 0}
+  statusEffectId: 
+  statusDuration: 0
+  specialCardId: 
+  utilityEffectType: 0

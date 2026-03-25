@@ -122,6 +122,14 @@ namespace CardBattle
                 Health health = target.GetComponent<Health>();
                 if (health != null)
                     health.TakeDamage(remainingDamage);
+
+                // Grant OT when the player takes HP damage (Req 2.5)
+                if (overtimeMeter != null && IsPlayerTarget(target))
+                {
+                    Health playerHealth = target.GetComponent<Health>();
+                    if (playerHealth != null)
+                        overtimeMeter.GainFromDamage(remainingDamage, playerHealth.maxHealth);
+                }
             }
 
             // Raise DamageEvent
@@ -134,6 +142,15 @@ namespace CardBattle
                     Amount = totalDamage
                 });
             }
+        }
+
+        /// <summary>Check if the target is the player (has PlayerTargetable or matches BattleManager's player).</summary>
+        private bool IsPlayerTarget(GameObject target)
+        {
+            if (target == null) return false;
+            if (target.GetComponent<PlayerTargetable>() != null) return true;
+            if (BattleManager.Instance != null && target == BattleManager.Instance.gameObject) return true;
+            return target.CompareTag("Player");
         }
 
         // ── Defense ─────────────────────────────────────────────────────────
