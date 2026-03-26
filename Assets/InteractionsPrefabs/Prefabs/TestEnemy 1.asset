@@ -19,19 +19,25 @@ MonoBehaviour:
   sprite: {fileID: 0}
   attackPattern:
   - actionType: 0
-    value: 2
+    value: 25
     statusEffectId: 
     statusDuration: 0
     buffType: 1
-    buffDuration: 2
+    buffDuration: 0
+    intentColor: 0
+    parryMatchTags: []
     condition: 0
-  - actionType: 3
-    value: 5
-    statusEffectId: 
-    statusDuration: 0
-    buffType: 1
-    buffDuration: 5
+  - actionType: 0
+    value: 50
+    statusEffectId: bleed
+    statusDuration: 2
+    buffType: 0
+    buffDuration: 0
+    intentColor: 1
+    parryMatchTags: []
     condition: 0
   isBoss: 0
+  enemyParryChance: 0
+  baseParryWindowDuration: 0
   preFightDialogue: hey jew
   postFightDialogue: bye jew

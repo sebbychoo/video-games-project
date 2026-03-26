@@ -21,7 +21,7 @@ MonoBehaviour:
   blockValue: 5
   parryMatchTags: []
   targetMode: 0
-  cardSprite: {fileID: 0}
+  cardSprite: {fileID: 21300000, guid: be27a9a16e554554b8b06e125aa81b9c, type: 3}
   statusEffectId: 
   statusDuration: 0
   specialCardId: 
