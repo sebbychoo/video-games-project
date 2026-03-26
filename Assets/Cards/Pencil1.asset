@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 154aa4f86be312148af124d3aa7065b5, type: 3}
-  m_Name: Parry1
+  m_Name: Pencil1
   m_EditorClassIdentifier: CardBattle::CardBattle.CardData
-  cardName: Parry!
+  cardName: Pencil
   overtimeCost: 1
-  description: Parry!!!!!
-  cardType: 1
+  description: Stabs for 5 damage
+  cardType: 0
   cardRarity: 0
-  effectValue: 0
-  blockValue: 5
+  effectValue: 5
+  blockValue: 0
   parryMatchTags: []
   targetMode: 0
-  cardSprite: {fileID: 21300000, guid: be27a9a16e554554b8b06e125aa81b9c, type: 3}
+  cardSprite: {fileID: 21300000, guid: 5359a24318cd2b641885b6777debe88c, type: 3}
   statusEffectId: 
   statusDuration: 0
   specialCardId: 

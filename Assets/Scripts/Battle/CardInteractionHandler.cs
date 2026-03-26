@@ -80,6 +80,10 @@ namespace CardBattle
             Card.IsHovered = true;
             CardTargetingManager.Instance?.SetHoveredCard(Card);
 
+            // Show description on hover
+            CardVisual visual = Card.GetComponent<CardVisual>();
+            if (visual != null) visual.ShowDescription();
+
             // Show effect preview tooltip
             if (EffectPreview != null)
                 EffectPreview.Show(Card);
@@ -99,6 +103,13 @@ namespace CardBattle
             // Cancel any pending switch
             _waitingToSwitch = false;
 
+            // Always hide tooltip on exit, regardless of phase or selection state
+            if (Card != null)
+            {
+                CardVisual visual = Card.GetComponent<CardVisual>();
+                if (visual != null) visual.HideDescription();
+            }
+
             if (BattleManager.Instance == null) return;
 
             bool isPlayPhase = BattleManager.Instance.CurrentTurn == TurnPhase.Play;
@@ -109,7 +120,7 @@ namespace CardBattle
 
             if (!isPlayPhase && !isParryWindow) return;
 
-            // If a card is selected, ignore hover exit
+            // If a card is selected, ignore hover exit for card position
             if (CardTargetingManager.Instance != null
                 && CardTargetingManager.Instance.HasSelectedCard)
                 return;
