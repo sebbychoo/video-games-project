@@ -33,6 +33,8 @@ namespace CardBattle
         [Header("Card Display")]
         [SerializeField] TextMeshProUGUI cardEntryPrefab; // fallback text-only
         [SerializeField] GameObject cardPrefab;           // full card prefab (optional)
+        [SerializeField] float inspectionCardScale = 0.5f; // scale for cards in inspection panel
+        [SerializeField] Vector2 inspectionCardSize = new Vector2(150f, 200f); // fixed size per card in inspection
 
         private readonly List<GameObject> _spawnedEntries = new List<GameObject>();
 
@@ -148,10 +150,37 @@ namespace CardBattle
                     // Spawn full card prefab and initialize it
                     GameObject go = Instantiate(cardPrefab, contentParent);
                     go.SetActive(true);
+                    go.transform.localScale = Vector3.one * inspectionCardScale;
+
+                    // Force fixed size — prevent layout group from stretching
+                    RectTransform cardRT = go.GetComponent<RectTransform>();
+                    if (cardRT != null)
+                    {
+                        cardRT.anchorMin = new Vector2(0.5f, 0.5f);
+                        cardRT.anchorMax = new Vector2(0.5f, 0.5f);
+                        cardRT.pivot = new Vector2(0.5f, 0.5f);
+                        cardRT.sizeDelta = inspectionCardSize;
+                    }
+
+                    // Add LayoutElement to override layout group sizing
+                    LayoutElement le = go.GetComponent<LayoutElement>();
+                    if (le == null) le = go.AddComponent<LayoutElement>();
+                    le.preferredWidth = inspectionCardSize.x * inspectionCardScale;
+                    le.preferredHeight = inspectionCardSize.y * inspectionCardScale;
+                    le.flexibleWidth = 0;
+                    le.flexibleHeight = 0;
+
+                    // Disable interaction on inspection cards
+                    CardInteractionHandler handler = go.GetComponent<CardInteractionHandler>();
+                    if (handler != null) handler.enabled = false;
 
                     // Try to initialize via CardInstance if available
                     CardInstance ci = go.GetComponent<CardInstance>();
                     if (ci != null) ci.Data = card;
+
+                    // Refresh visuals
+                    CardVisual cv = go.GetComponent<CardVisual>();
+                    if (cv != null) cv.Refresh();
 
                     _spawnedEntries.Add(go);
                 }

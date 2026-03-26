@@ -107,6 +107,9 @@ namespace CardBattle
             // Don't lift if already selected
             if (card.IsSelected) return;
 
+            // Bring to front so it overlaps neighbors
+            card.transform.SetAsLastSibling();
+
             CardTransformTarget target = layout.GetTargetTransform(index, _cards.Count);
             card.ArcTarget = target;
             animator.PlayHoverEnter(card, target);
@@ -117,6 +120,9 @@ namespace CardBattle
         {
             // If selected, keep it lifted — don't return to arc
             if (card.IsSelected) return;
+
+            // Restore sibling order based on hand position
+            RestoreSiblingOrder();
 
             int index = _cards.IndexOf(card);
             if (index < 0) return;
@@ -130,6 +136,9 @@ namespace CardBattle
         public void OnCardSelected(CardInstance card)
         {
             card.IsSelected = true;
+            // Bring to front
+            card.transform.SetAsLastSibling();
+
             int index = _cards.IndexOf(card);
             if (index < 0) return;
             CardTransformTarget target = layout.GetTargetTransform(index, _cards.Count);
@@ -162,6 +171,7 @@ namespace CardBattle
             if (card == null) return;
             card.IsSelected = false;
             if (animator != null) animator.StopSelectedIdle(card);
+            RestoreSiblingOrder();
             int index = _cards.IndexOf(card);
             if (index < 0) return;
             if (layout == null) return;
@@ -195,6 +205,16 @@ namespace CardBattle
             layout.RefreshLayout(_cards);
             for (int i = 0; i < _cards.Count; i++)
                 _cards[i].ArcTarget = layout.GetTargetTransform(i, _cards.Count);
+        }
+
+        /// <summary>Restore sibling order to match hand order (left to right).</summary>
+        private void RestoreSiblingOrder()
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                if (_cards[i] != null)
+                    _cards[i].transform.SetSiblingIndex(i);
+            }
         }
     }
 }

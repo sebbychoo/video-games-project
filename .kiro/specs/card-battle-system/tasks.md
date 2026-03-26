@@ -349,8 +349,8 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
 - [x] 12. Checkpoint — Ensure battle UI is functional and all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 13. Persistence — SaveManager, RunState, MetaState
-  - [ ] 13.1 Implement SaveManager with JSON serialization
+- [x] 13. Persistence — SaveManager, RunState, MetaState
+  - [x] 13.1 Implement SaveManager with JSON serialization
     - Create `Assets/Scripts/Core/SaveManager.cs` with `SaveRun()`, `LoadRun()`, `SaveMeta()`, `LoadMeta()`, `WipeRun()`, `SnapshotPreEncounter()`, `RestorePreEncounter()`
     - Serialize RunState and MetaState to JSON via Unity's JsonUtility or Newtonsoft
     - Handle corrupted/missing save files gracefully (start fresh, preserve meta if possible)
@@ -358,7 +358,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Mid-combat quit saves pre-encounter snapshot
     - _Requirements: 27.1, 27.2, 27.3, 27.4, 27.5, 27.6, 27.7_
 
-  - [ ]* 13.2 Write property tests for persistence (Properties 22, 23, 24, 41)
+  - [x] 13.2 Write property tests for persistence (Properties 22, 23, 24, 41)
     - Create `Assets/Tests/EditMode/Persistence/RunStatePropertyTests.cs`
     - **Property 22: Death Wipes Run State, Preserves Meta State** — After death, run state wiped, Bad_Reviews and upgrades preserved
     - **Validates: Requirements 24.1, 24.2, 24.3**

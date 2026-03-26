@@ -51,7 +51,7 @@ namespace CardBattle
         {
             if (_cardInstance == null || _cardInstance.Data == null) return;
             if (CardDescriptionTooltip.Instance != null)
-                CardDescriptionTooltip.Instance.Show(_cardInstance.Data.description, _cardInstance.RectTransform);
+                CardDescriptionTooltip.Instance.Show(_cardInstance.Data, _cardInstance.Data.description, _cardInstance.RectTransform);
         }
 
         /// <summary>Hide the floating tooltip.</summary>

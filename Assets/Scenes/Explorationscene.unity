@@ -1624,6 +1624,7 @@ GameObject:
   m_Component:
   - component: {fileID: 981996154}
   - component: {fileID: 981996155}
+  - component: {fileID: 981996156}
   m_Layer: 0
   m_Name: SceneManager
   m_TagString: Untagged
@@ -1662,6 +1663,18 @@ MonoBehaviour:
   enemyDefeated: 0
   useDefaultSpawn: 0
   defaultSpawnPoint: {fileID: 1712284262}
+--- !u!114 &981996156
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 981996152}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a51e04a1c2527bd48b1443ea16dc70ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CardBattle::CardBattle.SaveManager
 --- !u!1 &986236368
 GameObject:
   m_ObjectHideFlags: 0
