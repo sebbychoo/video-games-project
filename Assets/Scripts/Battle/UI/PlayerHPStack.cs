@@ -48,6 +48,32 @@ namespace CardBattle
             _trackedHealth = health;
         }
 
+        /// <summary>
+        /// Convenience initializer that pulls player HP directly from BattleManager.
+        /// Sets up tracked health for auto-refresh and initializes the display.
+        /// </summary>
+        public void Initialize(BattleManager battleManager)
+        {
+            if (battleManager == null) return;
+
+            Health health = battleManager.GetComponentInChildren<Health>();
+            // Try the player object's Health via the public accessors
+            int currentHP = battleManager.PlayerHP;
+            int maxHP = battleManager.PlayerMaxHP;
+
+            // Find the player Health component for event-driven tracking
+            GameObject playerObj = battleManager.gameObject;
+            // Check if there's a tagged player in the scene
+            GameObject taggedPlayer = GameObject.FindWithTag("Player");
+            if (taggedPlayer != null)
+                health = taggedPlayer.GetComponent<Health>();
+
+            if (health != null)
+                SetTrackedHealth(health);
+
+            Initialize(currentHP, maxHP);
+        }
+
         private void OnEnable()
         {
             if (BattleEventBus.Instance != null)

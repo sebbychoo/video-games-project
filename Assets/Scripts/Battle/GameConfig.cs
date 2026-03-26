@@ -27,5 +27,8 @@ namespace CardBattle
         public int minimumDeckSize = 1;
         public int maximumDeckSize = 25;
         public float safeRoomChaseTimeout = 5f;
+        public float baseParryWindowDuration = 1.5f;
+        public float parryWindowFloorScaling = 0.02f;
+        public float parryWindowMinDuration = 0.3f;
     }
 }

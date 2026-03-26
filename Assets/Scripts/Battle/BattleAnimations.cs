@@ -73,6 +73,59 @@ namespace CardBattle
                 onComplete?.Invoke();
         }
 
+        /// <summary>
+        /// Dash forward only (fast phase). Call DashBack() after the parry window resolves.
+        /// onArrived fires when the attacker reaches the dash position.
+        /// </summary>
+        public void PlayDashForward(Transform attacker, Transform target, System.Action onArrived = null)
+        {
+            if (attacker != null && target != null)
+                StartCoroutine(DashForwardRoutine(attacker, target, onArrived));
+            else
+                onArrived?.Invoke();
+        }
+
+        /// <summary>
+        /// Two-phase dash: fast first 70%, then slow remaining 30% over parryWindowDuration.
+        /// The slow phase is when the parry window is active. onSlowPhaseStart fires when
+        /// the slow phase begins (open parry window here). onComplete fires at the end.
+        /// </summary>
+        private Coroutine _activeDashRoutine;
+
+        public void PlayDashWithSlowdown(Transform attacker, Transform target, float parryWindowDuration,
+            System.Action onSlowPhaseStart = null, System.Action onComplete = null)
+        {
+            if (attacker != null && target != null)
+                _activeDashRoutine = StartCoroutine(DashWithSlowdownRoutine(attacker, target, parryWindowDuration, onSlowPhaseStart, onComplete));
+            else
+            {
+                onSlowPhaseStart?.Invoke();
+                onComplete?.Invoke();
+            }
+        }
+
+        /// <summary>Stop the active dash coroutine (call when parry interrupts the dash).</summary>
+        public void StopActiveDash()
+        {
+            if (_activeDashRoutine != null)
+            {
+                StopCoroutine(_activeDashRoutine);
+                _activeDashRoutine = null;
+            }
+        }
+
+        /// <summary>
+        /// Dash back from current position to original position.
+        /// Call after parry window resolves.
+        /// </summary>
+        public void PlayDashBack(Transform attacker, Vector3 originalPos, System.Action onComplete = null)
+        {
+            if (attacker != null)
+                StartCoroutine(DashBackRoutine(attacker, originalPos, onComplete));
+            else
+                onComplete?.Invoke();
+        }
+
         /// <summary>Target tips backward and sinks into the ground.</summary>
         public void PlayDeath(Transform target, System.Action onComplete = null)
         {
@@ -107,6 +160,13 @@ namespace CardBattle
             if (_ragePulseRoutine != null)
                 StopCoroutine(_ragePulseRoutine);
             _ragePulseRoutine = StartCoroutine(RagePulseRoutine());
+        }
+
+        /// <summary>Quick green flash on successful parry.</summary>
+        public void PlayParryFlash()
+        {
+            if (screenOverlay == null) return;
+            StartCoroutine(ParryFlashRoutine());
         }
 
         /// <summary>Start the subtle screen edge glow while Overflow > 0.</summary>
@@ -183,6 +243,89 @@ namespace CardBattle
             }
 
             attacker.localPosition = startPos;
+
+            onComplete?.Invoke();
+        }
+
+        private IEnumerator DashForwardRoutine(Transform attacker, Transform target, System.Action onArrived)
+        {
+            Vector3 startPos = attacker.localPosition;
+            Vector3 worldDir = (target.position - attacker.position).normalized;
+            Vector3 localDashOffset = attacker.parent != null
+                ? attacker.parent.InverseTransformDirection(worldDir * dashDistance)
+                : worldDir * dashDistance;
+            Vector3 dashPos = startPos + localDashOffset;
+
+            // Fast dash forward (ease out)
+            float elapsed = 0f;
+            float duration = dashDuration * 0.5f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                t = 1f - (1f - t) * (1f - t); // ease out
+                attacker.localPosition = Vector3.Lerp(startPos, dashPos, t);
+                yield return null;
+            }
+            attacker.localPosition = dashPos;
+
+            onArrived?.Invoke();
+        }
+
+        private IEnumerator DashWithSlowdownRoutine(Transform attacker, Transform target, float parryWindowDuration,
+            System.Action onSlowPhaseStart, System.Action onComplete)
+        {
+            Vector3 startPos = attacker.localPosition;
+            Vector3 worldDir = (target.position - attacker.position).normalized;
+            Vector3 localDashOffset = attacker.parent != null
+                ? attacker.parent.InverseTransformDirection(worldDir * dashDistance)
+                : worldDir * dashDistance;
+            Vector3 dashPos = startPos + localDashOffset;
+
+            // Phase 1: Fast dash to 70% of the way (ease out)
+            float fastDuration = dashDuration * 0.5f;
+            float elapsed = 0f;
+            Vector3 midPos = Vector3.Lerp(startPos, dashPos, 0.7f);
+
+            while (elapsed < fastDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / fastDuration);
+                t = 1f - (1f - t) * (1f - t); // ease out
+                attacker.localPosition = Vector3.Lerp(startPos, midPos, t);
+                yield return null;
+            }
+
+            // Phase 2: Slow crawl the remaining 30% over the parry window duration
+            onSlowPhaseStart?.Invoke();
+
+            float slowDuration = Mathf.Max(parryWindowDuration, 0.3f);
+            elapsed = 0f;
+            while (elapsed < slowDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / slowDuration);
+                attacker.localPosition = Vector3.Lerp(midPos, dashPos, t);
+                yield return null;
+            }
+            attacker.localPosition = dashPos;
+
+            onComplete?.Invoke();
+        }
+
+        private IEnumerator DashBackRoutine(Transform attacker, Vector3 originalPos, System.Action onComplete)
+        {
+            Vector3 currentPos = attacker.localPosition;
+            float elapsed = 0f;
+            float duration = dashDuration * 0.5f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                attacker.localPosition = Vector3.Lerp(currentPos, originalPos, t);
+                yield return null;
+            }
+            attacker.localPosition = originalPos;
 
             onComplete?.Invoke();
         }
@@ -273,6 +416,27 @@ namespace CardBattle
 
             screenOverlay.color = Color.clear;
             _ragePulseRoutine = null;
+        }
+
+        private IEnumerator ParryFlashRoutine()
+        {
+            screenOverlay.gameObject.SetActive(true);
+            Color parryColor = new Color(0.2f, 1f, 0.3f, 0.35f);
+            screenOverlay.color = parryColor;
+
+            float elapsed = 0f;
+            float duration = 0.25f;
+            Color endColor = new Color(parryColor.r, parryColor.g, parryColor.b, 0f);
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                screenOverlay.color = Color.Lerp(parryColor, endColor, t);
+                yield return null;
+            }
+
+            screenOverlay.color = Color.clear;
         }
 
         private IEnumerator OverflowGlowRoutine()

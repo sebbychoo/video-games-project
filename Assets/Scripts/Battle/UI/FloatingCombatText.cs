@@ -37,6 +37,12 @@ namespace CardBattle
         [SerializeField] float statusDriftUp = 70f;
         [SerializeField] float statusDuration = 1f;
 
+        [Header("Parry Text")]
+        [SerializeField] Color parryColor = new Color(0f, 0.9f, 1f);
+        [SerializeField] float parryDriftUp = 90f;
+        [SerializeField] float parryDuration = 1f;
+        [SerializeField] float parryFontSize = 36f;
+
         [Header("Heal Text")]
         [SerializeField] Color healColor = Color.green;
         [SerializeField] float healDriftUp = 80f;
@@ -69,6 +75,8 @@ namespace CardBattle
                 BattleEventBus.Instance.OnDamageDealt += OnDamage;
                 BattleEventBus.Instance.OnBlockChanged += OnBlock;
                 BattleEventBus.Instance.OnStatusEffectApplied += OnStatusApplied;
+                BattleEventBus.Instance.OnParry += OnParry;
+                BattleEventBus.Instance.OnCardPlayed += OnCardPlayed;
             }
         }
 
@@ -79,6 +87,8 @@ namespace CardBattle
                 BattleEventBus.Instance.OnDamageDealt -= OnDamage;
                 BattleEventBus.Instance.OnBlockChanged -= OnBlock;
                 BattleEventBus.Instance.OnStatusEffectApplied -= OnStatusApplied;
+                BattleEventBus.Instance.OnParry -= OnParry;
+                BattleEventBus.Instance.OnCardPlayed -= OnCardPlayed;
             }
         }
 
@@ -100,6 +110,22 @@ namespace CardBattle
         {
             if (e.Target != null && !e.IsRemoval)
                 SpawnStatusText(e.EffectName, e.Target.transform.position);
+        }
+
+        private void OnParry(ParryEvent e)
+        {
+            if (e.Success && e.Player != null)
+                SpawnParryText(e.Player.transform.position);
+        }
+
+        private void OnCardPlayed(CardPlayedEvent e)
+        {
+            if (e.Card != null && e.Card.overtimeCost > 0)
+            {
+                // Show OT cost near the OT meter; use source position as fallback
+                Vector3 pos = e.Source != null ? e.Source.transform.position : Vector3.zero;
+                SpawnOTCostText(e.Card.overtimeCost, pos);
+            }
         }
 
         // ── Public API ──────────────────────────────────────────────────────
@@ -134,9 +160,15 @@ namespace CardBattle
             SpawnText($"+{amount}", healColor, worldPos, Vector2.up * healDriftUp, healDuration);
         }
 
+        /// <summary>Show floating "PARRY" text near the player character on successful parry.</summary>
+        public void SpawnParryText(Vector3 worldPos)
+        {
+            SpawnText("PARRY", parryColor, worldPos, Vector2.up * parryDriftUp, parryDuration, parryFontSize);
+        }
+
         // ── Core spawn ──────────────────────────────────────────────────────
 
-        private void SpawnText(string text, Color color, Vector3 worldPos, Vector2 drift, float duration)
+        private void SpawnText(string text, Color color, Vector3 worldPos, Vector2 drift, float duration, float fontSizeOverride = 0f)
         {
             if (textPrefab == null) return;
 
@@ -156,7 +188,7 @@ namespace CardBattle
 
             tmp.text = text;
             tmp.color = color;
-            tmp.fontSize = fontSize;
+            tmp.fontSize = fontSizeOverride > 0f ? fontSizeOverride : fontSize;
 
             // Convert world position to canvas position
             Vector2 screenPos = WorldToScreenPos(worldPos);

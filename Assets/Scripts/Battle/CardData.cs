@@ -1,9 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace CardBattle
 {
     public enum CardType { Attack, Defense, Effect, Utility, Special }
-    public enum CardRarity { Common, Rare, Epic, Legendary, Unknown }
+    public enum CardRarity { Common, Rare, Legendary, Unknown }
     public enum TargetMode { SingleEnemy, AllEnemies, Self, NoTarget }
     public enum UtilityEffectType { None, Draw, Restore, Retrieve, Reorder, Heal }
 
@@ -17,6 +18,7 @@ namespace CardBattle
         public CardRarity cardRarity;
         public int effectValue;
         public int blockValue;
+        public List<string> parryMatchTags; // Defense cards: defines which enemy attack types this card can parry
         public TargetMode targetMode;
         public Sprite cardSprite;
 

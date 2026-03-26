@@ -10,18 +10,19 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
   - [x] 1.1 Update CardData ScriptableObject and enums
     - Rename `energyCost` to `overtimeCost` in `Assets/Scripts/Battle/CardData.cs`
     - Replace `CardType` enum values (Attack/Skill/Power → Attack/Defense/Effect/Utility/Special)
-    - Add `CardRarity` enum (Common, Rare, Epic, Legendary, Unknown)
+    - Add `CardRarity` enum (Common, Rare, Legendary, Unknown)
     - Add `TargetMode` enum (SingleEnemy, AllEnemies, Self, NoTarget)
     - Add `UtilityEffectType` enum (None, Draw, Restore, Retrieve, Reorder, Heal)
-    - Add new fields: `cardRarity`, `effectValue`, `blockValue`, `targetMode`, `cardSprite`, `statusEffectId`, `statusDuration`, `specialCardId`, `utilityEffectType`, `description`
+    - Add new fields: `cardRarity`, `effectValue`, `parryMatchTags` (List<string>), `targetMode`, `cardSprite`, `statusEffectId`, `statusDuration`, `specialCardId`, `utilityEffectType`, `description`
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.6, 4.7, 4.8_
 
   - [x] 1.2 Update EnemyAction struct and add EnemyCombatantData ScriptableObject
     - Extend `EnemyActionType` enum in `Assets/Scripts/Battle/EnemyAction.cs` with Defend, Buff, Special
     - Add `EnemyBuffType` enum (None, DamageUp, DamageShield, Regen)
-    - Add `EnemyActionCondition` enum (None, HPBelow50, HPBelow25, PlayerHasBlock)
+    - Add `EnemyActionCondition` enum (None, HPBelow50, HPBelow25, PlayerLowHP)
     - Add `buffType`, `buffDuration`, `condition` fields to `EnemyAction` struct
-    - Create `EnemyCombatantData` ScriptableObject with enemyName, maxHP, hoursReward, variant, sprite, attackPattern, isBoss, dialogue fields
+    - Add `IntentColor` enum (White, Yellow, Red, Unparryable) and `intentColor`, `parryMatchTags` fields to `EnemyAction` struct
+    - Create `EnemyCombatantData` ScriptableObject with enemyName, maxHP, hoursReward, variant, sprite, attackPattern, isBoss, enemyParryChance, baseParryWindowDuration, dialogue fields
     - Add `EnemyVariant` enum (Coworker, Creature, Boss)
     - _Requirements: 26.1, 26.3, 26.4, 26.5, 25.7_
 
@@ -50,14 +51,14 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - _Requirements: 1.1, 1.2, 1.5, 1.6_
 
   - [x] 1.6 Extend BattleEventBus with new event types
-    - Add `StatusEffectEvent` (applied/removed), `OverflowEvent`, `BlockEvent`, `TurnPhaseChangedEvent`, `RageBurstEvent` to `Assets/Scripts/Battle/BattleEventBus.cs`
+    - Add `StatusEffectEvent` (applied/removed), `OverflowEvent`, `ParryEvent`, `TurnPhaseChangedEvent`, `RageBurstEvent` to `Assets/Scripts/Battle/BattleEventBus.cs`
     - Keep existing `CardPlayedEvent` and `DamageEvent`
     - _Requirements: 5.6, 9.4, 10.8, 10.9_
 
 - [x] 2. Checkpoint — Ensure all data models compile and existing tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 3. Core battle subsystems — OvertimeMeter, OverflowBuffer, BlockSystem
+- [x] 3. Core battle subsystems — OvertimeMeter, OverflowBuffer, ParrySystem
   - [x] 3.1 Implement OvertimeMeter component
     - Create `Assets/Scripts/Battle/OvertimeMeter.cs` with `Current`, `Max`, `Spend(int)`, `Regenerate()`, `GainFromDamage(int hpLost, int maxHP)` methods
     - Initialize at full capacity (10) at encounter start
@@ -95,20 +96,26 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - **Property 9: Rage Burst Consumption on Attack Only** — Overflow consumed only for Attack cards, unchanged for other types
     - **Validates: Requirements 3.2, 3.4, 3.5**
 
-  - [x] 3.6 Implement BlockSystem component
-    - Create `Assets/Scripts/Battle/BlockSystem.cs` with `AddBlock(int, target)`, `AbsorbDamage(int, target) → int remainingDmg`, `Reset(target)`, `GetBlock(target)`
-    - Track player Block and per-enemy Block
-    - Block absorbs damage before HP; reset player Block at turn start; reset enemy Block at start of that enemy's turn in Enemy_Phase (even if stunned)
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+  - [x] 3.6 Implement ParrySystem component
+    - Create `Assets/Scripts/Battle/ParrySystem.cs` with `StartParryWindow(EnemyAction, EnemyCombatant)`, `TryParry(CardInstance) → bool`, `IsParryWindowActive`, `GetMatchingCards(Hand) → List<CardInstance>` methods
+    - During Enemy_Phase, when an enemy attacks: play attack animation, slow down near end, open Parry_Window
+    - Highlight matching Defense cards in the player's Hand based on Parry_Match tags and Intent_Color
+    - If player drags matching Defense card onto character during window: cancel damage, move card to Discard_Pile at no OT cost
+    - If window expires without parry: deal full damage to player
+    - Support configurable Parry_Window duration per EnemyCombatant, scaling with difficulty/floor
+    - Support separate Parry_Window per individual enemy attack in multi-enemy encounters
+    - Skip Parry_Window for attacks with IntentColor.Unparryable
+    - Evaluate Enemy_Parry_Chance when player plays Attack cards (enemy parries cancel player attack damage)
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12_
 
-  - [x] 3.7 Write property tests for BlockSystem (Properties 10, 11, 12)
-    - Create `Assets/Tests/EditMode/Battle/BlockSystemPropertyTests.cs`
-    - **Property 10: Block Absorbs Damage Before HP** — new Block = max(0, b-d), new HP = hp - max(0, d-b)
-    - **Validates: Requirements 6.1, 6.2, 6.3, 6.5, 9.2**
-    - **Property 11: Block Resets Each Turn** — Block resets to 0 at new player turn
+  - [x] 3.7 Write property tests for ParrySystem (Properties 10, 11, 12)
+    - Create `Assets/Tests/EditMode/Battle/ParrySystemPropertyTests.cs`
+    - **Property 10: Parry Cancels Damage During Parry Window** — Matching Defense card during Parry_Window cancels damage, card goes to discard at no OT cost
+    - **Validates: Requirements 6.1, 6.2, 6.3, 9.2**
+    - **Property 11: Missed Parry Deals Full Damage** — Expired Parry_Window without matching card deals full attack damage
     - **Validates: Requirements 6.4**
-    - **Property 12: Defense Card Adds Block** — Playing Defense card sets Block to b + blockValue
-    - **Validates: Requirements 5.3**
+    - **Property 12: Proactive Defense Card Costs Overtime** — Defense card played during Play_Phase deducts OT cost, card goes to discard
+    - **Validates: Requirements 5.3, 6.5**
 
 - [x] 4. Status effect system
   - [x] 4.1 Implement StatusEffectSystem component
@@ -177,7 +184,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
   - [x] 7.1 Implement CardEffectResolver and ISpecialCardEffect
     - Create `Assets/Scripts/Battle/CardEffectResolver.cs` that switches on CardType and dispatches to type-specific handlers
     - Attack: deal effectValue damage (single or all enemies), apply Rage Burst bonus if overflow > 0
-    - Defense: add blockValue to target's Block (supports targeting any entity including enemies per Req 4.5)
+    - Defense: move card to Discard_Pile, deduct OT cost (proactive parry during Play_Phase — card is prepared but may not match next enemy attack)
     - Effect: apply StatusEffect to target
     - Utility: dispatch by UtilityEffectType (Draw, Restore, Retrieve, Reorder, Heal)
     - Special: lookup in SpecialCardRegistry and execute
@@ -198,11 +205,11 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
 
   - [x] 7.3 Implement EnemyCombatant component
     - Create `Assets/Scripts/Battle/EnemyCombatant.cs` MonoBehaviour wrapping EnemyCombatantData
-    - Track HP (reuse Health internally), attack pattern index, status effects, Block, intent
+    - Track HP (reuse Health internally), attack pattern index, status effects, intent, enemyParryChance
     - `ExecuteAction()`: execute current pattern action, advance index (cycle with modulo)
-    - `TakeDamage(int)`: apply Block absorption then HP reduction, apply Bleed bonus
+    - `TakeDamage(int)`: evaluate Enemy_Parry_Chance, if parry fails apply HP reduction, apply Bleed bonus
     - `IsAlive` property, death handling
-    - Support conditional action patterns (HP thresholds, player has Block)
+    - Support conditional action patterns (HP thresholds, player low HP)
     - _Requirements: 8.1, 8.6, 8.7, 8.8, 26.1, 26.2, 26.3, 26.4, 26.5_
 
   - [x] 7.4 Write property tests for enemy combat (Properties 14, 15, 21)
@@ -221,20 +228,20 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
 
 - [x] 8. BattleManager orchestration and turn loop
   - [x] 8.1 Refactor BattleManager to orchestrate subsystems
-    - Modify `Assets/Scripts/Battle/BattleManager.cs` to delegate to TurnPhaseController, OvertimeMeter, OverflowBuffer, BlockSystem, StatusEffectSystem, CardEffectResolver, DeckManager, HandManager
-    - `StartEncounter(EncounterData)`: initialize all subsystems, spawn EnemyCombatants, set OT to full, Block to 0, overflow to 0, determine enemy intents
+    - Modify `Assets/Scripts/Battle/BattleManager.cs` to delegate to TurnPhaseController, OvertimeMeter, OverflowBuffer, ParrySystem, StatusEffectSystem, CardEffectResolver, DeckManager, HandManager
+    - `StartEncounter(EncounterData)`: initialize all subsystems, spawn EnemyCombatants, set OT to full, overflow to 0, determine enemy intents
     - `TryPlayCard(CardInstance, GameObject)`: validate OT cost, resolve card effect, handle Rage Burst on Attack, move card to discard
-    - `EndTurn()`: discard remaining hand, execute enemy phase sequentially with delays, tick status effects, reset Block, advance turn, regen OT (turn 2+), draw new hand
+    - `EndTurn()`: discard remaining hand, execute enemy phase sequentially with delays (each enemy attack triggers Parry_Window), tick status effects, advance turn, regen OT (turn 2+), draw new hand
     - Handle player stun (skip Play_Phase)
     - Handle enemy stun (skip action), enemy death (remove from encounter)
     - Victory condition: all enemies dead; Defeat condition: player HP 0
     - Query Tool inventory at encounter start for passive modifiers
-    - _Requirements: 1.1–1.8, 2.1–2.4, 3.1–3.6, 5.1–5.6, 6.1–6.5, 8.1–8.8, 9.1–9.5, 10.1–10.11, 15.1–15.5_
+    - _Requirements: 1.1–1.8, 2.1–2.4, 3.1–3.6, 5.1–5.6, 6.1–6.12, 8.1–8.8, 9.1–9.5, 10.1–10.11, 15.1–15.5_
 
   - [x] 8.2 Implement enemy turn execution with sequential actions and animations
     - Execute each living enemy's action in sequence with visible delay
-    - Enemy attack: dash animation toward player, hit shake, reduce player Block then HP, raise DamageEvent
-    - Enemy defend: gain Block
+    - Enemy attack: dash animation toward player, slow down near end for Parry_Window, if not parried: hit shake + reduce player HP, raise DamageEvent
+    - Enemy defend: gain temporary damage reduction or defensive buff
     - Enemy buff: apply temporary modifier
     - Enemy status: apply StatusEffect to player
     - Check player defeat after each enemy action
@@ -263,7 +270,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
 
   - [x] 10.2 Implement CardEffectPreview tooltip on hover
     - Create `Assets/Scripts/Battle/UI/CardEffectPreview.cs` tooltip component
-    - Show calculated effective values on card hover (damage after Rage Burst + Tool modifiers, block after Tool modifiers, draw count, etc.)
+    - Show calculated effective values on card hover (damage after Rage Burst + Tool modifiers, parry match tags for Defense cards, draw count, etc.)
     - Reflect source-side modifiers only (no target-specific effects like Bleed)
     - _Requirements: 12.2_
 
@@ -286,7 +293,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
   - [x] 10.5 Implement FloatingCombatText system
     - Create `Assets/Scripts/Battle/UI/FloatingCombatText.cs`
     - Floating damage numbers (drift up, fade out) at target position
-    - Floating block numbers near Block display
+    - Floating parry text ("PARRY") near player character on successful parry
     - Floating OT cost numbers (drift down, fade out) near OT meter
     - Floating status effect name labels at target position
     - Floating heal numbers in green at target position
@@ -308,10 +315,13 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Subscribe to OvertimeMeter and OverflowBuffer changes
     - _Requirements: 13.2, 13.3_
 
-  - [x] 11.2 Implement BlockDisplay UI
-    - Create `Assets/Scripts/Battle/UI/BlockDisplay.cs`
-    - Show player Block value when > 0, hide when 0
-    - _Requirements: 13.4_
+  - [x] 11.2 Implement ParryWindowUI display
+    - Create `Assets/Scripts/Battle/UI/ParryWindowUI.cs`
+    - Show active parry window timer during Enemy_Phase attacks
+    - Highlight matching Defense cards in the player's hand during Parry_Window
+    - Display intent color (White/Yellow/Red) for current attack's parry difficulty
+    - Hide when no Parry_Window is active
+    - _Requirements: 6.1, 6.2, 6.8_
 
   - [x] 11.3 Implement DeckCounterUI with pile inspection
     - Create `Assets/Scripts/Battle/UI/DeckCounterUI.cs`
@@ -334,7 +344,6 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
   - [x] 11.6 Update PlayerHPStack and EnemyHPBar
     - Modify existing `PlayerHPStack` to display current/max HP from BattleManager
     - Modify existing `EnemyHPBar` to work with EnemyCombatant component, support multiple enemies
-    - Display enemy Block when > 0
     - _Requirements: 13.1, 13.5_
 
 - [x] 12. Checkpoint — Ensure battle UI is functional and all tests pass
@@ -399,7 +408,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
 
   - [ ] 15.2 Implement Tool modifier system in BattleManager
     - Query active Tool inventory at encounter start
-    - Apply OT regen modifiers, Block bonus modifiers, hand size modifiers, damage bonus modifiers
+    - Apply OT regen modifiers, Parry_Window duration modifiers, hand size modifiers, damage bonus modifiers
     - Multiple tools with same modifier type stack additively
     - Reflect modified values in UI
     - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
@@ -424,7 +433,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Card count by size: Small [1,3], Big [3,5], Huge [5,7]
     - Card rarity by floor-based probability tables
     - Shake animation before opening
-    - Rarity reveal sequence: grey → blue → orange → red → black (click-to-advance, animation per step)
+    - Rarity reveal sequence: grey → whitish yellow → medium red (with dust particles) → black with glowing aura (click-to-advance, animation per step)
     - Keep/Leave buttons after full reveal
     - Revisit: skip shake, show true rarity colors immediately
     - Walk-away support: unrevealed cards persist
@@ -438,8 +447,8 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
   - [ ] 17.3 Implement BathroomShop
     - Create `Assets/Scripts/Exploration/BathroomShop.cs`
     - Display cards (3–5) and Tools (0–2) with Hours prices
-    - Card pricing by rarity: Common 10, Rare 25, Epic 50, Legendary 100, Unknown 75
-    - Tool pricing by rarity: Common 30, Rare 60, Epic 120, Legendary 200
+    - Card pricing by rarity: Common 10, Rare 25, Legendary 100, Unknown 150
+    - Tool pricing by rarity: Common 30, Rare 60, Legendary 200 (Unknown tools not available in shops)
     - Purchase: deduct Hours, add card/tool to inventory
     - Reject purchase if insufficient Hours
     - Toilet card removal: display deck, select card, deduct escalating cost (25 + 10 per previous removal)
@@ -568,7 +577,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
   - [ ] 21.2 Implement hub upgrade effects
     - Computer: +1 damage to Technology-themed cards per level
     - Coffee Machine: +OT regen per turn
-    - Desk Chair: +1 block per Defense card per level
+    - Desk Chair: +parry window duration per level
     - Filing Cabinet: +hand size (early levels), +max deck size (later levels)
     - Plant: +base HP (early levels), +passive heal per floor (later levels, triggers on floor exit)
     - Whiteboard: unlock/upgrade floor minimap
@@ -611,7 +620,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Floor 5 only, exactly once per run
     - Non-hostile NPC, special turn-based encounter using player's normal deck/hand/OT
     - Worker has small HP pool (10–15), deals fixed self-damage each turn after player acts
-    - Shield resolution: Defense card targeting worker → Block absorbs self-damage → success → specific Tool reward
+    - Shield resolution: Defense card targeting worker during worker's self-harm Parry_Window → parry cancels self-damage → success → specific Tool reward
     - Empathy resolution: player self-damages before worker acts → worker walks away → success → different Tool reward
     - Failure: worker HP reaches 0 → no reward, narrative consequence
     - Handle with highest care (emotional core)
@@ -664,8 +673,8 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
 
 - [ ] 26. Integration wiring and final assembly
   - [ ] 26.1 Wire BattleManager to all subsystems and UI
-    - Connect BattleManager → TurnPhaseController, OvertimeMeter, OverflowBuffer, BlockSystem, StatusEffectSystem, CardEffectResolver, DeckManager, HandManager, EnemyCombatant instances
-    - Connect all UI components (OvertimeMeterUI, BlockDisplay, DeckCounterUI, EndTurnButton, TurnCounterUI, FloatingCombatText, StatusEffectIconStack, CardEffectPreview, EnemyIntentDisplay, VictoryScreen) to BattleEventBus subscriptions
+    - Connect BattleManager → TurnPhaseController, OvertimeMeter, OverflowBuffer, ParrySystem, StatusEffectSystem, CardEffectResolver, DeckManager, HandManager, EnemyCombatant instances
+    - Connect all UI components (OvertimeMeterUI, ParryWindowUI, DeckCounterUI, EndTurnButton, TurnCounterUI, FloatingCombatText, StatusEffectIconStack, CardEffectPreview, EnemyIntentDisplay, VictoryScreen) to BattleEventBus subscriptions
     - Connect SaveManager to SceneLoader for battle transitions
     - Connect RunState to BathroomShop, WorkBox, BreakRoomTrade for inventory/deck mutations
     - Connect MetaState to HubOffice for upgrade purchases
@@ -795,4 +804,4 @@ These can remain in the global namespace but will need `using CardBattle;` impor
 
 ### BattleEventBus.cs — Already Has StatusEffectEvent (Task 1.6)
 
-`Assets/Scripts/Battle/BattleEventBus.cs` already defines `StatusEffectEvent` struct and `OnStatusEffectApplied`/`OnStatusEffectRemoved` events. It also has `EntityTransformedEvent`. Task 1.6 should add the missing event types (OverflowEvent, BlockEvent, TurnPhaseChangedEvent, RageBurstEvent) without duplicating existing ones.
+`Assets/Scripts/Battle/BattleEventBus.cs` already defines `StatusEffectEvent` struct and `OnStatusEffectApplied`/`OnStatusEffectRemoved` events. It also has `EntityTransformedEvent`. Task 1.6 should add the missing event types (OverflowEvent, ParryEvent, TurnPhaseChangedEvent, RageBurstEvent) without duplicating existing ones.

@@ -53,7 +53,14 @@ namespace CardBattle
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (BattleManager.Instance == null) return;
-            if (BattleManager.Instance.CurrentTurn != TurnPhase.Play) return;
+
+            bool isPlayPhase = BattleManager.Instance.CurrentTurn == TurnPhase.Play;
+            bool isParryWindow = BattleManager.Instance.ParrySystem != null
+                && BattleManager.Instance.ParrySystem.IsParryWindowActive
+                && Card != null && Card.Data != null
+                && Card.Data.cardType == CardType.Defense;
+
+            if (!isPlayPhase && !isParryWindow) return;
 
             // If a different card is selected, start the switch timer
             if (CardTargetingManager.Instance != null
@@ -93,13 +100,21 @@ namespace CardBattle
             _waitingToSwitch = false;
 
             if (BattleManager.Instance == null) return;
-            if (BattleManager.Instance.CurrentTurn != TurnPhase.Play) return;
+
+            bool isPlayPhase = BattleManager.Instance.CurrentTurn == TurnPhase.Play;
+            bool isParryWindow = BattleManager.Instance.ParrySystem != null
+                && BattleManager.Instance.ParrySystem.IsParryWindowActive
+                && Card != null && Card.Data != null
+                && Card.Data.cardType == CardType.Defense;
+
+            if (!isPlayPhase && !isParryWindow) return;
 
             // If a card is selected, ignore hover exit
             if (CardTargetingManager.Instance != null
                 && CardTargetingManager.Instance.HasSelectedCard)
                 return;
 
+            if (Card == null) return;
             Card.IsHovered = false;
             CardTargetingManager.Instance?.ClearHoveredCard(Card);
 
@@ -114,6 +129,18 @@ namespace CardBattle
         public void OnPointerClick(PointerEventData eventData)
         {
             if (BattleManager.Instance == null) return;
+
+            // During parry window, clicking a Defense card triggers parry
+            if (BattleManager.Instance.ParrySystem != null
+                && BattleManager.Instance.ParrySystem.IsParryWindowActive
+                && Card != null && Card.Data != null
+                && Card.Data.cardType == CardType.Defense
+                && eventData.button == PointerEventData.InputButton.Left)
+            {
+                BattleManager.Instance.TryParryWithCard(Card);
+                return;
+            }
+
             if (BattleManager.Instance.CurrentTurn != TurnPhase.Play) return;
 
             // Right click cancels selection

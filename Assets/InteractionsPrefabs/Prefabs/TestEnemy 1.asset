@@ -23,7 +23,14 @@ MonoBehaviour:
     statusEffectId: 
     statusDuration: 0
     buffType: 1
-    buffDuration: 1
+    buffDuration: 2
+    condition: 0
+  - actionType: 3
+    value: 5
+    statusEffectId: 
+    statusDuration: 0
+    buffType: 1
+    buffDuration: 5
     condition: 0
   isBoss: 0
   preFightDialogue: hey jew

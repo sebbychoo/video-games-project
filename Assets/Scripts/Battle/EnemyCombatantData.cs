@@ -15,6 +15,9 @@ namespace CardBattle
         public Sprite sprite;
         public List<EnemyAction> attackPattern;
         public bool isBoss;
+        [Range(0f, 1f)]
+        public float enemyParryChance;
+        public float baseParryWindowDuration;
         [TextArea] public string preFightDialogue;
         [TextArea] public string postFightDialogue;
     }

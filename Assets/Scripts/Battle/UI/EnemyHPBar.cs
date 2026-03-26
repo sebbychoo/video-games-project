@@ -31,6 +31,12 @@ namespace CardBattle
         /// <summary>The GameObject this HP bar is tracking (for event filtering).</summary>
         private GameObject _trackedTarget;
 
+        /// <summary>The EnemyCombatant this HP bar is tracking, if any.</summary>
+        private EnemyCombatant _trackedEnemy;
+
+        /// <summary>The EnemyCombatant this HP bar is currently tracking.</summary>
+        public EnemyCombatant TrackedEnemy => _trackedEnemy;
+
         // ── Backward-compatible initialization ────────────────────────────────
 
         public void Initialize(int currentHP, int maxHP)
@@ -51,8 +57,29 @@ namespace CardBattle
         /// </summary>
         public void Initialize(EnemyCombatant enemy)
         {
+            _trackedEnemy = enemy;
             _trackedTarget = enemy != null ? enemy.gameObject : null;
             Initialize(enemy.CurrentHP, enemy.MaxHP);
+        }
+
+        /// <summary>
+        /// Reassign this HP bar to track a different EnemyCombatant.
+        /// Useful for screen-space bars that switch between enemies.
+        /// </summary>
+        public void SetEnemy(EnemyCombatant enemy)
+        {
+            _trackedEnemy = enemy;
+            _trackedTarget = enemy != null ? enemy.gameObject : null;
+
+            if (enemy != null && enemy.IsAlive)
+            {
+                gameObject.SetActive(true);
+                UpdateHP(enemy.CurrentHP, enemy.MaxHP);
+            }
+            else
+            {
+                gameObject.SetActive(enemy != null);
+            }
         }
 
         // ── Event subscriptions ───────────────────────────────────────────────
@@ -63,6 +90,7 @@ namespace CardBattle
             {
                 BattleEventBus.Instance.OnBlockChanged += HandleBlockChanged;
                 BattleEventBus.Instance.OnDamageDealt += HandleDamageDealt;
+                BattleEventBus.Instance.OnStatusEffectApplied += HandleStatusEffectApplied;
             }
         }
 
@@ -72,6 +100,7 @@ namespace CardBattle
             {
                 BattleEventBus.Instance.OnBlockChanged -= HandleBlockChanged;
                 BattleEventBus.Instance.OnDamageDealt -= HandleDamageDealt;
+                BattleEventBus.Instance.OnStatusEffectApplied -= HandleStatusEffectApplied;
             }
         }
 
@@ -86,7 +115,23 @@ namespace CardBattle
             if (_trackedTarget == null || e.Target != _trackedTarget) return;
 
             // Auto-refresh HP from the EnemyCombatant component
-            EnemyCombatant ec = _trackedTarget.GetComponent<EnemyCombatant>();
+            EnemyCombatant ec = _trackedEnemy != null ? _trackedEnemy : _trackedTarget.GetComponent<EnemyCombatant>();
+            if (ec != null)
+            {
+                UpdateHP(ec.CurrentHP, ec.MaxHP);
+
+                // Auto-hide when tracked enemy dies
+                if (!ec.IsAlive)
+                    gameObject.SetActive(false);
+            }
+        }
+
+        private void HandleStatusEffectApplied(StatusEffectEvent e)
+        {
+            if (_trackedTarget == null || e.Target != _trackedTarget) return;
+
+            // Refresh HP after status effect damage (e.g., Burn ticks)
+            EnemyCombatant ec = _trackedEnemy != null ? _trackedEnemy : _trackedTarget.GetComponent<EnemyCombatant>();
             if (ec != null)
                 UpdateHP(ec.CurrentHP, ec.MaxHP);
         }

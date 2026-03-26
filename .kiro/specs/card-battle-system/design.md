@@ -4,7 +4,7 @@
 
 This design extends the existing `CardBattle` namespace in the Overtime Unity project to implement the full GDD-defined combat system. The current codebase provides a working foundation: a basic turn loop (`BattleManager`), card rendering with arc layout (`CardLayoutController`, `CardAnimator`), hover/select/targeting interactions (`CardInteractionHandler`, `CardTargetingManager`), a deck/discard cycle (`DeckManager`), single-enemy combat with `Health`, and scene transitions (`SceneLoader`).
 
-The design replaces the generic "energy" integer with the Overtime Meter (capacity 10, regen 2/turn from turn 2), adds the Overflow Buffer and Rage Burst comeback mechanic, expands `CardData` to support five card types (Attack/Defense/Effect/Utility/Special) with four target modes and five rarity tiers, introduces multi-enemy encounters (1–4 enemies), status effects (Burn/Stun/Bleed), Block as a damage-absorbing shield, enemy intent display, and enemy attack pattern cycling. Beyond combat, the design covers first-person exploration hands, work box chests with rarity reveal, bathroom shops, break room NPC trades, procedural floor generation, run state persistence, hub office upgrades, narrative events, and all menu/UI screens.
+The design replaces the generic "energy" integer with the Overtime Meter (capacity 10, regen 2/turn from turn 2), adds the Overflow Buffer and Rage Burst comeback mechanic, expands `CardData` to support five card types (Attack/Defense/Effect/Utility/Special) with four target modes and four rarity tiers, introduces multi-enemy encounters (1–4 enemies), status effects (Burn/Stun/Bleed), the Parry system as a skill-based active defense mechanic (replacing the passive Block system), enemy intent display with parry difficulty colors, and enemy attack pattern cycling. Beyond combat, the design covers first-person exploration hands, work box chests with rarity reveal, bathroom shops, break room NPC trades, procedural floor generation, run state persistence, hub office upgrades, narrative events, and all menu/UI screens.
 
 The system targets Unity 2022+ with URP, C# scripting, and TextMeshPro for UI text.
 
@@ -25,7 +25,7 @@ graph TD
         BM[BattleManager]
         OM[OvertimeMeter]
         OB[OverflowBuffer]
-        BLK[BlockSystem]
+        PS[ParrySystem]
         SE[StatusEffectSystem]
         DM[DeckManager]
         HM[HandManager]
@@ -75,7 +75,7 @@ graph TD
 
     BM --> OM
     BM --> OB
-    BM --> BLK
+    BM --> PS
     BM --> SE
     BM --> DM
     BM --> HM
@@ -105,13 +105,13 @@ graph TD
 
 2. **OvertimeMeter as a separate component**: Rather than tracking energy as a plain int on `BattleManager`, the Overtime Meter is its own `OvertimeMeter` MonoBehaviour with `Spend`, `Regenerate`, `GainFromDamage`, and overflow routing. This isolates the resource math (including Tool modifiers) from turn logic.
 
-3. **CardEffectResolver pattern**: Card play resolution is delegated to a `CardEffectResolver` that switches on `CardType` and dispatches to type-specific handlers. Special cards use a `SpecialCardRegistry` dictionary mapping card IDs to `ISpecialCardEffect` implementations, so new specials don't require modifying the resolver. Because of the free targeting system (Req 4.5), Defense cards apply Block to whatever entity is targeted — including enemies. Playing a Defense card on an enemy gives that enemy Block. This is a valid (if suboptimal) play, not an error.
+3. **CardEffectResolver pattern**: Card play resolution is delegated to a `CardEffectResolver` that switches on `CardType` and dispatches to type-specific handlers. Special cards use a `SpecialCardRegistry` dictionary mapping card IDs to `ISpecialCardEffect` implementations, so new specials don't require modifying the resolver. Defense cards played during the Play_Phase are treated as proactive parry attempts — the Overtime cost is deducted and the card goes to the discard pile, but the card may not match the next incoming enemy attack. During the Enemy_Phase, matching Defense cards can be played for free via the Parry_Window to cancel incoming damage.
 
 4. **EnemyCombatant as a data+behaviour wrapper**: Each enemy in an encounter is represented by an `EnemyCombatant` MonoBehaviour holding HP, attack pattern index, status effects, and intent. The existing `Health` component is reused internally. `EnemyTargetable` is attached for targeting.
 
 5. **RunState as a serializable POCO**: All run-scoped data (deck, Hours, Tools, floor, HP, cutscene flags) lives in a `RunState` class that `SaveManager` serializes to JSON. `BattleManager` reads/writes `RunState` rather than owning the data directly.
 
-6. **Event-driven communication**: The existing `BattleEventBus` is extended with new event types (StatusEffectEvent removal, OverflowEvent, BlockEvent, TurnPhaseChangedEvent) so UI components can subscribe without direct references to game logic.
+6. **Event-driven communication**: The existing `BattleEventBus` is extended with new event types (StatusEffectEvent removal, OverflowEvent, ParryEvent, TurnPhaseChangedEvent) so UI components can subscribe without direct references to game logic.
 
 ## Components and Interfaces
 
@@ -123,7 +123,7 @@ graph TD
 | `TurnPhaseController` | Manages Draw→Play→Discard→Enemy state machine | `CurrentPhase`, `AdvancePhase()`, `OnPhaseChanged` event |
 | `OvertimeMeter` | Tracks current/max OT, regen, overflow routing | `Spend(int)`, `Regenerate()`, `GainFromDamage(int hpLost, int maxHP)`, `Current`, `Max` |
 | `OverflowBuffer` | Stores excess OT, consumed on next attack | `Add(int)`, `ConsumeAll() → int`, `Current` |
-| `BlockSystem` | Tracks player and enemy Block, absorbs damage | `AddBlock(int, target)`, `AbsorbDamage(int, target) → int remainingDmg`, `Reset(target)`, `GetBlock(target)` |
+| `ParrySystem` | Manages parry windows during Enemy_Phase, validates parry matches, handles enemy parry chance | `StartParryWindow(EnemyAction, EnemyCombatant)`, `TryParry(CardInstance) → bool`, `IsParryWindowActive`, `GetMatchingCards(Hand) → List<CardInstance>` |
 | `StatusEffectSystem` | Manages active effects on player and enemies | `Apply(target, StatusEffectData)`, `Tick(target)`, `GetEffects(target)` |
 | `CardEffectResolver` | Resolves card effects by type | `Resolve(CardData, source, target(s))` |
 | `SpecialCardRegistry` | Maps special card IDs to effect implementations | `Register(string id, ISpecialCardEffect)`, `Execute(string id, context)` |
@@ -183,13 +183,13 @@ public struct CardEffectContext
 | `PlayerHPStack` (existing) | Paper-stack HP visualization |
 | `EnemyHPBar` (existing) | Fill-bar HP per enemy |
 | `OvertimeMeterUI` | Displays current/max OT and overflow |
-| `BlockDisplay` | Shows current Block when > 0 |
+| `ParryWindowUI` | Shows active parry window timer, highlights matching Defense cards in hand |
 | `DeckCounterUI` | Draw pile and discard pile counts, clickable to inspect pile contents |
 | `EndTurnButton` | Button enabled during Play_Phase only, triggers end of player turn |
 | `VictoryScreen` | Post-encounter splash showing randomized victory verb, enemy name, and rewards earned |
 | `StartingDeckCarousel` | Deck set selection UI with left/right arrows, full card preview, and Select button |
 | `TurnCounterUI` | Displays current turn number at top-center of battle screen |
-| `FloatingCombatText` | Spawns floating damage/block/cost/status numbers that drift and fade |
+| `FloatingCombatText` | Spawns floating damage/parry/cost/status numbers that drift and fade |
 | `StatusEffectIconStack` | Vertical stack of active status effect icons with duration behind each entity |
 | `CardEffectPreview` | Tooltip showing calculated effective values on card hover |
 
@@ -209,7 +209,7 @@ public struct CardEffectContext
 
 ```csharp
 public enum CardType { Attack, Defense, Effect, Utility, Special }
-public enum CardRarity { Common, Rare, Epic, Legendary, Unknown }
+public enum CardRarity { Common, Rare, Legendary, Unknown }
 public enum TargetMode { SingleEnemy, AllEnemies, Self, NoTarget }
 
 [CreateAssetMenu(menuName = "CardBattle/CardData")]
@@ -221,7 +221,7 @@ public class CardData : ScriptableObject
     public CardType cardType;
     public CardRarity cardRarity;
     public int effectValue;       // damage, draw count, restore amount, etc.
-    public int blockValue;        // used by Defense cards
+    public List<string> parryMatchTags; // used by Defense cards — defines which enemy attack types this card can parry
     public TargetMode targetMode;
     public Sprite cardSprite;
 
@@ -254,6 +254,9 @@ public class EnemyCombatantData : ScriptableObject
     public Sprite sprite;
     public List<EnemyAction> attackPattern;
     public bool isBoss;
+    [Range(0f, 1f)]
+    public float enemyParryChance; // chance enemy parries a player's Attack card
+    public float baseParryWindowDuration; // seconds, scales with difficulty/floor
     [TextArea] public string preFightDialogue;
     [TextArea] public string postFightDialogue;
 }
@@ -264,6 +267,7 @@ public class EnemyCombatantData : ScriptableObject
 ```csharp
 public enum EnemyActionType { DealDamage, ApplyStatus, Defend, Buff, Special }
 public enum EnemyBuffType { None, DamageUp, DamageShield, Regen }
+public enum IntentColor { White, Yellow, Red, Unparryable }
 
 [Serializable]
 public struct EnemyAction
@@ -275,11 +279,14 @@ public struct EnemyAction
     // Buff-specific fields (used when actionType == Buff)
     public EnemyBuffType buffType;   // what kind of buff
     public int buffDuration;         // how many turns the buff lasts
+    // Parry difficulty (used when actionType == DealDamage)
+    public IntentColor intentColor;  // White/Yellow/Red/Unparryable — determines which Defense cards can parry this attack
+    public List<string> parryMatchTags; // attack type tags for parry matching
     // Optional condition for conditional patterns
     public EnemyActionCondition condition;
 }
 
-public enum EnemyActionCondition { None, HPBelow50, HPBelow25, PlayerHasBlock }
+public enum EnemyActionCondition { None, HPBelow50, HPBelow25, PlayerLowHP }
 ```
 
 ### StatusEffectData
@@ -405,6 +412,9 @@ public class GameConfig : ScriptableObject
     public int minimumDeckSize = 1;       // can't remove below this
     public int maximumDeckSize = 25;      // default cap, raised by Filing Cabinet upgrade
     public float safeRoomChaseTimeout = 5f; // seconds before chasing enemy gives up at safe room door
+    public float baseParryWindowDuration = 1.5f; // seconds, default parry window length
+    public float parryWindowFloorScaling = 0.02f; // seconds reduced per floor depth
+    public float parryWindowMinDuration = 0.3f;   // minimum parry window duration
 }
 ```
 
@@ -427,7 +437,7 @@ public struct WorkBoxSpawnRates
 ### ToolData (ScriptableObject)
 
 ```csharp
-public enum ToolModifierType { OvertimeRegen, BlockBonus, HandSize, DamageBonus, MaxHP, HealPerFloor, TechCardDamage, MaxDeckSize }
+public enum ToolModifierType { OvertimeRegen, ParryWindowBonus, HandSize, DamageBonus, MaxHP, HealPerFloor, TechCardDamage, MaxDeckSize }
 
 [CreateAssetMenu(menuName = "CardBattle/ToolData")]
 public class ToolData : ScriptableObject
@@ -443,7 +453,7 @@ public class ToolData : ScriptableObject
 public struct ToolModifier
 {
     public ToolModifierType modifierType;
-    public int value; // e.g., +1 block, +2 OT regen, +5 max HP
+    public int value; // e.g., +0.5s parry window, +2 OT regen, +5 max HP
 }
 ```
 
@@ -484,15 +494,15 @@ Implementation: A piecewise linear interpolation between the four GDD reference 
 
 ### Work Box Rarity Tables
 
-| Floor Range | Common | Rare | Epic | Legendary | Unknown |
-|---|---|---|---|---|---|
-| 1–3 | 70% | 20% | 8% | 2% | 0% |
-| 3–6 | 50% | 30% | 12% | 8% | 0% |
-| 7–10 | 30% | 35% | 20% | 14% | 1% |
-| 11–15 | 15% | 30% | 28% | 22% | 5% |
-| 16–20 | 5% | 15% | 30% | 35% | 15% |
-| 21–24 | 0% | 5% | 15% | 50% | 30% |
-| 25+ | 0% | 0% | 1% | 69% | 30% |
+| Floor Range | Common | Rare | Legendary | Unknown |
+|---|---|---|---|---|
+| 1–3 | 72% | 25% | 3% | 0% |
+| 3–6 | 52% | 38% | 10% | 0% |
+| 7–10 | 33% | 45% | 21% | 1% |
+| 11–15 | 18% | 45% | 32% | 5% |
+| 16–20 | 8% | 30% | 47% | 15% |
+| 21–24 | 0% | 12% | 58% | 30% |
+| 25+ | 0% | 1% | 69% | 30% |
 
 ### Work Box Size Spawn Rates
 
@@ -516,16 +526,16 @@ Implementation: A piecewise linear interpolation between the four GDD reference 
 |---|---|
 | Common | 10 |
 | Rare | 25 |
-| Epic | 50 |
 | Legendary | 100 |
-| Unknown | 75 |
+| Unknown | 150 |
 
 | Tool Rarity | Hours Cost |
 |---|---|
 | Common | 30 |
 | Rare | 60 |
-| Epic | 120 |
 | Legendary | 200 |
+
+Unknown rarity Tools are not available in shops.
 
 Card removal via toilet costs 25 Hours base, +10 Hours per previous removal in the current run (tracked by `RunState.cardRemovalsThisRun`).
 
@@ -573,7 +583,7 @@ Card removal via toilet costs 25 Hours base, +10 Hours per previous removal in t
 
 ### Property 7: Damage-to-Overtime Gain with Overflow Routing
 
-*For any* damage instance where `actualHPLost` is the HP lost after Block absorption, `maxHP` is the player's maximum HP, and `current`/`max` are the Overtime_Meter values: the meter shall gain `floor(actualHPLost / maxHP * 10)` points, the meter shall not exceed `max`, and any excess shall be added to the Overflow_Buffer.
+*For any* damage instance where `actualHPLost` is the HP actually lost, `maxHP` is the player's maximum HP, and `current`/`max` are the Overtime_Meter values: the meter shall gain `floor(actualHPLost / maxHP * 10)` points, the meter shall not exceed `max`, and any excess shall be added to the Overflow_Buffer.
 
 **Validates: Requirements 2.5, 2.6**
 
@@ -589,23 +599,23 @@ Card removal via toilet costs 25 Hours base, +10 Hours per previous removal in t
 
 **Validates: Requirements 3.2, 3.4, 3.5**
 
-### Property 10: Block Absorbs Damage Before HP
+### Property 10: Parry Cancels Damage During Parry Window
 
-*For any* damage instance with value `d`, current Block `b`, and current HP `hp` — whether the target is the player or an Enemy_Combatant — the new Block shall be `max(0, b - d)`, and the new HP shall be `hp - max(0, d - b)`. Block is always non-negative, and HP only decreases by the amount that exceeds Block. This property applies identically to player Block and enemy Block (per Req 6.5).
+*For any* enemy attack with damage `d` during the Enemy_Phase, if the player drags a matching Defense card (one whose parry match tags satisfy the attack's Parry_Match criteria based on Intent_Color) onto their character during the Parry_Window, the player shall take 0 damage from that attack, and the Defense card shall be moved to the Discard_Pile at no Overtime cost.
 
-**Validates: Requirements 6.1, 6.2, 6.3, 6.5, 9.2**
+**Validates: Requirements 6.1, 6.2, 6.3, 9.2**
 
-### Property 11: Block Resets Each Turn
+### Property 11: Missed Parry Deals Full Damage
 
-*For any* Block value at the end of a turn, when a new player turn begins, Block shall be reset to 0 regardless of its previous value.
+*For any* enemy attack with damage `d` during the Enemy_Phase, if the Parry_Window expires without the player placing a matching Defense card, the player shall take the full `d` damage.
 
 **Validates: Requirements 6.4**
 
-### Property 12: Defense Card Adds Block
+### Property 12: Proactive Defense Card Costs Overtime
 
-*For any* Defense card with `blockValue` and current player Block `b`, playing the card shall set Block to `b + blockValue`.
+*For any* Defense card with Overtime cost `c` played during the Play_Phase (proactive parry), the Overtime_Meter shall decrease by `c` and the card shall be moved to the Discard_Pile. The proactive parry is prepared but does not guarantee a match against the next incoming enemy attack.
 
-**Validates: Requirements 5.3**
+**Validates: Requirements 5.3, 6.5**
 
 ### Property 13: Attack Card Deals Correct Damage
 
@@ -717,7 +727,7 @@ Card removal via toilet costs 25 Hours base, +10 Hours per previous removal in t
 
 ### Property 30: Tool Modifier Application
 
-*For any* active Tool that modifies a combat value (OT regen, block bonus, hand size), the effective value used in combat shall equal `baseValue + toolModifier`. Multiple tools with the same modifier type shall stack additively.
+*For any* active Tool that modifies a combat value (OT regen, parry window duration, hand size), the effective value used in combat shall equal `baseValue + toolModifier`. Multiple tools with the same modifier type shall stack additively.
 
 **Validates: Requirements 15.2, 15.3, 15.4**
 
@@ -809,7 +819,7 @@ Card removal via toilet costs 25 Hours base, +10 Hours per previous removal in t
 | Quit during active encounter | Save pre-encounter snapshot, resume in exploration with enemy still present |
 | Heal exceeds target max HP | Clamp HP to maxHP, no overheal |
 | Bleed + Burn tick on same target | Bleed bonus applies to Burn tick damage (d + bleedValue) |
-| Stunned enemy with Block | Block resets at start of enemy's turn even if action is skipped |
+| Stunned enemy during Enemy_Phase | Enemy action skipped, no parry window displayed for that enemy |
 | Enemy chasing player into safe room | Enemy stops at doorway, gives up after ~5 seconds, resumes patrol |
 | Player wins final boss | Door spawns, win cinematic plays on interaction, returns to Main Menu |
 | Card addition at max deck size | Reject addition, display "deck full" feedback |
@@ -827,7 +837,7 @@ The card battle system requires both unit tests and property-based tests for com
 - Narrative flow: opening dialogue branching, death screen → game over screen transition
 
 **Property-Based Tests** focus on:
-- Universal invariants that must hold across all valid inputs (card conservation, block math, OT arithmetic)
+- Universal invariants that must hold across all valid inputs (card conservation, parry mechanics, OT arithmetic)
 - Comprehensive input coverage through randomized card costs, damage values, deck compositions, and encounter configurations
 
 ### Property-Based Testing Configuration
@@ -847,7 +857,7 @@ Assets/
       Battle/
         OvertimeMeterPropertyTests.cs    // Properties 5, 6, 7, 8, 35
         RageBurstPropertyTests.cs        // Property 9
-        BlockSystemPropertyTests.cs      // Properties 10, 11, 12
+        ParrySystemPropertyTests.cs      // Properties 10, 11, 12
         CardResolutionPropertyTests.cs   // Properties 13, 31, 32, 34
         DeckManagerPropertyTests.cs      // Properties 1, 2, 3
         StatusEffectPropertyTests.cs     // Properties 16, 17, 18, 19, 19a, 20, 36
@@ -870,7 +880,7 @@ Assets/
 ### Generator Strategy
 
 Property tests require custom FsCheck generators for domain types:
-- `CardData` generator: produces valid cards with random type, cost (0–10), effectValue (1–20), blockValue (1–15), rarity, and target mode, ensuring type-specific fields are populated (e.g., Defense cards always have blockValue > 0)
+- `CardData` generator: produces valid cards with random type, cost (0–10), effectValue (1–20), rarity, and target mode, ensuring type-specific fields are populated (e.g., Defense cards always have non-empty parryMatchTags)
 - `DeckState` generator: produces a random partition of N cards (8–30) across draw pile, hand, and discard pile
 - `OvertimeState` generator: produces random current/max OT values (0–10 / 10) and overflow buffer (0–50)
 - `EnemyCombatant` generator: produces enemies with random HP (1–100), attack patterns (1–6 actions), and optional status effects

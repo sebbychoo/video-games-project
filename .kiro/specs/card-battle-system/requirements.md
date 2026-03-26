@@ -17,7 +17,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 - **Card_Instance**: A runtime representation of a card in the player's hand, referencing a Card_Data asset.
 - **Card_Data**: A ScriptableObject asset defining a card's name, Overtime cost, type, rarity, effect value, target mode, and description.
 - **Card_Type**: Classification of a card: Attack, Defense, Effect, Utility, or Special.
-- **Card_Rarity**: The rarity tier of a card: Common (grey), Rare (blue), Epic (orange), Legendary (red), or Unknown (black). Unknown is the highest power tier, containing the most powerful cards in the game.
+- **Card_Rarity**: The rarity tier of a card: Common (whitish grey), Rare (whitish yellow), Legendary (medium red with small falling dust particles), or Unknown (black with glowing aura). Unknown is the highest power tier, containing the most powerful cards in the game.
 - **Target_Mode**: Defines how a card selects its target: Single_Enemy, All_Enemies, Self, or No_Target.
 - **Status_Effect**: A temporary modifier applied to the player or an enemy (e.g., Burn, Stun, Bleed) with a defined duration in turns.
 - **Enemy_Combatant**: An enemy entity participating in a battle encounter, with its own HP, attack patterns, and status effect tracking.
@@ -25,7 +25,11 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 - **Turn_Phase**: A discrete step within a turn: Draw_Phase, Play_Phase, Discard_Phase, or Enemy_Phase.
 - **Rage_Burst**: The mechanic where accumulated Overflow_Buffer points are consumed on the next attack card to add bonus damage.
 - **Tool**: A passive relic item that persists for the duration of a run and modifies battle mechanics.
-- **Block**: A defensive value that absorbs incoming damage before HP is reduced. Block resets to zero at the start of the player's turn.
+- **Parry**: An active defense mechanic where the player cancels incoming enemy damage by playing a matching Defense card during the enemy's attack animation window. Parrying during the Enemy_Phase is free (no Overtime cost); parrying proactively during the Play_Phase costs Overtime but may not match the incoming attack.
+- **Parry_Window**: The timed slowdown period at the end of an enemy attack animation during which the player can drag a matching Defense card onto their character to cancel the damage. Duration is configurable per enemy and scales with difficulty/floor.
+- **Parry_Match**: A data-driven mapping on Card_Data defining which Defense cards can parry which enemy attacks. Match requirements vary by card rarity: Common cards are easy to parry (most Defense cards work, enemies have high parry chance), Rare cards are harder to parry (requires more specific combos, enemies have lower parry chance), Legendary cards are very hard to parry (precise combos needed, enemies have very low parry chance), Unknown cards cannot be parried at all.
+- **Intent_Color**: A color indicator on Enemy_Intent that communicates parry difficulty: White (easy, corresponds to Common-rarity attacks), Yellow (medium, corresponds to Rare-rarity attacks), Red (hard, corresponds to Legendary-rarity attacks). Unknown-rarity attacks cannot be parried at all and display no parry indicator.
+- **Enemy_Parry_Chance**: A configurable percentage on EnemyCombatantData representing the chance that an enemy will parry (cancel) a player's attack card.
 - **First_Person_Hands_Controller**: The component responsible for rendering and animating Jean-Guy's two pixel art hand sprites overlaid on the camera view during exploration, handling idle, walking, sprinting, and interaction animations.
 - **Work_Box**: A chest found under work desks containing cards. Comes in Small, Big, and Huge sizes.
 - **Bathroom_Shop**: A shop found in bathroom rooms where the player can buy cards and Tools with Hours, or remove cards via the toilet.
@@ -64,7 +68,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 2. WHEN a player turn begins (starting from turn 2 onward), THE Overtime_Meter SHALL regenerate 2 Overtime points, capped at the current maximum capacity.
 3. WHEN the player plays a card, THE Battle_Manager SHALL deduct the card's Overtime cost from the Overtime_Meter.
 4. IF the player attempts to play a card whose Overtime cost exceeds the current Overtime_Meter value, THEN THE Battle_Manager SHALL reject the card play and display a rejection animation on the Card_Instance.
-5. WHEN the player takes damage, THE Overtime_Meter SHALL gain 1 Overtime point for every 10 percent of maximum HP actually lost after Block absorption in that damage instance, rounded down.
+5. WHEN the player takes damage, THE Overtime_Meter SHALL gain 1 Overtime point for every 10 percent of maximum HP actually lost in that damage instance, rounded down.
 6. WHEN the player takes damage from a status effect tick (such as Burn), THE Overtime_Meter SHALL gain at most 1 Overtime point per tick, regardless of the damage amount.
 7. WHEN the Overtime_Meter gains points that would exceed the maximum capacity, THE Overflow_Buffer SHALL store the excess points.
 
@@ -89,10 +93,10 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 
 1. THE Card_Data SHALL define the following fields: card name, Overtime cost, description, Card_Type, Card_Rarity, effect value, Target_Mode, and sprite reference.
 2. THE Card_Data SHALL support the following Card_Type values: Attack, Defense, Effect, Utility, and Special.
-3. THE Card_Data SHALL support the following Card_Rarity values: Common, Rare, Epic, Legendary, and Unknown.
+3. THE Card_Data SHALL support the following Card_Rarity values: Common, Rare, Legendary, and Unknown.
 4. THE Card_Data SHALL support the following Target_Mode values: Single_Enemy, All_Enemies, Self, and No_Target.
 5. THE Battle_Manager SHALL allow the player to target any entity in the encounter with any card, including Jean-Guy himself and allied NPCs (such as the worker in the Suicidal_Worker_Encounter). Target_Mode defines the default targeting behavior, but the player may override it to target any valid entity.
-6. WHERE a card has Card_Type Defense, THE Card_Data SHALL include a block value field representing the amount of Block granted when played.
+6. WHERE a card has Card_Type Defense, THE Card_Data SHALL include a parry match tag list defining which enemy attack types this card can parry.
 7. WHERE a card has Card_Type Effect, THE Card_Data SHALL include a status effect identifier and a duration field.
 8. WHERE a card has Card_Type Utility, THE Card_Data SHALL include a utility effect type field specifying the sub-type: Draw, Restore, Retrieve, Reorder, or Heal.
 
@@ -104,22 +108,29 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 
 1. WHEN the player plays an Attack card with Target_Mode Single_Enemy, THE Battle_Manager SHALL deal the card's effect value as damage to the selected Enemy_Combatant.
 2. WHEN the player plays an Attack card with Target_Mode All_Enemies, THE Battle_Manager SHALL deal the card's effect value as damage to every Enemy_Combatant in the Encounter.
-3. WHEN the player plays a Defense card, THE Battle_Manager SHALL add the card's block value to the player's current Block total.
+3. WHEN the player plays a Defense card during the Play_Phase (proactive parry), THE Battle_Manager SHALL deduct the card's Overtime cost and move the card to the Discard_Pile. The card is prepared as a proactive parry attempt but does not guarantee a match against the next enemy attack.
 4. WHEN the player plays an Effect card, THE Battle_Manager SHALL apply the specified Status_Effect to the target for the specified duration.
 5. WHEN a card is played, THE Battle_Manager SHALL move the Card_Instance from the Hand to the Discard_Pile after resolving the card's effect.
 6. WHEN a card is played, THE Battle_Manager SHALL raise a CardPlayedEvent on the BattleEventBus containing the Card_Data, source, and target.
 
-### Requirement 6: Block Mechanic
+### Requirement 6: Parry System
 
-**User Story:** As a player, I want to use Defense cards to gain Block that absorbs incoming damage, so that I have a way to mitigate enemy attacks.
+**User Story:** As a player, I want to actively parry incoming enemy attacks by playing matching Defense cards during a timed window, so that defense feels skill-based and reactive rather than passive.
 
 #### Acceptance Criteria
 
-1. THE Battle_Manager SHALL track the player's Block as a non-negative integer, initialized to 0 at the start of each Encounter.
-2. WHEN the player takes damage, THE Battle_Manager SHALL reduce the Block value first before reducing HP.
-3. IF the incoming damage exceeds the current Block value, THEN THE Battle_Manager SHALL reduce HP by the remaining damage after Block is fully consumed.
-4. WHEN a new player turn begins, THE Battle_Manager SHALL reset the player's Block to 0.
-5. THE Battle_Manager SHALL track Block for each Enemy_Combatant using the same mechanic as player Block. Enemy Block absorbs incoming damage before HP, and resets to 0 at the start of that enemy's turn in the Enemy_Phase, regardless of whether the enemy's action is skipped due to Stun.
+1. WHEN an Enemy_Combatant executes an attack during the Enemy_Phase, THE Battle_Manager SHALL play the attack animation and slow it down near the end to create a Parry_Window.
+2. WHILE the Parry_Window is active, THE Battle_Manager SHALL highlight all matching Defense cards in the player's Hand that satisfy the Parry_Match criteria for the incoming attack.
+3. WHEN the player drags a matching Defense card onto their character during the Parry_Window, THE Battle_Manager SHALL cancel the incoming damage entirely and move the used card to the Discard_Pile at no Overtime cost.
+4. IF the Parry_Window expires without the player placing a matching Defense card, THEN THE Battle_Manager SHALL deal the full attack damage to the player.
+5. WHEN the player plays a Defense card during the Play_Phase (proactive parry), THE Battle_Manager SHALL deduct the card's Overtime cost and move the card to the Discard_Pile. The proactive parry is prepared but may not match the next incoming enemy attack.
+6. WHEN an Encounter contains multiple Enemy_Combatants, THE Battle_Manager SHALL present a separate Parry_Window for each individual enemy attack during the Enemy_Phase.
+7. THE Card_Data SHALL define Parry_Match tags on each Defense card as a data-driven list, specifying which enemy attack types the card can parry. The specific combo definitions are configured by the designer on each Card_Data asset.
+8. THE Enemy_Intent SHALL display an Intent_Color indicating parry difficulty: White indicates most Defense cards satisfy the Parry_Match (easy parry), Yellow indicates only some Defense cards satisfy the Parry_Match (medium parry), and Red indicates only a perfect-match Defense card satisfies the Parry_Match (hard parry).
+9. WHERE an enemy attack has no valid Parry_Match defined, THE Battle_Manager SHALL NOT display a Parry_Window for that attack, and the attack SHALL deal damage unconditionally.
+10. THE Parry_Window duration SHALL be configurable per Enemy_Combatant and SHALL scale with difficulty and floor depth, with shorter windows on harder enemies and deeper floors.
+11. THE EnemyCombatantData SHALL include an Enemy_Parry_Chance field representing the percentage chance that the enemy will parry a player's Attack card, canceling the attack's damage. The Enemy_Parry_Chance is evaluated each time the player plays an Attack card targeting that enemy.
+12. WHEN an enemy successfully parries a player's Attack card, THE Battle_Manager SHALL cancel the attack damage, play a parry animation on the enemy, and still move the player's card to the Discard_Pile with the Overtime cost consumed.
 
 ### Requirement 7: Deck Cycling
 
@@ -154,7 +165,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 #### Acceptance Criteria
 
 1. WHEN the Enemy_Phase begins, THE Battle_Manager SHALL execute each living Enemy_Combatant's action sequentially with a visible delay between actions.
-2. WHEN an Enemy_Combatant deals damage to the player, THE Battle_Manager SHALL reduce the player's Block first, then HP for any remaining damage.
+2. WHEN an Enemy_Combatant deals damage to the player and the player does not successfully parry the attack, THE Battle_Manager SHALL reduce the player's HP by the full damage amount.
 3. WHEN an Enemy_Combatant deals damage, THE Battle_Manager SHALL play an attack dash animation from the Enemy_Combatant toward the player and a hit shake animation on the player.
 4. WHEN an Enemy_Combatant deals damage, THE Battle_Manager SHALL raise a DamageEvent on the BattleEventBus.
 5. IF the player's HP reaches 0 during the Enemy_Phase, THEN THE Battle_Manager SHALL immediately end the Encounter as a player defeat and trigger the run reset.
@@ -184,7 +195,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 #### Acceptance Criteria
 
 1. WHEN the player collides with an enemy trigger in the exploration scene, THE SceneLoader SHALL load the battle scene with the Encounter data for that enemy.
-2. WHEN the battle scene loads, THE Battle_Manager SHALL initialize all Enemy_Combatants, the player's HP, the Overtime_Meter, the Draw_Pile from the player's current deck, and the Block to 0.
+2. WHEN the battle scene loads, THE Battle_Manager SHALL initialize all Enemy_Combatants, the player's HP, the Overtime_Meter, and the Draw_Pile from the player's current deck.
 3. WHEN an Encounter ends in player victory, THE SceneLoader SHALL return to the exploration scene with the defeated enemy removed and the player at the pre-battle position.
 4. WHEN an Encounter ends in player defeat, THE SceneLoader SHALL trigger a full run reset, returning the player to the starting state.
 
@@ -195,7 +206,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 #### Acceptance Criteria
 
 1. WHILE the Turn_Phase is Play_Phase, THE CardTargetingManager SHALL allow the player to hover over cards to preview them and click to select a card.
-2. WHEN the player hovers over a card, THE CardInteractionHandler SHALL display a tooltip showing the calculated effective values (damage after Rage Burst bonus and Tool modifiers, block after Tool modifiers, draw count, etc.) so the player can see the real output before committing. The tooltip reflects source-side modifiers only and does not account for target-specific effects such as Bleed, since the target has not been selected yet.
+2. WHEN the player hovers over a card, THE CardInteractionHandler SHALL display a tooltip showing the calculated effective values (damage after Rage Burst bonus and Tool modifiers, parry match tags for Defense cards, draw count, etc.) so the player can see the real output before committing. The tooltip reflects source-side modifiers only and does not account for target-specific effects such as Bleed, since the target has not been selected yet.
 3. WHEN a card with Target_Mode Single_Enemy is selected, THE CardTargetingManager SHALL highlight valid Enemy_Combatant targets with an outline and wait for the player to click a target.
 4. WHEN a card with Target_Mode Self or No_Target is selected, THE Battle_Manager SHALL play the card immediately without requiring target selection.
 5. WHEN a card with Target_Mode All_Enemies is selected, THE CardTargetingManager SHALL highlight all Enemy_Combatants and play the card on confirmation click.
@@ -204,14 +215,15 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 
 ### Requirement 13: HP and Resource UI Display
 
-**User Story:** As a player, I want to see my HP, Overtime meter, Block, Overflow, and enemy HP at all times during combat, so that I can make informed decisions.
+**User Story:** As a player, I want to see my HP, Overtime meter, Overflow, and enemy HP at all times during combat, so that I can make informed decisions.
 
 #### Acceptance Criteria
 
 1. THE Battle_Manager SHALL display the player's current HP and maximum HP using the PlayerHPStack UI component.
 2. THE Battle_Manager SHALL display the current Overtime_Meter value and maximum capacity in a visible UI element.
 3. THE Battle_Manager SHALL display the current Overflow_Buffer value when the Overflow_Buffer is greater than 0.
-4. THE Battle_Manager SHALL display the player's current Block value when Block is greater than 0.
+4. THE OvertimeMeterUI SHALL display Overtime points as image-based dots rather than text, with overflow dots rendered in a distinct stacked color.
+5. THE OvertimeMeterUI SHALL display the total and maximum Overtime as text in the format "total/max" (e.g., "15/10") instead of showing overflow as a separate value.
 5. THE Battle_Manager SHALL display each Enemy_Combatant's current HP and maximum HP using an EnemyHPBar UI component.
 6. THE Battle_Manager SHALL display the current Draw_Pile count and Discard_Pile count.
 7. THE Battle_Manager SHALL display the current turn number at the top-center of the battle screen.
@@ -238,7 +250,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 
 1. THE Battle_Manager SHALL query the player's active Tool inventory at the start of each Encounter and apply passive modifiers.
 2. WHERE the player has a Tool that modifies Overtime regeneration, THE Overtime_Meter SHALL adjust the per-turn regeneration value accordingly.
-3. WHERE the player has a Tool that modifies Block, THE Battle_Manager SHALL adjust Block values granted by Defense cards accordingly.
+3. WHERE the player has a Tool that modifies Parry_Window duration, THE Battle_Manager SHALL adjust the Parry_Window timing accordingly.
 4. WHERE the player has a Tool that modifies hand size, THE Battle_Manager SHALL adjust the base hand size for the Draw_Phase accordingly.
 5. WHEN a Tool modifier affects a combat value, THE Battle_Manager SHALL reflect the modified value in the UI display.
 
@@ -270,12 +282,12 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 
 ### Requirement 17a: Floating Combat Text
 
-**User Story:** As a player, I want to see floating numbers when damage is dealt, block is gained, and resources change, so that I can quickly read what's happening without checking UI bars.
+**User Story:** As a player, I want to see floating numbers when damage is dealt, parries succeed, and resources change, so that I can quickly read what's happening without checking UI bars.
 
 #### Acceptance Criteria
 
 1. WHEN damage is dealt to any target, THE BattleAnimations SHALL display a floating damage number at the target's position that drifts upward and fades out.
-2. WHEN Block is gained, THE BattleAnimations SHALL display a floating block number near the player's Block display.
+2. WHEN a parry succeeds, THE BattleAnimations SHALL display a floating "PARRY" text near the player's character.
 3. WHEN Overtime points are spent, THE BattleAnimations SHALL display a floating cost number near the Overtime_Meter that drifts downward and fades out.
 4. WHEN a Status_Effect is applied, THE BattleAnimations SHALL display a floating text label with the effect name at the target's position.
 5. WHEN healing occurs, THE BattleAnimations SHALL display a floating heal number in a distinct color (green) at the target's position.
@@ -313,15 +325,16 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 
 ### Requirement 20: Enemy Intent Display
 
-**User Story:** As a player, I want to see what each enemy plans to do next turn, so that I can make informed decisions about blocking versus attacking.
+**User Story:** As a player, I want to see what each enemy plans to do next turn with color-coded parry difficulty, so that I can make informed decisions about which Defense cards to hold.
 
 #### Acceptance Criteria
 
 1. WHEN an Encounter begins, THE Battle_Manager SHALL determine each Enemy_Combatant's first action based on that enemy's attack pattern and store the action as the Enemy_Intent.
 2. WHILE the Turn_Phase is Play_Phase, THE Battle_Manager SHALL display an Enemy_Intent icon above each living Enemy_Combatant's sprite indicating the planned action type (attack, defend, buff, or special). The intent SHALL update in real-time as conditions change during the player's turn (e.g., if the player deals damage that pushes an enemy below an HP threshold, the displayed intent updates immediately to reflect the conditional pattern change).
-3. WHERE an Enemy_Combatant's Enemy_Intent is an attack action, THE Battle_Manager SHALL display the intended damage number alongside the Enemy_Intent icon.
-4. WHEN an Enemy_Phase completes, THE Battle_Manager SHALL update each living Enemy_Combatant's Enemy_Intent to reflect the action for the following turn.
-5. WHEN an Enemy_Combatant is defeated, THE Battle_Manager SHALL remove that Enemy_Combatant's Enemy_Intent display.
+3. WHERE an Enemy_Combatant's Enemy_Intent is an attack action, THE Battle_Manager SHALL display the intended damage number alongside the Enemy_Intent icon, using office-themed text labels: "EMAILS +N" for attack intents and "POLICY UPDATE" for defend intents.
+4. WHERE an Enemy_Combatant's Enemy_Intent is an attack action, THE EnemyIntentDisplay SHALL render the intent with an Intent_Color: White for easy parry (most Defense cards match), Yellow for medium parry (some Defense cards match), Red for hard parry (only perfect-match Defense cards work), or no color indicator for unparryable attacks.
+5. WHEN an Enemy_Phase completes, THE Battle_Manager SHALL update each living Enemy_Combatant's Enemy_Intent to reflect the action for the following turn.
+6. WHEN an Enemy_Combatant is defeated, THE Battle_Manager SHALL remove that Enemy_Combatant's Enemy_Intent display.
 
 ### Requirement 21: Work Box (Chest) System
 
@@ -332,10 +345,10 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 1. THE Level_Generator SHALL spawn Work_Box objects only under work desk furniture within generated rooms.
 2. THE Level_Generator SHALL assign Work_Box sizes using floor-based spawn rates: Floors 1-5 produce 100% Small; Floors 6-10 produce 90% Small and 10% Big; Floors 11 and above produce 70% Small, 25% Big, and 5% Huge.
 3. THE Work_Box SHALL contain a number of cards based on size: Small contains 1 to 3 cards, Big contains 3 to 5 cards, and Huge contains 5 to 7 cards.
-4. THE Work_Box SHALL assign card rarities using floor-based probability tables: Floors 1-3 use 70% Common, 20% Rare, 8% Epic, 2% Legendary, 0% Unknown; Floors 3-6 use 50% Common, 30% Rare, 12% Epic, 8% Legendary, 0% Unknown; scaling up to Floors 25 and above using 0% Common, 0% Rare, 1% Epic, 69% Legendary, 30% Unknown.
+4. THE Work_Box SHALL assign card rarities using floor-based probability tables: Floors 1-3 use 72% Common, 25% Rare, 3% Legendary, 0% Unknown; Floors 3-6 use 52% Common, 38% Rare, 10% Legendary, 0% Unknown; Floors 7-10 use 33% Common, 45% Rare, 21% Legendary, 1% Unknown; Floors 11-15 use 18% Common, 45% Rare, 32% Legendary, 5% Unknown; Floors 16-20 use 8% Common, 30% Rare, 47% Legendary, 15% Unknown; Floors 21-24 use 0% Common, 12% Rare, 58% Legendary, 30% Unknown; Floors 25 and above use 0% Common, 1% Rare, 69% Legendary, 30% Unknown.
 5. WHEN the player interacts with an unopened Work_Box, THE Work_Box SHALL play a shake animation before opening.
 6. WHEN the Work_Box opens, THE Work_Box SHALL display an inventory screen showing all contained cards face-down as grey tiles.
-7. WHEN the player clicks a grey tile, THE Work_Box SHALL begin the rarity reveal sequence: if the card is Common the tile reveals immediately; if the card is Rare or higher the tile shifts to blue; if the card is Epic or higher the tile shifts from blue to orange; if the card is Legendary or higher the tile shifts from orange to red; if the card is Unknown the tile shifts to black. Each click advances one step and triggers an animation, and the player must wait for the animation to complete before clicking again. The tile stops changing color at the card's true rarity.
+7. WHEN the player clicks a grey tile, THE Work_Box SHALL begin the rarity reveal sequence: if the card is Common the tile reveals immediately with a whitish grey color; if the card is Rare or higher the tile shifts to whitish yellow; if the card is Legendary or higher the tile shifts to medium red with small falling dust particles; if the card is Unknown the tile shifts to black with a glowing aura. Each click advances one step and triggers an animation, and the player must wait for the animation to complete before clicking again. The tile stops changing color at the card's true rarity.
 8. WHEN the player clicks a tile that has reached its true rarity color, THE Work_Box SHALL reveal the full card detail including art, name, cost, and effect, and display a Keep button on the right and a Leave button on the left.
 9. WHEN the player clicks Keep, THE Work_Box SHALL add the card to the player's deck at no cost.
 10. WHEN the player clicks Leave, THE Work_Box SHALL discard the card and it is no longer available.
@@ -409,7 +422,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 
 1. THE Enemy_Combatant SHALL define an attack pattern as an ordered sequence of actions including attack, defend, buff, and special action types.
 2. THE Enemy_Combatant SHALL execute actions from the attack pattern in order, cycling back to the beginning when the sequence completes.
-3. WHERE an Enemy_Combatant executes a Defend action, THE Enemy_Combatant SHALL gain Block equal to the action's value. Enemy Block absorbs incoming damage before HP, consistent with the player Block mechanic (Req 6.5).
+3. WHERE an Enemy_Combatant executes a Defend action, THE Enemy_Combatant SHALL gain a temporary damage reduction or defensive buff as defined in the EnemyCombatantData. The specific defensive behavior is configured per enemy.
 4. WHERE an Enemy_Combatant executes a Buff action, THE Enemy_Combatant SHALL apply a temporary modifier to itself (e.g., increased damage on next attack, or a status effect on itself such as a damage shield). The specific buff effect is defined per-enemy in the EnemyCombatantData.
 5. WHERE an Enemy_Combatant has conditional logic in the attack pattern, THE Enemy_Combatant SHALL evaluate the condition each turn and select the appropriate action.
 6. WHILE the current floor is in the early range of floors 1 through 5, THE Level_Generator SHALL weight enemy type selection toward coworker variant Enemy_Combatants.
@@ -443,7 +456,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 5. IF the player attempts to purchase an upgrade with insufficient Bad_Reviews, THEN THE Hub_Office SHALL reject the purchase and display a feedback message indicating insufficient Bad_Reviews.
 6. WHERE the Computer upgrade is purchased, THE Hub_Office SHALL increase damage dealt by Technology-themed cards by 1 per upgrade level starting from the next run.
 7. WHERE the Coffee Machine upgrade is purchased, THE Hub_Office SHALL increase the Overtime_Meter per-turn regeneration value starting from the next run.
-8. WHERE the Desk Chair upgrade is purchased, THE Hub_Office SHALL increase the block value granted by Defense cards by 1 per upgrade level starting from the next run.
+8. WHERE the Desk Chair upgrade is purchased, THE Hub_Office SHALL increase the Parry_Window duration by a fixed amount per upgrade level starting from the next run.
 9. WHERE the Filing Cabinet upgrade is purchased, THE Hub_Office SHALL increase the starting hand size at early upgrade levels and increase the maximum deck size at later upgrade levels, with effects applying from the next run onward.
 10. WHERE the Plant upgrade is purchased, THE Hub_Office SHALL increase Jean-Guy's base HP at early upgrade levels and add passive healing per floor at later upgrade levels, with effects applying from the next run onward. Passive healing triggers when the player uses the floor exit (stairs or elevator), not on floor entry.
 11. THE Hub_Office SHALL visually update the appearance of furniture items as upgrades are purchased, reflecting the current upgrade level.
@@ -497,7 +510,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 3. WHEN the player encounters the worker, THE Suicidal_Worker_Encounter SHALL enter a special turn-based encounter view where the player uses their normal run deck and hand (same draw pile, discard pile, and Overtime Meter as regular combat) and acts first each turn.
 4. THE Suicidal_Worker_Encounter SHALL initialize the worker with a small HP pool (10-15 HP). The worker deals fixed self-damage at the end of each turn after the player's action.
 5. WHILE the Suicidal_Worker_Encounter is active and the player has not intervened, THE Suicidal_Worker_Encounter SHALL show the worker harming himself at the end of each turn after the player's action, reducing the worker's HP.
-6. WHEN the player plays a Defense card targeting the worker, THE Suicidal_Worker_Encounter SHALL apply Block to the worker, absorbing the worker's self-damage, interrupting the self-harm, de-escalating the situation, and resolving the encounter as a success (Shield resolution).
+6. WHEN the player plays a Defense card targeting the worker during the worker's self-harm Parry_Window, THE Suicidal_Worker_Encounter SHALL parry the worker's self-damage, interrupting the self-harm, de-escalating the situation, and resolving the encounter as a success (Shield resolution).
 7. WHEN the player causes Jean-Guy to take self-damage before the worker acts in a given turn (e.g., by playing an Attack card targeting Jean-Guy via the free targeting system in Req 4.5), THE Suicidal_Worker_Encounter SHALL cause the worker to question his actions and walk away, resolving the encounter as a success (Empathy resolution).
 8. IF the worker's HP reaches 0 from self-harm before the player intervenes, THEN THE Suicidal_Worker_Encounter SHALL resolve as a failure with the worker dying, awarding no reward, and playing a narrative consequence.
 9. WHEN the Suicidal_Worker_Encounter resolves via Shield resolution, THE Suicidal_Worker_Encounter SHALL award the player a specific Tool reward distinct from the Empathy resolution reward.
@@ -528,7 +541,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 
 1. WHEN combat is triggered, THE Battle_Manager SHALL snap the view to a 2D battle screen while keeping the 3D exploration environment visible in the background.
 2. THE Battle_Manager SHALL render the 3D exploration scene as a blurred or dimmed background behind the 2D battle UI elements to maintain focus on the battle.
-3. THE Battle_Manager SHALL display the card hand, player HP, Overtime_Meter, Block, and Enemy_Combatant stats as 2D UI elements overlaid on the background.
+3. THE Battle_Manager SHALL display the card hand, player HP, Overtime_Meter, and Enemy_Combatant stats as 2D UI elements overlaid on the background.
 4. THE Battle_Manager SHALL render the background as a view of the 3D exploration scene from the position where combat was triggered.
 
 ### Requirement 35: Main Menu
@@ -613,7 +626,7 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 4. THE Tutorial_NPC SHALL NOT explain combat mechanics while in the Hub_Office. Combat is not a known or expected part of the job — it should feel like a surprise when it first happens.
 5. WHEN the Hub_Office tutorial walkthrough completes, THE Tutorial_NPC SHALL casually direct the player to start their first shift on floor 1, treating it as a normal workday.
 6. WHEN the player encounters their first enemy on floor 1, THE Tutorial_NPC SHALL react with surprise and confusion (e.g., "What the — that guy looks pissed. Uh... I think you gotta fight him?"), establishing that combat is absurd and unexpected even to the NPCs.
-7. DURING the first combat encounter of the tutorial run, THE Battle_Manager SHALL display contextual UI prompts highlighting key battle screen elements: the card hand, Overtime Meter, Block display, enemy HP bars, enemy intent icons, and the End Turn button. The prompts SHALL use confused, improvised language rather than formal tutorial text (e.g., "I guess these are your... cards? Try dragging one?" rather than "Play a card by clicking it").
+7. DURING the first combat encounter of the tutorial run, THE Battle_Manager SHALL display contextual UI prompts highlighting key battle screen elements: the card hand, Overtime Meter, enemy HP bars, enemy intent icons with parry difficulty colors, and the End Turn button. The prompts SHALL use confused, improvised language rather than formal tutorial text (e.g., "I guess these are your... cards? Try dragging one?" rather than "Play a card by clicking it").
 8. THE Tutorial_NPC SHALL explain Work_Box interaction when the player first encounters a Work_Box on floor 1, reacting as if discovering it for the first time (e.g., "Wait, there's stuff under the desks?").
 9. WHEN the tutorial sequence completes (after the first combat encounter), THE Tutorial_NPC SHALL say farewell and disappear, allowing the player to continue the run normally.
 10. THE Save_Manager SHALL persist the tutorial-completed flag in MetaState so the tutorial never replays on subsequent runs.
@@ -650,9 +663,9 @@ The existing codebase (namespace `CardBattle`) already provides a basic turn loo
 #### Acceptance Criteria
 
 1. WHEN a Bathroom_Shop is generated, THE Level_Generator SHALL stock it with 3 to 5 cards and 0 to 2 Tools.
-2. THE Bathroom_Shop SHALL assign card rarities using the same floor-based probability tables as Work_Boxes (defined in Requirement 21.4).
-3. THE Bathroom_Shop SHALL price cards based on rarity: Common costs 10 Hours, Rare costs 25 Hours, Epic costs 50 Hours, Legendary costs 100 Hours, and Unknown costs 75 Hours.
-4. THE Bathroom_Shop SHALL price Tools based on rarity: Common costs 30 Hours, Rare costs 60 Hours, Epic costs 120 Hours, and Legendary costs 200 Hours.
+2. THE Bathroom_Shop SHALL assign card rarities using the same floor-based probability tables as Work_Boxes (defined in Requirement 21.4), which use 4 rarity tiers: Common, Rare, Legendary, and Unknown.
+3. THE Bathroom_Shop SHALL price cards based on rarity: Common costs 10 Hours, Rare costs 25 Hours, Legendary costs 100 Hours, and Unknown costs 150 Hours.
+4. THE Bathroom_Shop SHALL price Tools based on rarity: Common costs 30 Hours, Rare costs 60 Hours, and Legendary costs 200 Hours. Unknown rarity Tools are not available in shops.
 5. THE Bathroom_Shop SHALL price toilet card removal at 25 Hours, increasing by 10 Hours for each card previously removed during the current run.
 6. THE Bathroom_Shop SHALL guarantee at least one Tool is available in shops on boss floors (floors 3, 6, 9, etc.).
 7. THE Bathroom_Shop inventory SHALL be generated once when the floor is created and remain fixed for the duration of that floor visit.

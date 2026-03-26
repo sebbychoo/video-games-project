@@ -180,7 +180,8 @@ namespace CardBattle
 
         private IEnumerator HoverEnterRoutine(CardInstance card, CardTransformTarget arcTarget, System.Action onComplete = null)
         {
-            RectTransform rt = card.RectTransform;
+            RectTransform rt = card != null ? card.RectTransform : null;
+            if (rt == null) { onComplete?.Invoke(); yield break; }
 
             Vector2 startPos   = rt.anchoredPosition;
             Vector2 endPos     = new Vector2(arcTarget.anchoredPosition.x,
@@ -193,6 +194,7 @@ namespace CardBattle
             float elapsed = 0f;
             while (elapsed < hoverDuration)
             {
+                if (card == null || rt == null) { onComplete?.Invoke(); yield break; }
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / hoverDuration);
 
@@ -202,6 +204,7 @@ namespace CardBattle
                 yield return null;
             }
 
+            if (card == null || rt == null) { onComplete?.Invoke(); yield break; }
             rt.anchoredPosition = endPos;
             rt.localEulerAngles = endRot;
             rt.localScale       = endScale;
@@ -211,7 +214,8 @@ namespace CardBattle
 
         private IEnumerator HoverExitRoutine(CardInstance card, CardTransformTarget arcTarget)
         {
-            RectTransform rt = card.RectTransform;
+            RectTransform rt = card != null ? card.RectTransform : null;
+            if (rt == null) yield break;
 
             Vector2 startPos   = rt.anchoredPosition;
             Vector2 endPos     = arcTarget.anchoredPosition;
@@ -223,6 +227,7 @@ namespace CardBattle
             float elapsed = 0f;
             while (elapsed < hoverDuration)
             {
+                if (card == null || rt == null) yield break;
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / hoverDuration);
 
@@ -232,6 +237,7 @@ namespace CardBattle
                 yield return null;
             }
 
+            if (card == null || rt == null) yield break;
             rt.anchoredPosition = endPos;
             rt.localEulerAngles = endRot;
             rt.localScale       = endScale;

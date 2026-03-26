@@ -10,15 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 154aa4f86be312148af124d3aa7065b5, type: 3}
-  m_Name: New Card Data
-  m_EditorClassIdentifier: Assembly-CSharp::CardBattle.CardData
-  cardName: Attack!
+  m_Name: Parry1
+  m_EditorClassIdentifier: CardBattle::CardBattle.CardData
+  cardName: Parry!
   overtimeCost: 1
-  description: attacks
-  cardType: 0
+  description: Parry!!!!!
+  cardType: 1
   cardRarity: 0
-  effectValue: 10
-  blockValue: 0
+  effectValue: 0
+  blockValue: 5
+  parryMatchTags: []
   targetMode: 0
   cardSprite: {fileID: 0}
   statusEffectId: 

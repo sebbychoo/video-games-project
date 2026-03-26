@@ -49,6 +49,14 @@ namespace CardBattle
         public int TurnNumber;
     }
 
+    public struct ParryEvent
+    {
+        public GameObject Player;
+        public GameObject Enemy;
+        public CardData DefenseCard;
+        public bool Success;
+    }
+
     public struct RageBurstEvent
     {
         public int OverflowConsumed;
@@ -69,6 +77,7 @@ namespace CardBattle
         public event System.Action<OverflowEvent> OnOverflow;
         public event System.Action<BlockEvent> OnBlockChanged;
         public event System.Action<TurnPhaseChangedEvent> OnTurnPhaseChanged;
+        public event System.Action<ParryEvent> OnParry;
         public event System.Action<RageBurstEvent> OnRageBurst;
 
         private void Awake()
@@ -104,6 +113,7 @@ namespace CardBattle
         public void Raise(OverflowEvent e) => OnOverflow?.Invoke(e);
         public void Raise(BlockEvent e) => OnBlockChanged?.Invoke(e);
         public void Raise(TurnPhaseChangedEvent e) => OnTurnPhaseChanged?.Invoke(e);
+        public void Raise(ParryEvent e) => OnParry?.Invoke(e);
         public void Raise(RageBurstEvent e) => OnRageBurst?.Invoke(e);
     }
 }

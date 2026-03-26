@@ -64,6 +64,50 @@ namespace CardBattle
             _discard.Add(card);
         }
 
+        /// <summary>
+        /// Retrieve N random cards from the discard pile and return them.
+        /// Removes the retrieved cards from the discard pile. (Req 19.3)
+        /// </summary>
+        public List<CardData> RetrieveFromDiscard(int count)
+        {
+            var retrieved = new List<CardData>();
+            if (count <= 0 || _discard.Count == 0) return retrieved;
+
+            int actual = Mathf.Min(count, _discard.Count);
+
+            // Fisher-Yates partial shuffle to pick random cards
+            for (int i = 0; i < actual; i++)
+            {
+                int j = Random.Range(i, _discard.Count);
+                CardData tmp = _discard[i];
+                _discard[i] = _discard[j];
+                _discard[j] = tmp;
+            }
+
+            // Take the first 'actual' cards
+            for (int i = 0; i < actual; i++)
+                retrieved.Add(_discard[i]);
+
+            _discard.RemoveRange(0, actual);
+            return retrieved;
+        }
+
+        /// <summary>
+        /// Peek at the top N cards of the draw pile without removing them. (Req 19.4)
+        /// Returns up to N cards from the top (end) of the draw pile.
+        /// </summary>
+        public List<CardData> PeekTop(int count)
+        {
+            var result = new List<CardData>();
+            if (count <= 0 || _deck.Count == 0) return result;
+
+            int actual = Mathf.Min(count, _deck.Count);
+            for (int i = _deck.Count - 1; i >= _deck.Count - actual; i--)
+                result.Add(_deck[i]);
+
+            return result;
+        }
+
         /// <summary>Moves all cards from the discard pile into the deck and shuffles.</summary>
         public void ShuffleDiscardIntoDeck()
         {

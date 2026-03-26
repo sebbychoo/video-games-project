@@ -74,6 +74,28 @@ namespace CardBattle
         }
 
         /// <summary>
+        /// Directly restore OT points (used by Utility Restore cards).
+        /// Caps at max; excess routes to OverflowBuffer. (Req 19.2)
+        /// </summary>
+        public void Restore(int amount)
+        {
+            if (amount <= 0) return;
+
+            int newValue = Current + amount;
+            if (newValue > Max)
+            {
+                int overflow = newValue - Max;
+                Current = Max;
+                if (overflowBuffer != null)
+                    overflowBuffer.Add(overflow);
+            }
+            else
+            {
+                Current = newValue;
+            }
+        }
+
+        /// <summary>
         /// Gain OT from taking damage. Gain = floor(hpLost / maxHP * 10).
         /// Status effect ticks cap at 1 OT per tick (caller passes isStatusTick=true).
         /// Excess beyond max routes to OverflowBuffer.
@@ -87,8 +109,18 @@ namespace CardBattle
                 gain = Mathf.Min(gain, 1);
 
             if (gain <= 0) return;
+            GainFlat(gain);
+        }
 
-            int newValue = Current + gain;
+        /// <summary>
+        /// Gain a flat amount of OT (e.g. from parry reward).
+        /// Excess beyond max routes to OverflowBuffer.
+        /// </summary>
+        public void GainFlat(int amount)
+        {
+            if (amount <= 0) return;
+
+            int newValue = Current + amount;
             if (newValue > Max)
             {
                 int overflow = newValue - Max;

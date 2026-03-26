@@ -46,7 +46,7 @@ namespace CardBattle
                     ResolveAttack(data, source, target, allEnemies);
                     break;
                 case CardType.Defense:
-                    ResolveDefense(data, target);
+                    ResolveDefense(data);
                     break;
                 case CardType.Effect:
                     ResolveEffect(data, target);
@@ -155,11 +155,12 @@ namespace CardBattle
 
         // ── Defense ─────────────────────────────────────────────────────────
 
-        private void ResolveDefense(CardData data, GameObject target)
+        private void ResolveDefense(CardData data)
         {
-            // Defense cards add Block to whatever entity is targeted (Req 4.5)
-            if (blockSystem != null && target != null)
-                blockSystem.AddBlock(data.blockValue, target);
+            // Proactive parry during Play_Phase: OT cost already deducted by BattleManager.TryPlayCard.
+            // Card moves to discard (handled by the caller after this method).
+            // The card is prepared as a proactive parry but does not guarantee a match
+            // against the next enemy attack. (Req 5.3, 6.5)
         }
 
         // ── Effect ──────────────────────────────────────────────────────────
@@ -190,12 +191,10 @@ namespace CardBattle
                     ResolveUtilityRestore(data.effectValue);
                     break;
                 case UtilityEffectType.Retrieve:
-                    // Placeholder: retrieve cards from discard to hand
-                    Debug.Log($"Retrieve effect: would return {data.effectValue} card(s) from discard to hand.");
+                    ResolveUtilityRetrieve(data.effectValue);
                     break;
                 case UtilityEffectType.Reorder:
-                    // Placeholder: reorder top N cards of draw pile
-                    Debug.Log($"Reorder effect: would let player rearrange top {data.effectValue} card(s) of draw pile.");
+                    ResolveUtilityReorder(data.effectValue);
                     break;
                 case UtilityEffectType.Heal:
                     ResolveUtilityHeal(data.effectValue, target);
@@ -218,12 +217,27 @@ namespace CardBattle
         private void ResolveUtilityRestore(int amount)
         {
             if (overtimeMeter == null || amount <= 0) return;
+            overtimeMeter.Restore(amount);
+        }
 
-            // GainFromDamage(hpLost, maxHP) calculates gain = floor(hpLost / maxHP * 10).
-            // To add exactly 'amount' OT points: GainFromDamage(amount * 10, 100)
-            // => floor(amount * 10 / 100 * 10) = amount.
-            // Excess beyond max is automatically routed to OverflowBuffer by OvertimeMeter.
-            overtimeMeter.GainFromDamage(amount * 10, 100);
+        private void ResolveUtilityRetrieve(int count)
+        {
+            if (count <= 0) return;
+
+            List<CardData> retrieved = deckManager.RetrieveFromDiscard(count);
+            foreach (CardData card in retrieved)
+                handManager.AddCard(card);
+        }
+
+        private void ResolveUtilityReorder(int count)
+        {
+            if (count <= 0) return;
+
+            // Peek at the top N cards, then place them back in the same order.
+            // Full interactive reorder requires UI — for now the cards are revealed
+            // and returned to the top of the draw pile in their original order.
+            List<CardData> topCards = deckManager.PeekTop(count);
+            Debug.Log($"Reorder: viewing top {topCards.Count} card(s) of draw pile.");
         }
 
         private void ResolveUtilityHeal(int healAmount, GameObject target)
@@ -235,11 +249,7 @@ namespace CardBattle
 
             int actualHeal = Mathf.Min(healAmount, health.maxHealth - health.currentHealth);
             if (actualHeal > 0)
-            {
-                // Health.TakeDamage subtracts, so we add by using negative... 
-                // Actually Health doesn't have a Heal method. We modify currentHealth directly.
                 health.currentHealth += actualHeal;
-            }
         }
 
         // ── Special ─────────────────────────────────────────────────────────

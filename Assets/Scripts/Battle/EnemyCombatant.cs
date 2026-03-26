@@ -20,6 +20,16 @@ namespace CardBattle
     }
 
     /// <summary>
+    /// Result of applying damage to an enemy, indicating whether the enemy
+    /// parried the attack or took the damage.
+    /// </summary>
+    public struct TakeDamageResult
+    {
+        public bool WasParried;
+        public int DamageDealt;
+    }
+
+    /// <summary>
     /// MonoBehaviour wrapping EnemyCombatantData for a single enemy in an encounter.
     /// Tracks HP (via Health component), attack pattern index, and provides
     /// action execution, damage handling, and intent display.
@@ -37,6 +47,12 @@ namespace CardBattle
         public bool IsAlive => _health != null && _health.currentHealth > 0;
         public int CurrentHP => _health != null ? _health.currentHealth : 0;
         public int MaxHP => _health != null ? _health.maxHealth : 0;
+
+        /// <summary>Chance (0–1) that this enemy parries a player's Attack card.</summary>
+        public float EnemyParryChance => _data != null ? _data.enemyParryChance : 0f;
+
+        /// <summary>Hours currency awarded when this enemy is defeated.</summary>
+        public int HoursReward => _data != null ? _data.hoursReward : 0;
 
         /// <summary>
         /// Returns the next action in the pattern for intent display.
@@ -160,13 +176,47 @@ namespace CardBattle
         }
 
         /// <summary>
-        /// Apply damage to this enemy. Applies Bleed bonus, Block absorption,
-        /// then remaining damage to HP. Raises DamageEvent.
+        /// Apply damage from a player Attack card. Evaluates Enemy_Parry_Chance first;
+        /// if the enemy parries, damage is canceled. Otherwise applies Bleed bonus,
+        /// Block absorption, then remaining damage to HP. Raises DamageEvent.
+        /// </summary>
+        public TakeDamageResult TakeDamageFromAttack(int damage, GameObject source)
+        {
+            if (!IsAlive)
+                return new TakeDamageResult { WasParried = false, DamageDealt = 0 };
+
+            // Evaluate Enemy_Parry_Chance (Req 6.11)
+            float parryChance = _data != null ? _data.enemyParryChance : 0f;
+            if (parryChance > 0f && Random.value < parryChance)
+            {
+                // Enemy parried — cancel all damage
+                Debug.Log($"{(_data != null ? _data.enemyName : name)} parried the attack!");
+                return new TakeDamageResult { WasParried = true, DamageDealt = 0 };
+            }
+
+            // Parry failed — apply damage normally
+            int dealt = ApplyDamageInternal(damage, source);
+            return new TakeDamageResult { WasParried = false, DamageDealt = dealt };
+        }
+
+        /// <summary>
+        /// Apply damage to this enemy (non-parryable). Used for status effect ticks,
+        /// environmental damage, and other sources that bypass enemy parry chance.
+        /// Applies Bleed bonus, Block absorption, then remaining damage to HP.
+        /// Raises DamageEvent.
         /// </summary>
         public void TakeDamage(int damage, GameObject source)
         {
             if (!IsAlive) return;
+            ApplyDamageInternal(damage, source);
+        }
 
+        /// <summary>
+        /// Internal damage pipeline: Bleed bonus → Block absorption → HP reduction → DamageEvent.
+        /// Returns the total damage dealt (before Block absorption).
+        /// </summary>
+        private int ApplyDamageInternal(int damage, GameObject source)
+        {
             // Apply Bleed bonus
             int bleedBonus = _statusEffectSystem != null
                 ? _statusEffectSystem.GetBleedBonus(gameObject)
@@ -192,6 +242,8 @@ namespace CardBattle
                     Amount = totalDamage
                 });
             }
+
+            return totalDamage;
         }
 
         // ── Condition evaluation ────────────────────────────────────────────
@@ -209,11 +261,10 @@ namespace CardBattle
                 case EnemyActionCondition.HPBelow25:
                     return _health != null && _health.currentHealth < _health.maxHealth * 0.25f;
 
-                case EnemyActionCondition.PlayerHasBlock:
-                    if (_blockSystem == null || BattleManager.Instance == null) return false;
-                    // Check if the player has any Block
-                    // We look for the player GameObject via BattleManager
-                    return _blockSystem.GetBlock(BattleManager.Instance.gameObject) > 0;
+                case EnemyActionCondition.PlayerLowHP:
+                    if (BattleManager.Instance == null) return false;
+                    // Check if the player's HP is below 25% of max
+                    return BattleManager.Instance.PlayerHP < BattleManager.Instance.PlayerMaxHP * 0.25f;
 
                 default:
                     return true;

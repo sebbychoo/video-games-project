@@ -8,12 +8,17 @@ namespace CardBattle
     {
         public static BattleManager Instance { get; private set; }
 
+        // ── Public HP Accessors ───────────────────────────────────────────────
+        public int PlayerHP => playerHealth != null ? playerHealth.currentHealth : 0;
+        public int PlayerMaxHP => playerHealth != null ? playerHealth.maxHealth : 1;
+
         // ── Subsystem References ──────────────────────────────────────────────
         [Header("Subsystems")]
         [SerializeField] TurnPhaseController   turnPhaseController;
         [SerializeField] OvertimeMeter         overtimeMeter;
         [SerializeField] OverflowBuffer        overflowBuffer;
         [SerializeField] BlockSystem           blockSystem;
+        [SerializeField] ParrySystem           parrySystem;
         [SerializeField] StatusEffectSystem    statusEffectSystem;
         [SerializeField] CardEffectResolver    cardEffectResolver;
         [SerializeField] DeckManager           deckManager;
@@ -34,6 +39,8 @@ namespace CardBattle
         [SerializeField] PlayerHPStack         playerHPStack;
         [SerializeField] EnemyHPBar            playerHPBar;
         [SerializeField] EnemyHPBar            screenEnemyHPBar;
+        [SerializeField] EnemyIntentDisplay    screenEnemyIntent;
+        [SerializeField] StatusEffectIconStack enemyStatusEffectIcons;
         [SerializeField] OvertimeMeterUI       overtimeMeterUI;
         [SerializeField] DeckCounterUI         deckCounterUI;
         [SerializeField] BlockDisplay          blockDisplay;
@@ -58,6 +65,9 @@ namespace CardBattle
         // Stores the target while the exit animation plays
         private GameObject _pendingTarget;
 
+        // Stores the enemy action before ExecuteAction advances the pattern index
+        private EnemyAction _lastExecutedEnemyAction;
+
         /// <summary>Current turn phase — used by CardInteractionHandler and CardTargetingManager.</summary>
         public TurnPhase CurrentTurn => turnPhaseController != null
             ? turnPhaseController.CurrentPhase
@@ -73,6 +83,9 @@ namespace CardBattle
 
         /// <summary>The HandManager subsystem for this battle.</summary>
         public HandManager HandManager => handManager;
+
+        /// <summary>The ParrySystem subsystem for this battle.</summary>
+        public ParrySystem ParrySystem => parrySystem;
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -173,6 +186,7 @@ namespace CardBattle
             if (overflowBuffer == null) { Debug.LogError("BattleManager: OverflowBuffer not assigned!"); return; }
             if (overtimeMeter == null) { Debug.LogError("BattleManager: OvertimeMeter not assigned!"); return; }
             if (blockSystem == null) { Debug.LogError("BattleManager: BlockSystem not assigned!"); return; }
+            if (parrySystem == null) { Debug.LogError("BattleManager: ParrySystem not assigned!"); return; }
             if (statusEffectSystem == null) { Debug.LogError("BattleManager: StatusEffectSystem not assigned!"); return; }
             if (cardEffectResolver == null) { Debug.LogError("BattleManager: CardEffectResolver not assigned!"); return; }
             if (deckManager == null) { Debug.LogError("BattleManager: DeckManager not assigned!"); return; }
@@ -183,6 +197,12 @@ namespace CardBattle
             overtimeMeter.Initialize(otMax, otRegen, overflowBuffer);
             blockSystem.Initialize();
             statusEffectSystem.Initialize();
+
+            // Initialize ParrySystem with config and current floor
+            int currentFloor = 1;
+            RunState runState = FindRunState();
+            if (runState != null) currentFloor = runState.currentFloor;
+            parrySystem.Initialize(gameConfig, currentFloor);
 
             // Apply Tool modifiers from RunState
             ApplyToolModifiers();
@@ -256,16 +276,44 @@ namespace CardBattle
             if (Time.frameCount == _lastEndTurnFrame) return;
             _lastEndTurnFrame = Time.frameCount;
 
-            // Discard remaining hand
+            // Discard non-Defense cards; keep Defense cards in hand for parry during Enemy_Phase
+            List<CardInstance> toDiscard = new List<CardInstance>();
             foreach (CardInstance card in handManager.Cards)
+            {
+                if (card.Data.cardType != CardType.Defense)
+                    toDiscard.Add(card);
+            }
+            foreach (CardInstance card in toDiscard)
+            {
                 deckManager.Discard(card.Data);
-            handManager.DiscardAll();
+                handManager.RemoveCard(card);
+            }
 
             // Advance to Discard phase, then Enemy phase
             turnPhaseController.AdvancePhase(); // Play → Discard
             turnPhaseController.AdvancePhase(); // Discard → Enemy
 
             StartCoroutine(EnemyPhaseRoutine());
+        }
+
+        /// <summary>
+        /// Attempt to parry the current enemy attack with a Defense card.
+        /// Called by the UI when the player drags a Defense card during a Parry_Window.
+        /// Returns true if the parry succeeded.
+        /// </summary>
+        public bool TryParryWithCard(CardInstance card)
+        {
+            if (!_encounterActive) return false;
+            if (parrySystem == null || !parrySystem.IsParryWindowActive) return false;
+
+            bool success = parrySystem.TryParry(card);
+            if (success)
+            {
+                // Move card to discard at no OT cost
+                deckManager.Discard(card.Data);
+                handManager.RemoveCard(card);
+            }
+            return success;
         }
 
         // ── Card resolution callback ──────────────────────────────────────────
@@ -398,7 +446,8 @@ namespace CardBattle
                     continue;
                 }
 
-                // Execute enemy action
+                // Execute enemy action — capture intent before it advances the pattern index
+                _lastExecutedEnemyAction = enemy.CurrentIntent;
                 EnemyActionResult result = enemy.ExecuteAction();
                 if (result.WasSkipped)
                 {
@@ -431,24 +480,110 @@ namespace CardBattle
             switch (result.ActionType)
             {
                 case EnemyActionType.DealDamage:
-                    // Play attack dash animation
-                    bool dashDone = false;
-                    if (battleAnimations != null && playerHealth != null)
+                    // Save enemy start position for dash-back
+                    Vector3 enemyStartPos = enemy.transform.localPosition;
+
+                    // Calculate parry window duration before starting the dash
+                    float windowDuration = parrySystem.CalculateWindowDuration(_lastExecutedEnemyAction, enemy);
+                    bool isParryable = _lastExecutedEnemyAction.intentColor != IntentColor.Unparryable
+                        && _lastExecutedEnemyAction.actionType == EnemyActionType.DealDamage;
+
+                    bool parried = false;
+                    bool dashComplete = false;
+
+                    if (isParryable && battleAnimations != null && playerHealth != null)
                     {
-                        battleAnimations.PlayAttackDash(
+                        // Two-phase dash: fast start, slow finish over parry window duration
+                        bool slowPhaseStarted = false;
+                        battleAnimations.PlayDashWithSlowdown(
                             enemy.transform,
                             playerHealth.transform,
-                            () =>
+                            windowDuration,
+                            onSlowPhaseStart: () => slowPhaseStarted = true,
+                            onComplete: () => dashComplete = true);
+
+                        // Wait for slow phase to begin, then open parry window
+                        while (!slowPhaseStarted)
+                            yield return null;
+
+                        parrySystem.StartParryWindow(_lastExecutedEnemyAction, enemy);
+
+                        // Tick parry window alongside the slow dash
+                        while (!dashComplete && parrySystem.IsParryWindowActive)
+                        {
+                            parrySystem.TickParryWindow(Time.deltaTime);
+                            if (parrySystem.ParrySucceeded)
                             {
-                                if (battleAnimations != null && playerHealth != null)
-                                    battleAnimations.PlayHitShake(playerHealth.transform);
-                                dashDone = true;
-                            });
-                        while (!dashDone)
+                                parried = true;
+                                break;
+                            }
+                            yield return null;
+                        }
+                        if (parrySystem.ParrySucceeded)
+                            parried = true;
+                        parrySystem.CloseParryWindow();
+
+                        // Wait for dash to finish if parry didn't interrupt
+                        while (!dashComplete && !parried)
+                            yield return null;
+                    }
+                    else if (battleAnimations != null && playerHealth != null)
+                    {
+                        // Unparryable — normal fast dash
+                        bool arrived = false;
+                        battleAnimations.PlayDashForward(
+                            enemy.transform,
+                            playerHealth.transform,
+                            () => arrived = true);
+                        while (!arrived)
                             yield return null;
                     }
 
-                    // Apply Bleed bonus from player
+                    // Resolve — hit or parried
+                    if (parried)
+                    {
+                        // Stop the dash animation so it doesn't fight with dash-back
+                        if (battleAnimations != null)
+                            battleAnimations.StopActiveDash();
+
+                        // Parry succeeded — green flash, small shake, gain 1 OT, dash back
+                        Debug.Log("[BattleManager] Parry SUCCESS — no damage dealt, +1 OT.");
+                        if (battleAnimations != null)
+                        {
+                            battleAnimations.PlayParryFlash();
+                            battleAnimations.PlayScreenShake(1, 10);
+                        }
+
+                        // Gain 1 Overtime on successful parry
+                        if (overtimeMeter != null)
+                            overtimeMeter.GainFlat(1);
+                        if (overtimeMeterUI != null)
+                            overtimeMeterUI.Refresh();
+
+                        if (battleAnimations != null)
+                        {
+                            bool backDone = false;
+                            battleAnimations.PlayDashBack(enemy.transform, enemyStartPos, () => backDone = true);
+                            while (!backDone) yield return null;
+                        }
+                        break;
+                    }
+
+                    // Parry missed or unparryable — hit shake then dash back
+                    if (battleAnimations != null)
+                        battleAnimations.StopActiveDash();
+                    if (battleAnimations != null && playerHealth != null)
+                        battleAnimations.PlayHitShake(playerHealth.transform);
+
+                    // Dash enemy back to start position
+                    if (battleAnimations != null)
+                    {
+                        bool backDone2 = false;
+                        battleAnimations.PlayDashBack(enemy.transform, enemyStartPos, () => backDone2 = true);
+                        while (!backDone2) yield return null;
+                    }
+
+                    // Deal damage
                     int bleedBonus = statusEffectSystem.GetBleedBonus(playerGO);
                     int totalDamage = result.DamageValue + bleedBonus;
 
@@ -472,6 +607,10 @@ namespace CardBattle
                         playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
                     if (playerHPBar != null && playerHealth != null)
                         playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+
+                    // Refresh OT UI after damage-to-OT gain
+                    if (overtimeMeterUI != null)
+                        overtimeMeterUI.Refresh();
 
                     // Raise DamageEvent
                     if (BattleEventBus.Instance != null)
@@ -511,14 +650,33 @@ namespace CardBattle
 
                 case EnemyActionType.Defend:
                     // Block is already applied inside EnemyCombatant.ExecuteAction()
+                    // Play a subtle defensive animation on the enemy
+                    if (battleAnimations != null)
+                        battleAnimations.PlayHitShake(enemy.transform);
+                    UpdateEnemyHPBar(enemy);
                     break;
 
                 case EnemyActionType.Buff:
-                    // Placeholder for buff handling
+                    // Apply the buff as a status effect on the enemy itself
+                    if (result.BuffType != EnemyBuffType.None)
+                    {
+                        string buffEffectId = "EnemyBuff_" + result.BuffType.ToString();
+                        statusEffectSystem.Apply(enemy.gameObject, new StatusEffectInstance
+                        {
+                            effectId = buffEffectId,
+                            duration = result.BuffDuration > 0 ? result.BuffDuration : 2,
+                            value = result.DamageValue
+                        });
+
+                        // Visual feedback — subtle shake to indicate buff activation
+                        if (battleAnimations != null)
+                            battleAnimations.PlayHitShake(enemy.transform);
+                    }
                     break;
 
                 case EnemyActionType.Special:
-                    // Placeholder for special enemy actions
+                    // Special actions are enemy-specific; log for now
+                    Debug.Log($"Enemy {enemy.Data?.enemyName} performed a special action.");
                     break;
             }
         }
@@ -526,6 +684,14 @@ namespace CardBattle
         private void FinishEnemyPhase()
         {
             if (!_encounterActive) return;
+
+            // Discard any Defense cards that survived the Enemy_Phase (unused parry cards)
+            List<CardInstance> remainingCards = new List<CardInstance>(handManager.Cards);
+            foreach (CardInstance card in remainingCards)
+            {
+                deckManager.Discard(card.Data);
+                handManager.RemoveCard(card);
+            }
 
             // Advance from Enemy → Draw (increments turn number)
             turnPhaseController.AdvancePhase();
@@ -580,6 +746,17 @@ namespace CardBattle
             // Regenerate OT (turn 2 onward)
             if (turnPhaseController.TurnNumber >= 2)
                 overtimeMeter.Regenerate();
+
+            // Refresh OT UI after regen
+            if (overtimeMeterUI != null)
+                overtimeMeterUI.Refresh();
+
+            // Refresh enemy intents for the new turn
+            foreach (EnemyIntentDisplay intent in _enemyIntents)
+            {
+                if (intent != null) intent.Refresh();
+            }
+            if (screenEnemyIntent != null) screenEnemyIntent.Refresh();
 
             // Draw new hand
             DrawHand();
@@ -776,6 +953,14 @@ namespace CardBattle
             // Initialize screen-space enemy HP bar for first enemy
             if (screenEnemyHPBar != null && _enemies.Count == 1)
                 screenEnemyHPBar.Initialize(combatant);
+
+            // Initialize screen-space enemy intent display for first enemy
+            if (screenEnemyIntent != null && _enemies.Count == 1)
+                screenEnemyIntent.Initialize(combatant);
+
+            // Initialize screen-space enemy status effect icons for first enemy
+            if (enemyStatusEffectIcons != null && _enemies.Count == 1)
+                enemyStatusEffectIcons.Initialize(combatant.gameObject);
         }
 
         private void InitializeDeck()
@@ -851,6 +1036,16 @@ namespace CardBattle
                     EnemyIntentDisplay intent = enemy.GetComponentInChildren<EnemyIntentDisplay>();
                     if (intent != null)
                         intent.Hide();
+
+                    // Clean up the corresponding HP bar
+                    if (i < _enemyHPBars.Count)
+                    {
+                        EnemyHPBar deadBar = _enemyHPBars[i];
+                        if (deadBar != null)
+                            deadBar.gameObject.SetActive(false);
+                        _enemyHPBars.RemoveAt(i);
+                    }
+
                     // Play death animation
                     if (battleAnimations != null)
                     {
@@ -872,6 +1067,31 @@ namespace CardBattle
                     _enemies.RemoveAt(i);
                 }
             }
+
+            // Reassign screen-space enemy HP bar if the tracked enemy died
+            if (screenEnemyHPBar != null)
+            {
+                EnemyCombatant tracked = screenEnemyHPBar.TrackedEnemy;
+                bool needsReassign = tracked == null || !tracked.IsAlive;
+
+                if (needsReassign)
+                {
+                    List<EnemyCombatant> living = GetLivingEnemies();
+                    if (living.Count > 0)
+                    {
+                        screenEnemyHPBar.SetEnemy(living[0]);
+                        // Also reassign screen-space intent and status icons
+                        if (screenEnemyIntent != null)
+                            screenEnemyIntent.Initialize(living[0]);
+                        if (enemyStatusEffectIcons != null)
+                            enemyStatusEffectIcons.Initialize(living[0].gameObject);
+                    }
+                    else
+                    {
+                        screenEnemyHPBar.gameObject.SetActive(false);
+                    }
+                }
+            }
         }
 
         private void UpdateEnemyHPBar(EnemyCombatant enemy)
@@ -880,8 +1100,8 @@ namespace CardBattle
             if (idx >= 0 && idx < _enemyHPBars.Count && _enemyHPBars[idx] != null)
                 _enemyHPBars[idx].UpdateHP(enemy.CurrentHP, enemy.MaxHP);
 
-            // Update screen-space enemy HP bar (shows first enemy)
-            if (screenEnemyHPBar != null && _enemies.Count > 0 && _enemies[0] == enemy)
+            // Update screen-space enemy HP bar if it's tracking this enemy
+            if (screenEnemyHPBar != null && screenEnemyHPBar.TrackedEnemy == enemy)
                 screenEnemyHPBar.UpdateHP(enemy.CurrentHP, enemy.MaxHP);
         }
 
@@ -898,8 +1118,14 @@ namespace CardBattle
             // Clear player status effects on encounter end
             statusEffectSystem.ClearAll(playerObject ?? gameObject);
 
-            // Award Hours from defeated enemies
-            // (Will be wired to RunState/VictoryScreen when those are implemented)
+            // Award Hours from defeated enemies (sum of each enemy's hoursReward)
+            int totalHours = 0;
+            foreach (EnemyCombatant enemy in _enemies)
+            {
+                if (enemy != null)
+                    totalHours += enemy.HoursReward;
+            }
+            // TODO: Add totalHours to RunState when SaveManager is wired
 
             // Return to exploration
             if (SceneLoader.Instance != null)
