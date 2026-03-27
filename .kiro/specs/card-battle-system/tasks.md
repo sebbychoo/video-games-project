@@ -423,7 +423,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Reject card additions that exceed limit with feedback message
     - _Requirements: 14.4, 14.5_
 
-- [-] 16. Checkpoint — Ensure deck selection, tools, and persistence work, all tests pass
+- [x] 16. Checkpoint — Ensure deck selection, tools, and persistence work, all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 17. Exploration systems — Work Box, Bathroom Shop, Break Room Trade

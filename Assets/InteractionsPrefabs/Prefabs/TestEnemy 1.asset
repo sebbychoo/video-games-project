@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: CardBattle::CardBattle.EnemyCombatantData
   enemyName: Joe Biden
   maxHP: 30
-  hoursReward: 5
+  hoursReward: 50
   variant: 0
   sprite: {fileID: 0}
   attackPattern:

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 875479e7a7fcd3c4a8499be955591aed, type: 3}
+  m_Name: OfficeBasics
+  m_EditorClassIdentifier: CardBattle::CardBattle.StartingDeckSet
+  setName: Office Basics
+  description: '"You took what you could when you got up from your desk."'
+  cards:
+  - {fileID: 11400000, guid: 523f5a01e048ddc44b8c98306ea3ee2b, type: 2}
+  - {fileID: 11400000, guid: fe2378519e3a2134f8bcd8b4af8efd6a, type: 2}
+  - {fileID: 11400000, guid: 523f5a01e048ddc44b8c98306ea3ee2b, type: 2}
+  - {fileID: 11400000, guid: fe2378519e3a2134f8bcd8b4af8efd6a, type: 2}
+  - {fileID: 11400000, guid: 523f5a01e048ddc44b8c98306ea3ee2b, type: 2}
+  - {fileID: 11400000, guid: fe2378519e3a2134f8bcd8b4af8efd6a, type: 2}
+  - {fileID: 11400000, guid: 523f5a01e048ddc44b8c98306ea3ee2b, type: 2}
+  - {fileID: 11400000, guid: fe2378519e3a2134f8bcd8b4af8efd6a, type: 2}

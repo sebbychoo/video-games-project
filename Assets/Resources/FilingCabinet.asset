@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ae5e1715df536c4582c858eb9bd4bc1, type: 3}
+  m_Name: FilingCabinet
+  m_EditorClassIdentifier: CardBattle::CardBattle.HubUpgradeData
+  upgradeId: FilingCabinet
+  displayName: Filing Cabinet
+  maxLevel: 5
+  costPerLevel: 05000000
+  effectsPerLevel:
+  - modifierType: 7
+    value: 5
+  description: More cards!
+  furnitureSprites: []
