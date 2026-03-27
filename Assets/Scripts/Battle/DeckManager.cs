@@ -65,6 +65,24 @@ namespace CardBattle
         }
 
         /// <summary>
+        /// Attempts to add a card to the deck, respecting the maximum deck size limit.
+        /// Returns true if the card was added, false if the deck is full.
+        /// </summary>
+        /// <param name="card">The card to add.</param>
+        /// <param name="maxDeckSize">Maximum allowed deck size.</param>
+        /// <returns>True if added, false if deck is at capacity.</returns>
+        public bool TryAddCard(CardData card, int maxDeckSize)
+        {
+            if (card == null) return false;
+            if (TotalCardCount >= maxDeckSize) return false;
+            _discard.Add(card);
+            return true;
+        }
+
+        /// <summary>Total cards across draw pile, hand (not tracked here), and discard pile.</summary>
+        public int TotalCardCount => _deck.Count + _discard.Count;
+
+        /// <summary>
         /// Retrieve N random cards from the discard pile and return them.
         /// Removes the retrieved cards from the discard pile. (Req 19.3)
         /// </summary>

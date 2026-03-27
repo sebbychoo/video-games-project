@@ -19,6 +19,7 @@ namespace CardBattle
 
         private GameConfig _gameConfig;
         private int _currentFloor;
+        private float _parryWindowModifier;
 
         /// <summary>Whether a parry window is currently open and accepting input.</summary>
         public bool IsParryWindowActive => _parryWindowActive && _parryWindowTimer > 0f;
@@ -48,6 +49,13 @@ namespace CardBattle
             _parryWindowActive = false;
             _parryWindowTimer = 0f;
             _parrySucceeded = false;
+            _parryWindowModifier = 0f;
+        }
+
+        /// <summary>Apply an additive modifier to parry window duration (from Tools).</summary>
+        public void ApplyWindowDurationModifier(float modifier)
+        {
+            _parryWindowModifier += modifier;
         }
 
         /// <summary>
@@ -264,6 +272,9 @@ namespace CardBattle
             float baseDuration = (enemy != null && enemy.Data != null && enemy.Data.baseParryWindowDuration > 0f)
                 ? enemy.Data.baseParryWindowDuration
                 : (_gameConfig != null ? _gameConfig.baseParryWindowDuration : 1.5f);
+
+            // Apply Tool modifier (additive)
+            baseDuration += _parryWindowModifier;
 
             // Scale down with floor depth
             float floorScaling = _gameConfig != null ? _gameConfig.parryWindowFloorScaling : 0.02f;

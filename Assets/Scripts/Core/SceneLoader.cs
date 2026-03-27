@@ -1,21 +1,58 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using static CardBattle.BattleManager;
+using CardBattle;
 
 /// <summary>
 /// Singleton that persists across scenes.
-/// Handles scene switching and stores shared game state.
+/// Handles scene switching, battle transitions, and shared game state.
 /// </summary>
 public class SceneLoader : MonoBehaviour
 {
     public static SceneLoader Instance;
 
     public Vector3 playerPosition;
-    public bool enemyDefeated = false;
     public bool useDefaultSpawn = false;
 
     public Transform defaultSpawnPoint;
+
+    // --- Legacy field kept for backward compatibility (read-only accessor) ---
+    /// <summary>
+    /// Returns true if any enemy has been defeated. Kept for backward
+    /// compatibility with code that checks the old single-bool field.
+    /// </summary>
+    public bool enemyDefeated
+    {
+        get => _defeatedEnemyIds.Count > 0;
+        set
+        {
+            // Legacy setter: when set to false, clear all defeated enemies.
+            // When set to true, this is a no-op (use MarkEnemyDefeated instead).
+            if (!value)
+                _defeatedEnemyIds.Clear();
+        }
+    }
+
+    // --- Defeated enemy tracking (replaces single bool) ---
+    private HashSet<string> _defeatedEnemyIds = new HashSet<string>();
+
+    /// <summary>ID of the most recently defeated enemy trigger.</summary>
+    public string CurrentBattleEnemyId => _defeatedEnemyId;
+    private string _defeatedEnemyId;
+
+    /// <summary>Check whether a specific enemy trigger has been defeated.</summary>
+    public bool IsEnemyDefeated(string enemyId)
+    {
+        return !string.IsNullOrEmpty(enemyId) && _defeatedEnemyIds.Contains(enemyId);
+    }
+
+    /// <summary>Mark a specific enemy trigger as defeated.</summary>
+    public void MarkEnemyDefeated(string enemyId)
+    {
+        if (!string.IsNullOrEmpty(enemyId))
+            _defeatedEnemyIds.Add(enemyId);
+    }
 
     private void Awake()
     {
@@ -31,6 +68,7 @@ public class SceneLoader : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (scene.name == "Explorationscene")
@@ -79,69 +117,125 @@ public class SceneLoader : MonoBehaviour
         if (cc != null) cc.enabled = true;
     }
 
-    //private IEnumerator SetSpawn()
-    //{
-    //    yield return null;
-    //    GameObject player = GameObject.FindWithTag("Player");
+    // --- Battle Transition API ---
 
-    //    if (player == null)
-    //    {
-    //        Debug.LogError("player not found");
-    //        yield break;
-    //    }
+    /// <summary>
+    /// Load the battle scene with encounter data. Snapshots pre-encounter state,
+    /// passes encounter to BattleManager, and transitions to the battle scene.
+    /// </summary>
+    public void LoadBattle(EncounterData encounter, string enemyId = null)
+    {
+        // Save player position before leaving exploration
+        GameObject player = GameObject.FindWithTag("Player");
+        if (player != null)
+            playerPosition = player.transform.position;
 
-    //    if (useDefaultSpawn)
-    //    {
-    //        if (defaultSpawnPoint != null)
-    //        {
-    //            player.transform.position = defaultSpawnPoint.position;
-    //        }
-    //        useDefaultSpawn = false;
-    //    }
-    //    else
-    //    {
-    //        player.transform.position = playerPosition;
-    //    }
-    //}
+        // Track which enemy trigger initiated this battle
+        _defeatedEnemyId = enemyId;
 
+        // Snapshot pre-encounter state for mid-combat quit recovery
+        if (SaveManager.Instance != null)
+            SaveManager.Instance.SnapshotPreEncounter();
 
-    //private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    //{
-    //    if (scene.name == "Explorationscene")
-    //        StartCoroutine(SetPlayerPositionNextFrame()); // SetPlayerPositionNextFrame
-    //}
+        // Pass encounter data to BattleManager before scene loads
+        if (encounter != null)
+            BattleManager.SetPendingEncounter(encounter);
 
+        // Unlock cursor for battle UI
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
 
-    //private IEnumerator SetPlayerPositionNextFrame()
-    //{
-    //    yield return null; // wait 1 frame
+        // Capture the exploration scene as a background image before
+        // transitioning — needs end-of-frame so the frame is fully rendered.
+        StartCoroutine(CaptureBackgroundAndLoadBattle());
+    }
 
-    //    GameObject player = GameObject.FindWithTag("Player");
-    //    if (player == null || playerPosition == Vector3.zero) yield break;
-    //        CharacterController cc = player.GetComponent<CharacterController>();
-    //    if (cc != null) cc.enabled = false;
-    //    player.transform.position = playerPosition;
-    //    if (cc != null) cc.enabled = true;
-    //}
+    private IEnumerator CaptureBackgroundAndLoadBattle()
+    {
+        yield return new WaitForEndOfFrame();
+        BattleBackground.CaptureBackground();
+        SceneManager.LoadScene("Battlescene");
+    }
 
+    /// <summary>
+    /// Legacy no-arg LoadBattle for backward compatibility and testing.
+    /// Does not pass encounter data or snapshot state.
+    /// </summary>
     public void LoadBattle()
     {
         GameObject player = GameObject.FindWithTag("Player");
         if (player != null)
             playerPosition = player.transform.position;
 
-        // Unlock cursor for battle UI (card clicking needs a visible, free cursor)
+        // Unlock cursor for battle UI
         Cursor.lockState = CursorLockMode.None;
-        Cursor.visible   = true;
+        Cursor.visible = true;
 
         SceneManager.LoadScene("Battlescene");
+    }
+
+    /// <summary>
+    /// Called when the player wins a battle. Marks the enemy as defeated,
+    /// updates RunState with earned rewards, and returns to exploration.
+    /// </summary>
+    public void OnBattleVictory(string enemyId, int hoursEarned, int badReviewsEarned)
+    {
+        // Mark the specific enemy as defeated
+        MarkEnemyDefeated(enemyId);
+
+        // Update RunState with earned rewards
+        if (SaveManager.Instance != null)
+        {
+            RunState run = SaveManager.Instance.CurrentRun;
+            if (run != null)
+            {
+                run.hours += hoursEarned;
+                run.hoursEarnedTotal += hoursEarned;
+                run.badReviewsEarnedTotal += badReviewsEarned;
+                run.enemiesDefeated++;
+            }
+
+            // Also update meta state for Bad Reviews (persistent currency)
+            if (badReviewsEarned > 0 && SaveManager.Instance.CurrentMeta != null)
+            {
+                SaveManager.Instance.CurrentMeta.badReviews += badReviewsEarned;
+            }
+
+            SaveManager.Instance.SaveRun();
+            SaveManager.Instance.SaveMeta();
+        }
+
+        // Restore player to pre-battle position
+        useDefaultSpawn = false;
+
+        LoadExploration();
+    }
+
+    /// <summary>
+    /// Called when the player loses a battle. Wipes run state and
+    /// returns to exploration (death screen handled separately).
+    /// </summary>
+    public void OnBattleDefeat()
+    {
+        // Wipe run state (death resets the run)
+        if (SaveManager.Instance != null)
+            SaveManager.Instance.WipeRun();
+
+        // Spawn at default position on a fresh run
+        useDefaultSpawn = true;
+
+        // Clear defeated enemies for the new run
+        _defeatedEnemyIds.Clear();
+        _defeatedEnemyId = null;
+
+        LoadExploration();
     }
 
     public void LoadExploration()
     {
         // Re-lock cursor for 3D exploration
         Cursor.lockState = CursorLockMode.Confined;
-        Cursor.visible   = false;
+        Cursor.visible = false;
         SceneManager.LoadScene("Explorationscene");
     }
 }

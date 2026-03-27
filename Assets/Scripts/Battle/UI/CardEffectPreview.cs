@@ -144,9 +144,25 @@ namespace CardBattle
         /// <summary>Sum all active Tool modifiers of the given type.</summary>
         private int GetToolModifierValue(ToolModifierType modType)
         {
-            // Query RunState for tools — returns 0 if no RunState/tools available
-            // This will be fully wired when SaveManager is implemented
-            return 0;
+            if (SaveManager.Instance == null || SaveManager.Instance.CurrentRun == null)
+                return 0;
+
+            var toolIds = SaveManager.Instance.CurrentRun.toolIds;
+            if (toolIds == null) return 0;
+
+            int total = 0;
+            foreach (string toolId in toolIds)
+            {
+                ToolData tool = Resources.Load<ToolData>(toolId);
+                if (tool == null || tool.modifiers == null) continue;
+
+                foreach (ToolModifier mod in tool.modifiers)
+                {
+                    if (mod.modifierType == modType)
+                        total += mod.value;
+                }
+            }
+            return total;
         }
     }
 }

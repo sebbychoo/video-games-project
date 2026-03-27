@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace CardBattle
 {
-    public enum ToolModifierType { OvertimeRegen, BlockBonus, HandSize, DamageBonus, MaxHP, HealPerFloor, TechCardDamage, MaxDeckSize }
+    public enum ToolModifierType { OvertimeRegen, BlockBonus, HandSize, DamageBonus, MaxHP, HealPerFloor, TechCardDamage, MaxDeckSize, ParryWindowBonus }
 
     [Serializable]
     public struct ToolModifier

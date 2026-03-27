@@ -17,6 +17,9 @@ namespace CardBattle
         [SerializeField] private HandManager handManager;
         [SerializeField] private BattleEventBus battleEventBus;
 
+        /// <summary>Additive damage bonus from Tool modifiers, applied to Attack cards.</summary>
+        private int _damageBonus;
+
         /// <summary>Auto-wire from sibling components if serialized fields are empty.</summary>
         private void Awake()
         {
@@ -28,6 +31,21 @@ namespace CardBattle
             if (handManager == null) handManager = GetComponent<HandManager>();
             if (battleEventBus == null) battleEventBus = GetComponent<BattleEventBus>();
         }
+
+        /// <summary>Apply an additive damage bonus from Tool modifiers.</summary>
+        public void ApplyDamageBonus(int bonus)
+        {
+            _damageBonus += bonus;
+        }
+
+        /// <summary>Reset all tool modifiers (called at encounter start before applying new ones).</summary>
+        public void ResetModifiers()
+        {
+            _damageBonus = 0;
+        }
+
+        /// <summary>Current total damage bonus from tools.</summary>
+        public int DamageBonus => _damageBonus;
 
         /// <summary>
         /// Resolve a played card's effect, move it from hand to discard, and raise events.
@@ -79,7 +97,7 @@ namespace CardBattle
 
         private void ResolveAttack(CardData data, GameObject source, GameObject target, List<EnemyCombatant> allEnemies)
         {
-            int baseDamage = data.effectValue;
+            int baseDamage = data.effectValue + _damageBonus;
 
             // Apply Rage Burst bonus (Attack cards only)
             int rageBurstBonus = RageBurstCalculator.TryConsume(overflowBuffer, data.cardType, baseDamage);

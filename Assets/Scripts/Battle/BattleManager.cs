@@ -45,6 +45,7 @@ namespace CardBattle
         [SerializeField] DeckCounterUI         deckCounterUI;
         [SerializeField] BlockDisplay          blockDisplay;
         [SerializeField] TurnCounterUI         turnCounterUI;
+        [SerializeField] VictoryScreen         victoryScreen;
 
         [Header("Spawning")]
         [SerializeField] GameObject            enemyPrefab;
@@ -61,6 +62,7 @@ namespace CardBattle
         private int                  _handSize;
         private int                  _lastEndTurnFrame = -1;
         private bool                 _encounterActive;
+        private EncounterData        _currentEncounter;
 
         // Stores the target while the exit animation plays
         private GameObject _pendingTarget;
@@ -176,8 +178,7 @@ namespace CardBattle
             }
 
             _encounterActive = true;
-
-            // Determine hand size from config + tool modifiers
+            _currentEncounter = encounter;
             _handSize = gameConfig != null ? gameConfig.baseHandSize : 5;
             int otMax = gameConfig != null ? gameConfig.overtimeMaxCapacity : 10;
             int otRegen = gameConfig != null ? gameConfig.overtimeRegenPerTurn : 2;
@@ -782,6 +783,10 @@ namespace CardBattle
 
         private void ApplyToolModifiers()
         {
+            // Reset subsystem modifiers before re-applying
+            if (cardEffectResolver != null)
+                cardEffectResolver.ResetModifiers();
+
             // Query RunState for tool IDs and load ToolData assets
             RunState runState = FindRunState();
             if (runState == null || runState.toolIds == null) return;
@@ -796,13 +801,27 @@ namespace CardBattle
                     switch (mod.modifierType)
                     {
                         case ToolModifierType.OvertimeRegen:
-                            overtimeMeter.ApplyRegenModifier(mod.value);
+                            if (overtimeMeter != null)
+                                overtimeMeter.ApplyRegenModifier(mod.value);
                             break;
                         case ToolModifierType.HandSize:
                             _handSize += mod.value;
                             break;
-                        // BlockBonus, DamageBonus, etc. are applied at resolution time
-                        // by the respective subsystems or CardEffectResolver
+                        case ToolModifierType.ParryWindowBonus:
+                            if (parrySystem != null)
+                                parrySystem.ApplyWindowDurationModifier(mod.value * 0.01f);
+                            break;
+                        case ToolModifierType.DamageBonus:
+                            if (cardEffectResolver != null)
+                                cardEffectResolver.ApplyDamageBonus(mod.value);
+                            break;
+                        case ToolModifierType.MaxHP:
+                            if (playerHealth != null)
+                            {
+                                playerHealth.maxHealth += mod.value;
+                                playerHealth.currentHealth += mod.value;
+                            }
+                            break;
                     }
                 }
             }
@@ -810,8 +829,8 @@ namespace CardBattle
 
         private RunState FindRunState()
         {
-            // Try to find a RunState from a SaveManager or similar source
-            // For now, return null — will be wired when SaveManager is implemented
+            if (SaveManager.Instance != null)
+                return SaveManager.Instance.CurrentRun;
             return null;
         }
 
@@ -1119,20 +1138,47 @@ namespace CardBattle
             statusEffectSystem.ClearAll(playerObject ?? gameObject);
 
             // Award Hours from defeated enemies (sum of each enemy's hoursReward)
-            int totalHours = 0;
+            _victoryHours = 0;
+            List<string> enemyNames = new List<string>();
             foreach (EnemyCombatant enemy in _enemies)
             {
                 if (enemy != null)
-                    totalHours += enemy.HoursReward;
+                {
+                    _victoryHours += enemy.HoursReward;
+                    if (enemy.Data != null && !string.IsNullOrEmpty(enemy.Data.enemyName))
+                        enemyNames.Add(enemy.Data.enemyName);
+                }
             }
-            // TODO: Add totalHours to RunState when SaveManager is wired
 
-            // Return to exploration
+            // Determine boss rewards
+            _victoryIsBoss = _currentEncounter != null && _currentEncounter.isBossEncounter;
+            _victoryBadReviews = _currentEncounter != null ? _currentEncounter.badReviewsReward : 0;
+
+            // No card rewards from encounters (cards from Work_Boxes, shops, trades only)
+
+            // Show victory screen if available, otherwise transition immediately
+            if (victoryScreen != null)
+            {
+                victoryScreen.OnDismissed = () => ReturnToExploration();
+                victoryScreen.Show(enemyNames, _victoryHours, _victoryBadReviews, _victoryIsBoss);
+            }
+            else
+            {
+                ReturnToExploration();
+            }
+        }
+
+        // Cached victory rewards for use in ReturnToExploration
+        private int _victoryHours;
+        private int _victoryBadReviews;
+        private bool _victoryIsBoss;
+
+        private void ReturnToExploration()
+        {
             if (SceneLoader.Instance != null)
             {
-                SceneLoader.Instance.enemyDefeated = true;
-                SceneLoader.Instance.useDefaultSpawn = false;
-                SceneLoader.Instance.LoadExploration();
+                string enemyId = SceneLoader.Instance.CurrentBattleEnemyId;
+                SceneLoader.Instance.OnBattleVictory(enemyId, _victoryHours, _victoryBadReviews);
             }
         }
 
@@ -1147,22 +1193,18 @@ namespace CardBattle
             // Clear player status effects
             statusEffectSystem.ClearAll(playerObject ?? gameObject);
 
-            // Play death animation then return to exploration with run reset
+            // Play death animation then trigger run reset via SceneLoader
             if (battleAnimations != null && playerHealth != null)
             {
                 battleAnimations.PlayDeath(playerHealth.transform, () =>
                 {
                     if (SceneLoader.Instance != null)
-                    {
-                        SceneLoader.Instance.useDefaultSpawn = true;
-                        SceneLoader.Instance.LoadExploration();
-                    }
+                        SceneLoader.Instance.OnBattleDefeat();
                 });
             }
             else if (SceneLoader.Instance != null)
             {
-                SceneLoader.Instance.useDefaultSpawn = true;
-                SceneLoader.Instance.LoadExploration();
+                SceneLoader.Instance.OnBattleDefeat();
             }
         }
     }

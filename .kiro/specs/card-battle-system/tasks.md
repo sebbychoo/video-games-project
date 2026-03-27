@@ -369,61 +369,61 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - **Property 41: Mid-Combat Save Restores Pre-Encounter State** — Quit during encounter saves pre-combat state, resume in exploration
     - **Validates: Requirements 27.7**
 
-- [ ] 14. Battle transition and encounter lifecycle
-  - [ ] 14.1 Update SceneLoader for battle transitions with encounter data
+- [x] 14. Battle transition and encounter lifecycle
+  - [x] 14.1 Update SceneLoader for battle transitions with encounter data
     - Modify `Assets/Scripts/Core/SceneLoader.cs` to pass EncounterData when loading battle scene
     - On victory: return to exploration, remove defeated enemy, restore player position
     - On defeat: trigger run reset via SaveManager, proceed to death screen
     - Snapshot pre-encounter state before loading battle scene
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-  - [ ] 14.2 Update Battlescene_Trigger for encounter data passing
+  - [x] 14.2 Update Battlescene_Trigger for encounter data passing
     - Modify `Assets/Scripts/World/Battlescene_Trigger.cs` to determine EncounterData from the triggering enemy
     - Support single roaming enemies (1v1) and pre-defined multi-enemy groups
     - _Requirements: 8.2, 11.1_
 
-  - [ ] 14.3 Implement battle scene background rendering
+  - [x] 14.3 Implement battle scene background rendering
     - Keep 3D exploration environment visible as blurred/dimmed background behind 2D battle UI
     - Render background from pre-battle camera position
     - _Requirements: 34.1, 34.2, 34.3, 34.4_
 
-  - [ ] 14.4 Implement VictoryScreen
+  - [x] 14.4 Implement VictoryScreen
     - Create `Assets/Scripts/Battle/UI/VictoryScreen.cs`
     - Display randomized victory verb + enemy name(s) + Hours earned (+ Bad_Reviews for bosses)
     - Dismiss on click or after short delay
     - _Requirements: 16.1, 16.2, 16.3, 16.4_
 
-  - [ ] 14.5 Implement encounter victory rewards
+  - [x] 14.5 Implement encounter victory rewards
     - Award Hours = sum of each defeated enemy's hoursReward
     - Award Bad_Reviews for boss encounters
     - No card rewards from encounters (cards from Work_Boxes, shops, trades only)
     - _Requirements: 16.1, 16.2, 16.3_
 
-- [ ] 15. Starting deck selection and Tool integration
-  - [ ] 15.1 Implement StartingDeckCarousel UI
+- [x] 15. Starting deck selection and Tool integration
+  - [x] 15.1 Implement StartingDeckCarousel UI
     - Create `Assets/Scripts/Battle/UI/StartingDeckCarousel.cs`
     - Carousel view: deck set name at top, 8 cards displayed with full details, left/right arrows to browse sets
     - Select button at bottom-center initializes Draw_Pile with chosen 8 cards
     - _Requirements: 14.1, 14.2, 14.3_
 
-  - [ ] 15.2 Implement Tool modifier system in BattleManager
+  - [x] 15.2 Implement Tool modifier system in BattleManager
     - Query active Tool inventory at encounter start
     - Apply OT regen modifiers, Parry_Window duration modifiers, hand size modifiers, damage bonus modifiers
     - Multiple tools with same modifier type stack additively
     - Reflect modified values in UI
     - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
 
-  - [ ]* 15.3 Write property test for Tool modifiers (Property 30)
+  - [x] 15.3 Write property test for Tool modifiers (Property 30)
     - Create `Assets/Tests/EditMode/Economy/ToolModifierPropertyTests.cs`
     - **Property 30: Tool Modifier Application** — Effective value = baseValue + sum of tool modifiers of same type
     - **Validates: Requirements 15.2, 15.3, 15.4**
 
-  - [ ] 15.4 Implement deck size limit enforcement
+  - [x] 15.4 Implement deck size limit enforcement
     - Enforce maximum deck size (default 25, increased by Filing Cabinet upgrade)
     - Reject card additions that exceed limit with feedback message
     - _Requirements: 14.4, 14.5_
 
-- [ ] 16. Checkpoint — Ensure deck selection, tools, and persistence work, all tests pass
+- [-] 16. Checkpoint — Ensure deck selection, tools, and persistence work, all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 17. Exploration systems — Work Box, Bathroom Shop, Break Room Trade
