@@ -426,8 +426,8 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
 - [x] 16. Checkpoint — Ensure deck selection, tools, and persistence work, all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 17. Exploration systems — Work Box, Bathroom Shop, Break Room Trade
-  - [ ] 17.1 Implement WorkBox interaction and rarity reveal
+- [x] 17. Exploration systems — Work Box, Bathroom Shop, Break Room Trade
+  - [x] 17.1 Implement WorkBox interaction and rarity reveal
     - Create `Assets/Scripts/Exploration/WorkBox.cs`
     - Spawn under work desks only, size determined by floor-based spawn rates
     - Card count by size: Small [1,3], Big [3,5], Huge [5,7]
@@ -439,12 +439,12 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Walk-away support: unrevealed cards persist
     - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 21.10, 21.11, 21.12_
 
-  - [ ]* 17.2 Write property test for Work Box card count (Property 26)
+  - [x]* 17.2 Write property test for Work Box card count (Property 26)
     - Create `Assets/Tests/EditMode/Procedural/FloorGenerationPropertyTests.cs`
     - **Property 26: Work Box Card Count by Size** — Small → [1,3], Big → [3,5], Huge → [5,7]
     - **Validates: Requirements 21.3**
 
-  - [ ] 17.3 Implement BathroomShop
+  - [x] 17.3 Implement BathroomShop
     - Create `Assets/Scripts/Exploration/BathroomShop.cs`
     - Display cards (3–5) and Tools (0–2) with Hours prices
     - Card pricing by rarity: Common 10, Rare 25, Legendary 100, Unknown 150
@@ -458,7 +458,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Inventory generated once per floor, fixed for duration
     - _Requirements: 22.1, 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.9, 43.1, 43.2, 43.3, 43.4, 43.5, 43.6, 43.7_
 
-  - [ ]* 17.4 Write property tests for shop and card removal (Properties 27, 28, 37, 38, 39)
+  - [x]* 17.4 Write property tests for shop and card removal (Properties 27, 28, 37, 38, 39)
     - Create `Assets/Tests/EditMode/Economy/ShopPropertyTests.cs`
     - **Property 27: Shop Purchase Deducts Currency and Adds Item** — Hours = h - c, item in inventory; rejected if c > h
     - **Validates: Requirements 22.3, 22.4**
@@ -471,7 +471,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - **Property 39: Escalating Card Removal Cost** — Cost = 25 + (r * 10) where r = previous removals
     - **Validates: Requirements 43.5**
 
-  - [ ] 17.5 Implement BreakRoomTrade
+  - [x] 17.5 Implement BreakRoomTrade
     - Create `Assets/Scripts/Exploration/BreakRoomTrade.cs`
     - Display offered trade (item wanted vs item offered)
     - Only offer trades player can fulfill
@@ -481,7 +481,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Decline: close interface, no penalty
     - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 23.7_
 
-  - [ ]* 17.6 Write property test for trades (Property 29)
+  - [x]* 17.6 Write property test for trades (Property 29)
     - Append to `Assets/Tests/EditMode/Economy/ShopPropertyTests.cs`
     - **Property 29: Trade Conserves Inventory** — Accept: have B not A; Decline: inventory unchanged
     - **Validates: Requirements 23.5, 23.6**
