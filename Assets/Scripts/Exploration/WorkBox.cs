@@ -88,13 +88,20 @@ namespace CardBattle
             int cardCount = RollCardCount(_size);
             for (int i = 0; i < cardCount; i++)
             {
-                CardRarity rarity = RollRarity(floor);
-                string cardId = PickCardIdForRarity(rarity);
+                CardRarity rolledRarity = RollRarity(floor);
+                string cardId = PickCardIdForRarity(rolledRarity);
+
+                // Use the card's actual rarity, not the rolled one,
+                // in case the fallback picked a card of a different rarity
+                CardRarity actualRarity = rolledRarity;
+                CardData cardData = Resources.Load<CardData>(cardId);
+                if (cardData != null)
+                    actualRarity = cardData.cardRarity;
 
                 _cards.Add(new WorkBoxCard
                 {
                     cardId = cardId,
-                    rarity = rarity,
+                    rarity = actualRarity,
                     revealState = RevealState.Hidden,
                     kept = false,
                     left = false

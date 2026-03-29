@@ -588,6 +588,7 @@ MonoBehaviour:
   deckSets:
   - {fileID: 11400000, guid: 12743cf089f299546b2dff47fbc0da00, type: 2}
   - {fileID: 11400000, guid: cbd1941e078e9684fbfd6d720e07624e, type: 2}
+  - {fileID: 11400000, guid: d6a7b89dfae047042b2623d6efa25c4f, type: 2}
   deckSetNameText: {fileID: 56427504}
   deckSetDescriptionText: {fileID: 1126667746}
   cardDisplayParent: {fileID: 878633989}
