@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5bebd0ad0d65124f8432d604efc1a36, type: 3}
+  m_Name: GameConfig
+  m_EditorClassIdentifier: CardBattle::CardBattle.GameConfig
+  finalFloor: 75
+  baseHandSize: 5
+  overtimeMaxCapacity: 10
+  overtimeRegenPerTurn: 2
+  workerEncounterFloor: 5
+  bossFloorInterval: 3
+  breakRoomFloorInterval: 2
+  workerHP: 12
+  workerSelfDamage: 4
+  playerBaseHP: 80
+  minimapBaseRevealLevel: 0
+  waterCoolerFloorInterval: 2
+  waterCoolerHealPercent: 0.35
+  shopMinCards: 3
+  shopMaxCards: 5
+  shopMinTools: 0
+  shopMaxTools: 2
+  cardRemovalBaseCost: 25
+  cardRemovalCostIncrease: 10
+  minimumDeckSize: 1
+  maximumDeckSize: 25
+  safeRoomChaseTimeout: 5
+  baseParryWindowDuration: 1.5
+  parryWindowFloorScaling: 0.02
+  parryWindowMinDuration: 0.3

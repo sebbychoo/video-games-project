@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 namespace CardBattle
 {
@@ -16,6 +18,7 @@ namespace CardBattle
         [SerializeField] private GameConfig gameConfig;
         [SerializeField] private GameObject inventoryPanel;
         [SerializeField] private Transform cardTileContainer;
+        [SerializeField] private Transform deckCardContainer;
         [SerializeField] private GameObject cardTilePrefab;
         [SerializeField] private GameObject keepButton;
         [SerializeField] private GameObject leaveButton;
@@ -141,13 +144,21 @@ namespace CardBattle
             if (card.revealState < targetState)
             {
                 card.revealState = GetNextRevealState(card.revealState, card.rarity);
-                StartCoroutine(PlayRevealAnimation(index, card.revealState));
+                StartCoroutine(PlayRevealAnimationThenRefresh(index, card.revealState));
             }
             else if (card.revealState == targetState && card.revealState != RevealState.FullReveal)
             {
                 card.revealState = RevealState.FullReveal;
                 _selectedCardIndex = index;
                 ShowKeepLeaveButtons(true);
+                SpawnCardTiles(); // Refresh to show glow
+            }
+            else if (card.revealState == RevealState.FullReveal)
+            {
+                // Already fully revealed — select it and refresh visuals
+                _selectedCardIndex = index;
+                ShowKeepLeaveButtons(true);
+                SpawnCardTiles();
             }
 
             return card.revealState;
@@ -184,6 +195,11 @@ namespace CardBattle
 
             ShowKeepLeaveButtons(false);
             _selectedCardIndex = -1;
+
+            // Refresh both panels so the kept card shows as empty and appears in deck
+            SpawnCardTiles();
+            SpawnDeckTiles();
+
             return true;
         }
 
@@ -195,11 +211,14 @@ namespace CardBattle
             if (index < 0 || index >= _cards.Count) return;
 
             WorkBoxCard card = _cards[index];
-            if (card.kept || card.left) return;
+            if (card.kept) return;
 
-            card.left = true;
+            // Don't permanently mark as left — just deselect so player can come back
             ShowKeepLeaveButtons(false);
             _selectedCardIndex = -1;
+
+            // Refresh tiles to remove glow/dim
+            SpawnCardTiles();
         }
 
         /// <summary>
@@ -448,7 +467,7 @@ namespace CardBattle
                 dustParticles.Play();
             }
 
-            yield return new WaitForSeconds(revealStepDuration);
+            yield return new WaitForSecondsRealtime(revealStepDuration);
 
             // Stop dust particles after animation
             if (state == RevealState.Red && dustParticles != null)
@@ -459,14 +478,284 @@ namespace CardBattle
             _animating = false;
         }
 
+        private IEnumerator PlayRevealAnimationThenRefresh(int index, RevealState state)
+        {
+            yield return StartCoroutine(PlayRevealAnimation(index, state));
+            SpawnCardTiles(); // Refresh tiles to show updated colors
+        }
+
         // ----------------------------------------------------------------
         // UI Helpers
         // ----------------------------------------------------------------
+
+        /// <summary>Finds named UI children on a tile for reliable assignment.</summary>
+        private static void SetupTile(GameObject tile, string name, Color bgColor, Sprite sprite, bool showSprite)
+        {
+            // Make the Button's own image transparent but keep it as raycast target
+            Image buttonImg = tile.GetComponent<Image>();
+            if (buttonImg != null)
+            {
+                buttonImg.color = Color.clear;
+                buttonImg.raycastTarget = true;
+            }
+
+            // RarityBG — background color
+            Transform rarityBG = tile.transform.Find("RarityBG");
+            if (rarityBG != null)
+            {
+                Image bg = rarityBG.GetComponent<Image>();
+                if (bg != null) bg.color = bgColor;
+            }
+
+            // CardSprite — the actual card art
+            Transform cardSprite = tile.transform.Find("CardSprite");
+            if (cardSprite != null)
+            {
+                Image img = cardSprite.GetComponent<Image>();
+                if (img != null)
+                {
+                    if (showSprite && sprite != null)
+                    {
+                        img.sprite = sprite;
+                        img.color = Color.white;
+                    }
+                    else
+                    {
+                        img.sprite = null;
+                        img.color = Color.clear;
+                    }
+                }
+            }
+
+            // Pick contrasting text color based on background brightness
+            Color textColor = GetContrastColor(bgColor);
+
+            // CardName — try TMP first, then legacy Text
+            Transform cardName = tile.transform.Find("CardName");
+            if (cardName != null)
+            {
+                TMP_Text tmp = cardName.GetComponent<TMP_Text>();
+                if (tmp != null)
+                {
+                    tmp.text = name;
+                    tmp.color = textColor;
+                }
+                else
+                {
+                    Text txt = cardName.GetComponent<Text>();
+                    if (txt != null)
+                    {
+                        txt.text = name;
+                        txt.color = textColor;
+                    }
+                }
+            }
+        }
+
+        /// <summary>Returns black or white depending on which contrasts better with the background.</summary>
+        private static Color GetContrastColor(Color bg)
+        {
+            // Perceived luminance formula
+            float luminance = 0.299f * bg.r + 0.587f * bg.g + 0.114f * bg.b;
+            return luminance > 0.5f ? Color.black : Color.white;
+        }
+
+        /// <summary>
+        /// Ensures a GridLayoutGroup exists on the container. Does not override Inspector settings.
+        /// </summary>
+        private static void EnsureGridLayout(Transform container)
+        {
+            if (container == null) return;
+            if (container.GetComponent<GridLayoutGroup>() == null)
+                container.gameObject.AddComponent<GridLayoutGroup>();
+        }
+
+        private void SpawnCardTiles()
+        {
+            if (cardTileContainer == null || cardTilePrefab == null) return;
+
+            foreach (Transform child in cardTileContainer)
+                Destroy(child.gameObject);
+
+            EnsureGridLayout(cardTileContainer);
+
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                WorkBoxCard card = _cards[i];
+                GameObject tile = Instantiate(cardTilePrefab, cardTileContainer);
+                tile.SetActive(true);
+
+                var button = tile.GetComponent<Button>();
+                bool isSelected = (_selectedCardIndex == i);
+
+                if (card.kept)
+                {
+                    // Show the card with its rarity color but dimmed + "(Kept)" label
+                    CardData keptData = Resources.Load<CardData>(card.cardId);
+                    Color keptColor = GetRarityColor(card.rarity);
+                    // Darken the rarity color
+                    keptColor = new Color(keptColor.r * 0.5f, keptColor.g * 0.5f, keptColor.b * 0.5f, 0.7f);
+                    SetupTile(tile, "(Kept)", keptColor,
+                        keptData != null ? keptData.cardSprite : null,
+                        keptData != null && keptData.cardSprite != null);
+                    AddDimOverlay(tile);
+                    if (button != null) button.interactable = false;
+                }
+                else
+                {
+                    CardData cardData = Resources.Load<CardData>(card.cardId);
+
+                    if (card.revealState == RevealState.FullReveal && cardData != null)
+                    {
+                        SetupTile(tile, cardData.cardName,
+                            GetRarityColor(card.rarity), cardData.cardSprite, true);
+
+                        if (isSelected)
+                            AddGlowOutline(tile, card.rarity);
+                        else
+                            AddDimOverlay(tile);
+                    }
+                    else
+                    {
+                        SetupTile(tile, "???", GetRevealColor(card.revealState), null, false);
+
+                        // Dim non-selected unrevealed cards when something is selected
+                        if (_selectedCardIndex >= 0 && !isSelected)
+                            AddDimOverlay(tile);
+                    }
+
+                    int index = i;
+                    if (button != null)
+                        button.onClick.AddListener(() => OnCardTileClicked(index));
+                }
+            }
+        }
+
+        /// <summary>Adds a semi-transparent dark overlay on top of a tile to dim it.</summary>
+        private static void AddDimOverlay(GameObject tile)
+        {
+            GameObject dim = new GameObject("DimOverlay");
+            dim.transform.SetParent(tile.transform, false);
+            dim.transform.SetAsLastSibling(); // render on top
+
+            RectTransform rt = dim.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            Image img = dim.AddComponent<Image>();
+            img.color = new Color(0f, 0f, 0f, 0.5f);
+            img.raycastTarget = false; // clicks pass through to the button
+        }
+
+        private static Color GetRevealColor(RevealState state)
+        {
+            switch (state)
+            {
+                case RevealState.Hidden: return Color.gray;
+                case RevealState.Yellow: return new Color(1f, 0.95f, 0.7f);
+                case RevealState.Red: return new Color(0.8f, 0.2f, 0.2f);
+                case RevealState.Black: return new Color(0.1f, 0.1f, 0.1f);
+                case RevealState.FullReveal: return Color.white;
+                default: return Color.gray;
+            }
+        }
+
+        private void SpawnDeckTiles()
+        {
+            if (deckCardContainer == null || cardTilePrefab == null) return;
+
+            foreach (Transform child in deckCardContainer)
+                Destroy(child.gameObject);
+
+            RunState run = null;
+            if (SaveManager.Instance != null)
+                run = SaveManager.Instance.CurrentRun;
+
+            if (run == null || run.deckCardIds == null) return;
+
+            EnsureGridLayout(deckCardContainer);
+
+            foreach (string cardId in run.deckCardIds)
+            {
+                GameObject tile = Instantiate(cardTilePrefab, deckCardContainer);
+                tile.SetActive(true);
+
+                CardData cardData = Resources.Load<CardData>(cardId);
+
+                string name = cardData != null ? cardData.cardName : cardId;
+                Color bgColor = cardData != null ? GetRarityColor(cardData.cardRarity) : Color.gray;
+                Sprite sprite = cardData != null ? cardData.cardSprite : null;
+
+                SetupTile(tile, name, bgColor, sprite, sprite != null);
+
+                var button = tile.GetComponent<Button>();
+                if (button != null)
+                    button.interactable = false;
+            }
+        }
+
+        private static Color GetRarityColor(CardRarity rarity)
+        {
+            switch (rarity)
+            {
+                case CardRarity.Common: return new Color(0.6f, 0.6f, 0.6f);
+                case CardRarity.Rare: return new Color(1f, 0.95f, 0.7f);
+                case CardRarity.Legendary: return new Color(0.8f, 0.2f, 0.2f);
+                case CardRarity.Unknown: return new Color(0.1f, 0.1f, 0.1f);
+                default: return Color.gray;
+            }
+        }
+
+        private static Color GetGlowColor(CardRarity rarity)
+        {
+            switch (rarity)
+            {
+                case CardRarity.Common: return new Color(1f, 1f, 1f, 0.8f);
+                case CardRarity.Rare: return new Color(1f, 0.85f, 0.2f, 0.9f);
+                case CardRarity.Legendary: return new Color(1f, 0.15f, 0.15f, 0.9f);
+                case CardRarity.Unknown: return new Color(0.6f, 0.2f, 1f, 0.9f);
+                default: return Color.white;
+            }
+        }
+
+        private static void AddGlowOutline(GameObject tile, CardRarity rarity)
+        {
+            // Create outline as first child so it renders behind everything
+            GameObject glow = new GameObject("GlowOutline");
+            glow.transform.SetParent(tile.transform, false);
+            glow.transform.SetAsFirstSibling();
+
+            RectTransform rt = glow.AddComponent<RectTransform>();
+            // Stretch to fill tile but extend 6px on each side
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(-6f, -6f);
+            rt.offsetMax = new Vector2(6f, 6f);
+
+            Image img = glow.AddComponent<Image>();
+            Color glowColor = GetGlowColor(rarity);
+            img.color = glowColor;
+
+            // Add pulse — faster for higher rarities
+            float speed = rarity == CardRarity.Legendary ? 3f :
+                          rarity == CardRarity.Unknown ? 4f : 2f;
+            RarityGlowPulse pulse = glow.AddComponent<RarityGlowPulse>();
+            pulse.Initialize(glowColor, speed);
+        }
 
         private void ShowInventory()
         {
             if (inventoryPanel != null)
                 inventoryPanel.SetActive(true);
+
+            SpawnCardTiles();
+            SpawnDeckTiles();
+
+            // Unlock cursor so the player can interact with the UI
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
 
         /// <summary>
@@ -479,6 +768,10 @@ namespace CardBattle
 
             ShowKeepLeaveButtons(false);
             _selectedCardIndex = -1;
+
+            // Re-lock cursor for first-person controls
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
 
         private void ShowKeepLeaveButtons(bool show)

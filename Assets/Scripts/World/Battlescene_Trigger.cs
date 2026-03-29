@@ -39,6 +39,9 @@ public class Battlescene_Trigger : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
+            // Don't start battle if player is interacting with something (WorkBox, shop, etc.)
+            if (WorkBoxTrigger.IsInteracting) return;
+
             EncounterData encounter = encounterData;
 
             // For roaming enemies without a pre-defined encounter, create one at runtime

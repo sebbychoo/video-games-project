@@ -66,7 +66,20 @@ namespace CardBattle
             }
 
             _currentIndex = 0;
+            _isActive = true;
             RefreshDisplay();
+        }
+
+        private bool _isActive;
+
+        private void Update()
+        {
+            // Keep cursor unlocked while deck selection is active (survives alt-tab)
+            if (_isActive)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
         }
 
         /// <summary>Navigate to the previous deck set (wraps around).</summary>
@@ -122,6 +135,7 @@ namespace CardBattle
                     deckManager.Initialize(new List<CardData>(chosen.cards));
             }
 
+            _isActive = false;
             OnDeckSelected?.Invoke();
         }
 
