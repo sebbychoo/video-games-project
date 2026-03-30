@@ -10,7 +10,7 @@ TagManager:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Hands
   - Water
   - UI
   - Enemy
@@ -42,6 +42,9 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Overlay
+    uniqueID: 1507898145
     locked: 0
   m_RenderingLayers:
   - Default

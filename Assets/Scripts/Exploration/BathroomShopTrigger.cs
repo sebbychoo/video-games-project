@@ -60,6 +60,9 @@ namespace CardBattle
             if (shopPanel != null) shopPanel.SetActive(true);
             SetPlayerMovement(false);
             SetEnemiesActive(false);
+
+            // Req 37.5 — NPC safety line on first interaction while enemies are on the floor
+            GetComponent<SafeRoomNPCDialogue>()?.OnPlayerInteract();
         }
 
         public void CloseShop()

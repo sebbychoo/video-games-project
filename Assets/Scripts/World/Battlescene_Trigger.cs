@@ -55,7 +55,25 @@ public class Battlescene_Trigger : MonoBehaviour
                 encounter.badReviewsReward = 0;
             }
 
+            // Only this enemy enters the encounter; all others resume patrol (req 37.6)
+            NotifyEnemiesOfEncounter(GetComponent<EnemyFollow>());
+
             SceneLoader.Instance.LoadBattle(encounter, enemyId);
+        }
+    }
+
+    /// <summary>
+    /// Tells the catching enemy it triggered an encounter, and tells every
+    /// other EnemyFollow on the floor to resume patrol.
+    /// </summary>
+    private static void NotifyEnemiesOfEncounter(EnemyFollow catchingEnemy)
+    {
+        foreach (var ef in Object.FindObjectsByType<EnemyFollow>(FindObjectsSortMode.None))
+        {
+            if (ef == catchingEnemy)
+                ef.OnEncounterTriggered();
+            else
+                ef.ResumePatrol();
         }
     }
 }

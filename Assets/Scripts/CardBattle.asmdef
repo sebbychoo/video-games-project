@@ -2,7 +2,8 @@
     "name": "CardBattle",
     "rootNamespace": "CardBattle",
     "references": [
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Unity.StarterAssets"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

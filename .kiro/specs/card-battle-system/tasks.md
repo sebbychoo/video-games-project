@@ -486,8 +486,8 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - **Property 29: Trade Conserves Inventory** — Accept: have B not A; Decline: inventory unchanged
     - **Validates: Requirements 23.5, 23.6**
 
-- [ ] 18. Exploration — Enemy behavior, Water Cooler, First-Person Hands
-  - [ ] 18.1 Update EnemyFollow for safe room avoidance and aggro behavior
+- [x] 18. Exploration — Enemy behavior, Water Cooler, First-Person Hands
+  - [x] 18.1 Update EnemyFollow for safe room avoidance and aggro behavior
     - Modify `Assets/Scripts/Enemy/EnemyFollow.cs` to:
     - Prevent entering bathroom and break rooms during roaming
     - Stop at doorway when chasing player into safe room, give up after ~5 seconds
@@ -495,7 +495,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Only the catching enemy enters encounter; others resume patrol
     - _Requirements: 37.1, 37.2, 37.3, 37.4, 37.6, 37.7_
 
-  - [ ] 18.2 Implement WaterCooler rest stop
+  - [x] 18.2 Implement WaterCooler rest stop
     - Create `Assets/Scripts/Exploration/WaterCooler.cs`
     - Restore 35% of max HP (rounded down), one-time use
     - Display heal amount before confirmation
@@ -503,12 +503,12 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Plant upgrade healing triggers first, water cooler afterward (independent, stackable)
     - _Requirements: 42.1, 42.2, 42.3, 42.4, 42.5_
 
-  - [ ]* 18.3 Write property test for Water Cooler (Property 40)
+  - [x] 18.3 Write property test for Water Cooler (Property 40)
     - Create `Assets/Tests/EditMode/Exploration/WaterCoolerPropertyTests.cs`
     - **Property 40: Water Cooler Heals Exactly 35% Max HP Once** — HP = min(hp + floor(maxHP * 0.35), maxHP), second use rejected
     - **Validates: Requirements 42.2, 42.3**
 
-  - [ ] 18.4 Implement FirstPersonHandsController
+  - [x] 18.4 Implement FirstPersonHandsController
     - Create `Assets/Scripts/Exploration/FirstPersonHandsController.cs`
     - Render two 2D pixel art hand sprites overlaid on camera (bottom-left, bottom-right)
     - Idle bob synced to movement speed
@@ -518,11 +518,11 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Hide hands before battle scene transition
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8_
 
-  - [ ] 18.5 Implement safe room NPC contextual dialogue
+  - [x] 18.5 Implement safe room NPC contextual dialogue
     - When player first interacts with NPC in bathroom/break room while enemies are on floor, NPC delivers safety line
     - _Requirements: 37.5_
 
-- [ ] 19. Checkpoint — Ensure exploration systems work, all tests pass
+- [x] 19. Checkpoint — Ensure exploration systems work, all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 20. Procedural floor generation and boss floor gating

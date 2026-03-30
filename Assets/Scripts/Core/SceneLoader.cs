@@ -145,6 +145,10 @@ public class SceneLoader : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
+        // Hide first-person hands before the scene transition (Req 18.8)
+        var hands = FindFirstObjectByType<CardBattle.FirstPersonHandsController>();
+        if (hands != null) hands.HideHands();
+
         // Capture the exploration scene as a background image before
         // transitioning — needs end-of-frame so the frame is fully rendered.
         StartCoroutine(CaptureBackgroundAndLoadBattle());
