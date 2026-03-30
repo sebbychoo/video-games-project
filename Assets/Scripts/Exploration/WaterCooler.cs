@@ -22,6 +22,25 @@ namespace CardBattle
         private const float HealPercent = 0.35f;
 
         private bool _used;
+        private bool _playerNearby;
+
+        private void Update()
+        {
+            if (_playerNearby && Input.GetKeyDown(KeyCode.E))
+                ShowPrompt();
+        }
+
+        private void OnTriggerEnter(Collider other)
+        {
+            if (other.CompareTag("Player"))
+                _playerNearby = true;
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (other.CompareTag("Player"))
+                _playerNearby = false;
+        }
 
         private void Start()
         {
@@ -47,6 +66,10 @@ namespace CardBattle
 
             if (confirmationPanel != null)
                 confirmationPanel.SetActive(true);
+
+            // Unlock cursor so player can click buttons
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
 
         /// <summary>
@@ -69,6 +92,7 @@ namespace CardBattle
                 confirmationPanel.SetActive(false);
 
             RefreshUI();
+            CloseCursor();
         }
 
         /// <summary>
@@ -78,6 +102,14 @@ namespace CardBattle
         {
             if (confirmationPanel != null)
                 confirmationPanel.SetActive(false);
+
+            CloseCursor();
+        }
+
+        private void CloseCursor()
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
 
         /// <summary>
