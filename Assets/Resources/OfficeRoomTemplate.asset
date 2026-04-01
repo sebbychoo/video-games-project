@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20ca21db1038bcc4fba76e674f5a0c5e, type: 3}
+  m_Name: OfficeRoomTemplate
+  m_EditorClassIdentifier: CardBattle::Procedural.RoomTemplate
+  roomName: Office
+  roomPrefab: {fileID: 4116227392053663040, guid: 97c2d4cf2080d64458766b8e14474a04, type: 3}
+  roomSize: {x: 10, y: 10}
+  spawnRules:
+  - prefab: {fileID: 5839078899423513848, guid: 36a47485006fa6c448cdd1849fdf89f1, type: 3}
+    minCount: 1
+    maxCount: 1
+    placement: 0
+    parentTag: 
+    minSpacing: 0
+  doorPositions: []

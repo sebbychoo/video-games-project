@@ -17,6 +17,7 @@ MonoBehaviour:
   hoursReward: 50
   variant: 0
   sprite: {fileID: 0}
+  explorationPrefab: {fileID: 319367816001114415, guid: b646587af54ea274894f622811699d72, type: 3}
   attackPattern:
   - actionType: 0
     value: 25

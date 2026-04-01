@@ -74,6 +74,39 @@ namespace CardBattle
         // ----------------------------------------------------------------
 
         /// <summary>
+        /// Pre-initializes the work box with a known floor and size.
+        /// Called by LevelGenerator when spawning boxes under desks.
+        /// Overrides the floor/size that would otherwise be rolled on first interaction.
+        /// </summary>
+        public void InitializeForFloor(int floor, WorkBoxSize size)
+        {
+            if (_initialized) return;
+            _initialized = true;
+            _size = size;
+
+            int cardCount = RollCardCount(_size);
+            for (int i = 0; i < cardCount; i++)
+            {
+                CardRarity rolledRarity = RollRarity(floor);
+                string cardId = PickCardIdForRarity(rolledRarity);
+
+                CardRarity actualRarity = rolledRarity;
+                CardData cardData = Resources.Load<CardData>(cardId);
+                if (cardData != null)
+                    actualRarity = cardData.cardRarity;
+
+                _cards.Add(new WorkBoxCard
+                {
+                    cardId = cardId,
+                    rarity = actualRarity,
+                    revealState = RevealState.Hidden,
+                    kept = false,
+                    left = false
+                });
+            }
+        }
+
+        /// <summary>
         /// Generates box contents based on the current floor.
         /// Called on first interaction. Idempotent — does nothing if already initialized.
         /// </summary>

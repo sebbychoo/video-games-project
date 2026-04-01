@@ -13,6 +13,7 @@ namespace CardBattle
         public int hoursReward;
         public EnemyVariant variant;
         public Sprite sprite;
+        public GameObject explorationPrefab; // prefab spawned during exploration
         public List<EnemyAction> attackPattern;
         public bool isBoss;
         [Range(0f, 1f)]

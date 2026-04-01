@@ -19,5 +19,9 @@ namespace CardBattle
         public bool isActive;
         public int enemiesDefeated;
         public int cardRemovalsThisRun;
+        // Floor transition spawn position (where the exit was on the previous floor)
+        public float spawnX;
+        public float spawnZ;
+        public bool hasCustomSpawn;
     }
 }

@@ -30,6 +30,8 @@ namespace Procedural
 
             SpawnZone[] zones = GetComponentsInChildren<SpawnZone>();
 
+            if (template == null) return;
+
             foreach (SpawnRule rule in template.spawnRules)
             {
                 int count = Random.Range(rule.minCount, rule.maxCount + 1);

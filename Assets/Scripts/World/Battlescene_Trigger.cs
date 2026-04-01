@@ -63,6 +63,31 @@ public class Battlescene_Trigger : MonoBehaviour
     }
 
     /// <summary>
+    /// Programmatically triggers the encounter (used by BossFloorGate force-engage, Req 38.4).
+    /// </summary>
+    public void TriggerEncounter()
+    {
+        EncounterData encounter = encounterData;
+
+        if (encounter == null && singleEnemyData != null)
+        {
+            encounter = ScriptableObject.CreateInstance<EncounterData>();
+            encounter.enemies = new System.Collections.Generic.List<EnemyCombatantData> { singleEnemyData };
+            encounter.isBossEncounter = singleEnemyData.isBoss;
+            encounter.badReviewsReward = 0;
+        }
+
+        if (encounter == null)
+        {
+            Debug.LogWarning("Battlescene_Trigger.TriggerEncounter: No encounter data configured.");
+            return;
+        }
+
+        NotifyEnemiesOfEncounter(GetComponent<EnemyFollow>());
+        SceneLoader.Instance.LoadBattle(encounter, enemyId);
+    }
+
+    /// <summary>
     /// Tells the catching enemy it triggered an encounter, and tells every
     /// other EnemyFollow on the floor to resume patrol.
     /// </summary>

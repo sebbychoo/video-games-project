@@ -3,6 +3,15 @@ using UnityEngine;
 
 namespace Procedural
 {
+    /// <summary>Room type classification used by LevelGenerator for constrained placement.</summary>
+    public enum RoomType
+    {
+        Office,
+        Bathroom,
+        BreakRoom,
+        BossRoom
+    }
+
     /// <summary>
     /// ScriptableObject defining a room type and its spawn rules.
     /// Create via Assets > Create > Procedural > Room Template.
@@ -11,6 +20,7 @@ namespace Procedural
     public class RoomTemplate : ScriptableObject
     {
         public string roomName = "Office";
+        public RoomType roomType = RoomType.Office;
         public GameObject roomPrefab; // the shell (walls, floor, ceiling)
         public Vector2 roomSize = new Vector2(10f, 10f); // width x depth
 

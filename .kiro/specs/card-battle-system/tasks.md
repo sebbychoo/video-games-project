@@ -525,8 +525,8 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
 - [x] 19. Checkpoint — Ensure exploration systems work, all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 20. Procedural floor generation and boss floor gating
-  - [ ] 20.1 Extend LevelGenerator for full floor generation rules
+- [x] 20. Procedural floor generation and boss floor gating
+  - [x] 20.1 Extend LevelGenerator for full floor generation rules
     - Modify `Assets/Scripts/Procedural/LevelGenerator.cs` to:
     - Spawn Work_Boxes only under work desks
     - Place bathrooms on every floor (subset with shops)
@@ -540,21 +540,21 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Constrained procedural generation (not purely random)
     - _Requirements: 33.1, 33.2, 33.3, 33.4, 33.5, 33.6, 33.7, 33.8, 33.9, 38.1_
 
-  - [ ]* 20.2 Write property tests for floor generation (Properties 25, 33)
+  - [x] 20.2 Write property tests for floor generation (Properties 25, 33)
     - Append to `Assets/Tests/EditMode/Procedural/FloorGenerationPropertyTests.cs`
     - **Property 25: Boss Floor Placement** — Boss rooms at floors 3, 6, 9, ..., none on non-multiples of 3
     - **Validates: Requirements 25.1, 33.6**
     - **Property 33: Boss Floor Blocks Exit Until Defeated** — Exit locked while boss alive, unlocked after defeat
     - **Validates: Requirements 38.3, 38.4, 38.5**
 
-  - [ ] 20.3 Implement boss floor gating
+  - [x] 20.3 Implement boss floor gating
     - On boss floors: lock exit until boss defeated, boss intercepts player if they try to leave
     - On non-boss floors: exit available at any time
     - Player may explore boss floor freely before engaging boss
     - Player may continue exploring after boss defeat
     - _Requirements: 38.2, 38.3, 38.4, 38.5_
 
-  - [ ] 20.4 Implement floor minimap (FloorMinimap)
+  - [x] 20.4 Implement floor minimap (FloorMinimap)
     - Create `Assets/Scripts/Exploration/FloorMinimap.cs`
     - Level 0: no minimap (no Whiteboard upgrade)
     - Level 1: show visited rooms only

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using CardBattle;
+using Procedural;
 
 /// <summary>
 /// Singleton that persists across scenes.
@@ -73,6 +74,22 @@ public class SceneLoader : MonoBehaviour
     {
         if (scene.name == "Explorationscene")
         {
+            // Regenerate the floor for the current run floor number
+            LevelGenerator gen = FindObjectOfType<LevelGenerator>();
+            if (gen != null)
+            {
+                SaveManager sm = FindObjectOfType<SaveManager>();
+                int floor = sm != null && sm.CurrentRun != null ? sm.CurrentRun.currentFloor : 1;
+                gen.Generate(floor);
+
+                // Save exit position so next floor knows where to spawn the player
+                if (sm != null && sm.CurrentRun != null)
+                {
+                    sm.CurrentRun.spawnX = gen.ExitPosition.x;
+                    sm.CurrentRun.spawnZ = gen.ExitPosition.z;
+                    sm.CurrentRun.hasCustomSpawn = floor > 1;
+                }
+            }
             StartCoroutine(SetSpawn());
         }
     }
@@ -93,8 +110,16 @@ public class SceneLoader : MonoBehaviour
 
         if (useDefaultSpawn)
         {
-            // LOST: spawn at default
-            if (defaultSpawnPoint != null)
+            // Check if we have a custom floor transition spawn position
+            SaveManager sm = FindObjectOfType<SaveManager>();
+            if (sm != null && sm.CurrentRun != null && sm.CurrentRun.hasCustomSpawn)
+            {
+                Vector3 floorSpawn = new Vector3(sm.CurrentRun.spawnX, 0f, sm.CurrentRun.spawnZ);
+                player.transform.position = floorSpawn;
+                sm.CurrentRun.hasCustomSpawn = false; // consume it
+                Debug.Log("Spawned at floor transition position: " + floorSpawn);
+            }
+            else if (defaultSpawnPoint != null)
             {
                 player.transform.position = defaultSpawnPoint.position;
                 Debug.Log("Spawned at DEFAULT (lost fight)");
