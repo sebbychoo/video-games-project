@@ -39,10 +39,11 @@ public class Battlescene_Trigger : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            // Don't start battle if player is interacting with something (WorkBox, shop, etc.)
+            // Don't start battle if player is interacting with something
             if (WorkBoxTrigger.IsInteracting) return;
             if (BathroomShopTrigger.IsInteracting) return;
             if (BreakRoomTradeTrigger.IsInteracting) return;
+            if (CardBattle.Elevator.IsDescending) return;
 
             EncounterData encounter = encounterData;
 

@@ -1,11 +1,15 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace CardBattle
 {
     [RequireComponent(typeof(BreakRoomTrade))]
-    public class BreakRoomTradeTrigger : MonoBehaviour
+    public class BreakRoomTradeTrigger : MonoBehaviour, IInteractable
     {
         public static bool IsInteracting { get; private set; }
+        public string InteractPrompt => "Press E to trade";
+        public float InteractRange => 3f;
 
         [Header("UI References")]
         [SerializeField] private GameObject tradePanel;
@@ -45,23 +49,30 @@ namespace CardBattle
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
+                return;
             }
-            if (_playerInRange && !_isOpen && Input.GetKeyDown(KeyCode.E))
+            if (_playerInRange && Input.GetKeyDown(KeyCode.E))
                 OpenTradeUI();
-            else if (_isOpen && Input.GetKeyDown(KeyCode.Escape))
+        }
+
+        private void LateUpdate()
+        {
+            if (_isOpen && Input.GetKeyDown(KeyCode.Escape))
                 CloseTradeUI();
         }
 
         private void OpenTradeUI()
         {
+            EnsurePlayerRoot();
+
             _isOpen = true;
             IsInteracting = true;
+            SetPlayerControllers(false);
             if (!_trade.IsInitialized) _trade.Initialize();
             if (tradePanel != null) tradePanel.SetActive(true);
-            SetPlayerMovement(false);
             SetEnemiesActive(false);
+            EnsureEventSystem();
 
-            // Req 37.5 — NPC safety line on first interaction while enemies are on the floor
             GetComponent<SafeRoomNPCDialogue>()?.OnPlayerInteract();
         }
 
@@ -70,10 +81,53 @@ namespace CardBattle
             _isOpen = false;
             IsInteracting = false;
             if (tradePanel != null) tradePanel.SetActive(false);
-            SetPlayerMovement(true);
             SetEnemiesActive(true);
+            StartCoroutine(RestorePlayerNextFrame());
+        }
+
+        private IEnumerator RestorePlayerNextFrame()
+        {
+            yield return null;
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+            SetPlayerControllers(true);
+        }
+
+        private void EnsurePlayerRoot()
+        {
+            if (_playerRoot != null) return;
+            GameObject playerGO = GameObject.FindWithTag("Player");
+            if (playerGO != null) _playerRoot = playerGO.transform.root.gameObject;
+        }
+
+        private void SetPlayerControllers(bool enabled)
+        {
+            if (_playerRoot == null) return;
+            foreach (var mb in _playerRoot.GetComponentsInChildren<MonoBehaviour>())
+            {
+                string typeName = mb.GetType().Name;
+                if (typeName == "FirstPersonController" || typeName == "StarterAssetsInputs")
+                {
+                    mb.enabled = enabled;
+                    if (!enabled && typeName == "StarterAssetsInputs")
+                    {
+                        var lookField = mb.GetType().GetField("look");
+                        lookField?.SetValue(mb, Vector2.zero);
+                        var moveField = mb.GetType().GetField("move");
+                        moveField?.SetValue(mb, Vector2.zero);
+                    }
+                }
+            }
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (EventSystem.current == null)
+            {
+                var go = new GameObject("EventSystem");
+                go.AddComponent<EventSystem>();
+                go.AddComponent<StandaloneInputModule>();
+            }
         }
 
         public void OnAcceptClicked()
@@ -86,20 +140,6 @@ namespace CardBattle
         {
             _trade.DeclineTrade();
             CloseTradeUI();
-        }
-
-        private void SetPlayerMovement(bool enabled)
-        {
-            if (_playerRoot == null) return;
-            foreach (var mb in _playerRoot.GetComponentsInChildren<MonoBehaviour>())
-            {
-                if (mb is BreakRoomTrade || mb is BreakRoomTradeTrigger) continue;
-                string fullName = mb.GetType().FullName ?? "";
-                if (fullName.Contains("UnityEngine.EventSystems") || fullName.Contains("UnityEngine.UI")) continue;
-                string t = mb.GetType().Name;
-                if (t.Contains("Movement") || t.Contains("Controller") || t.Contains("Look") || t.Contains("Camera"))
-                    mb.enabled = enabled;
-            }
         }
 
         private static void SetEnemiesActive(bool enabled)

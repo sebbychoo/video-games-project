@@ -62,7 +62,8 @@ public class SceneLoader : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
             SceneManager.sceneLoaded += OnSceneLoaded;
-            playerPosition = defaultSpawnPoint.position;
+            if (defaultSpawnPoint != null)
+                playerPosition = defaultSpawnPoint.position;
         }
         else
         {
@@ -80,14 +81,16 @@ public class SceneLoader : MonoBehaviour
             {
                 SaveManager sm = FindObjectOfType<SaveManager>();
                 int floor = sm != null && sm.CurrentRun != null ? sm.CurrentRun.currentFloor : 1;
+                Debug.Log($"[SceneLoader] OnSceneLoaded: generating floor {floor}");
                 gen.Generate(floor);
 
-                // Save exit position so next floor knows where to spawn the player
-                if (sm != null && sm.CurrentRun != null)
+                // Only set elevator spawn if we don't already have a custom spawn
+                // (the elevator sets hasCustomSpawn before loading the scene)
+                if (sm != null && sm.CurrentRun != null && floor > 1 && !sm.CurrentRun.hasCustomSpawn)
                 {
-                    sm.CurrentRun.spawnX = gen.ExitPosition.x;
-                    sm.CurrentRun.spawnZ = gen.ExitPosition.z;
-                    sm.CurrentRun.hasCustomSpawn = floor > 1;
+                    sm.CurrentRun.spawnX = gen.ElevatorSpawnPosition.x;
+                    sm.CurrentRun.spawnZ = gen.ElevatorSpawnPosition.z;
+                    sm.CurrentRun.hasCustomSpawn = true;
                 }
             }
             StartCoroutine(SetSpawn());
@@ -114,24 +117,31 @@ public class SceneLoader : MonoBehaviour
             SaveManager sm = FindObjectOfType<SaveManager>();
             if (sm != null && sm.CurrentRun != null && sm.CurrentRun.hasCustomSpawn)
             {
-                Vector3 floorSpawn = new Vector3(sm.CurrentRun.spawnX, 0f, sm.CurrentRun.spawnZ);
+                Vector3 floorSpawn = new Vector3(sm.CurrentRun.spawnX, player.transform.position.y, sm.CurrentRun.spawnZ);
                 player.transform.position = floorSpawn;
-                sm.CurrentRun.hasCustomSpawn = false; // consume it
+                sm.CurrentRun.hasCustomSpawn = false;
                 Debug.Log("Spawned at floor transition position: " + floorSpawn);
-            }
-            else if (defaultSpawnPoint != null)
-            {
-                player.transform.position = defaultSpawnPoint.position;
-                Debug.Log("Spawned at DEFAULT (lost fight)");
             }
             else
             {
-                Debug.LogWarning("Default spawn point not assigned!");
+                // Try to find a PlayerSpawn marker in the spawned floor prefab
+                GameObject playerSpawnMarker = GameObject.FindWithTag("PlayerSpawn");
+                if (playerSpawnMarker != null)
+                {
+                    player.transform.position = playerSpawnMarker.transform.position;
+                    player.transform.rotation = playerSpawnMarker.transform.rotation;
+                    Debug.Log("Spawned at PlayerSpawn marker");
+                }
+                else if (defaultSpawnPoint != null)
+                {
+                    player.transform.position = defaultSpawnPoint.position;
+                    Debug.Log("Spawned at DEFAULT");
+                }
             }
         }
         else
         {
-            // WON: spawn where player was
+            // Post-battle return: spawn where player was before the fight
             player.transform.position = playerPosition;
             Debug.Log("Spawned at SAVED position (won fight): " + playerPosition);
         }
@@ -183,7 +193,13 @@ public class SceneLoader : MonoBehaviour
     {
         yield return new WaitForEndOfFrame();
         BattleBackground.CaptureBackground();
-        SceneManager.LoadScene("Battlescene");
+
+        if (LoadingScreen.Instance != null)
+            LoadingScreen.Instance.LoadBattle("Battlescene");
+        else if (FindObjectOfType<LoadingScreen>() is LoadingScreen ls1)
+            ls1.LoadBattle("Battlescene");
+        else
+            SceneManager.LoadScene("Battlescene");
     }
 
     /// <summary>
@@ -196,11 +212,15 @@ public class SceneLoader : MonoBehaviour
         if (player != null)
             playerPosition = player.transform.position;
 
-        // Unlock cursor for battle UI
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        SceneManager.LoadScene("Battlescene");
+        if (LoadingScreen.Instance != null)
+            LoadingScreen.Instance.LoadBattle("Battlescene");
+        else if (FindObjectOfType<LoadingScreen>() is LoadingScreen ls2)
+            ls2.LoadBattle("Battlescene");
+        else
+            SceneManager.LoadScene("Battlescene");
     }
 
     /// <summary>
@@ -262,9 +282,14 @@ public class SceneLoader : MonoBehaviour
 
     public void LoadExploration()
     {
-        // Re-lock cursor for 3D exploration
         Cursor.lockState = CursorLockMode.Confined;
         Cursor.visible = false;
-        SceneManager.LoadScene("Explorationscene");
+
+        if (LoadingScreen.Instance != null)
+            LoadingScreen.Instance.LoadSceneWithFade("Explorationscene", "");
+        else if (FindObjectOfType<LoadingScreen>() is LoadingScreen ls3)
+            ls3.LoadSceneWithFade("Explorationscene", "");
+        else
+            SceneManager.LoadScene("Explorationscene");
     }
 }

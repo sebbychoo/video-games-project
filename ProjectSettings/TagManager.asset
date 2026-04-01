@@ -7,6 +7,11 @@ TagManager:
   - CinemachineTarget
   - Enemy
   - Desk
+  - EnemySpawn
+  - WorkBoxSpawn
+  - ElevatorSpawn
+  - PlayerSpawn
+  - CubicleSpawn
   layers:
   - Default
   - TransparentFX

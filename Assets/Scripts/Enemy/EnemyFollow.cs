@@ -21,9 +21,11 @@ public class EnemyFollow : MonoBehaviour
 
     [Header("Aggro")]
     public bool isAggressive = true;
-    public float chaseRange = 10f;
+    public float chaseRange = 15f;
     [Tooltip("Field of view angle in degrees. Enemy only chases if player is within this cone.")]
     public float fieldOfView = 90f;
+    [Tooltip("Layer mask for line-of-sight obstacles (walls, cubicles etc.)")]
+    public LayerMask obstacleLayers;
 
     [Header("Safe Room")]
     public float safeRoomGiveUpTime = 5f;
@@ -85,8 +87,14 @@ public class EnemyFollow : MonoBehaviour
             float angle = Vector3.Angle(transform.forward, toPlayer);
             if (angle <= fieldOfView * 0.5f)
             {
-                _state = State.Chase;
-                return;
+                // Line of sight check — don't chase through walls/cubicles
+                Vector3 eyePos = transform.position + Vector3.up * 1f;
+                Vector3 playerEyePos = player.position + Vector3.up * 1f;
+                if (!Physics.Linecast(eyePos, playerEyePos, obstacleLayers))
+                {
+                    _state = State.Chase;
+                    return;
+                }
             }
         }
 

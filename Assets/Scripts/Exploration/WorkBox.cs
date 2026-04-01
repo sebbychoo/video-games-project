@@ -606,7 +606,8 @@ namespace CardBattle
         private static void EnsureGridLayout(Transform container)
         {
             if (container == null) return;
-            if (container.GetComponent<GridLayoutGroup>() == null)
+            // Don't add GridLayoutGroup if any layout group already exists
+            if (container.GetComponent<LayoutGroup>() == null)
                 container.gameObject.AddComponent<GridLayoutGroup>();
         }
 
@@ -792,10 +793,6 @@ namespace CardBattle
 
             SpawnCardTiles();
             SpawnDeckTiles();
-
-            // Unlock cursor so the player can interact with the UI
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
         }
 
         /// <summary>
@@ -809,9 +806,27 @@ namespace CardBattle
             ShowKeepLeaveButtons(false);
             _selectedCardIndex = -1;
 
-            // Re-lock cursor for first-person controls
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            // Don't touch cursor here — let WorkBoxTrigger handle it
+        }
+
+        /// <summary>
+        /// Called by the X button on the Canvas. Routes through WorkBoxTrigger
+        /// so cursor/controller state is properly restored.
+        /// </summary>
+        public void OnCloseButtonClicked()
+        {
+            var trigger = GetComponent<WorkBoxTrigger>();
+            if (trigger != null)
+            {
+                trigger.CloseBox();
+            }
+            else
+            {
+                // Fallback if no trigger (shouldn't happen)
+                CloseInventory();
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
         }
 
         private void ShowKeepLeaveButtons(bool show)

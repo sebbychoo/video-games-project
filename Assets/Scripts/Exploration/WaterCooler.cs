@@ -10,8 +10,10 @@ namespace CardBattle
     /// Plant hub upgrade healing triggers first (on floor exit), water cooler afterward.
     /// Requirements: 42.1, 42.2, 42.3, 42.4, 42.5
     /// </summary>
-    public class WaterCooler : MonoBehaviour
+    public class WaterCooler : MonoBehaviour, IInteractable
     {
+        public string InteractPrompt => "Press E to rest";
+        public float InteractRange => 3f;
         [Header("UI References")]
         [SerializeField] private GameObject confirmationPanel;
         [SerializeField] private TextMeshProUGUI healAmountText;

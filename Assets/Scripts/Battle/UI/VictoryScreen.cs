@@ -20,10 +20,10 @@ namespace CardBattle
         [SerializeField] TextMeshProUGUI rewardsText;
         [SerializeField] CanvasGroup canvasGroup;
         [SerializeField] Image blackOverlay;
-        [SerializeField] float autoDismissDelay = 4f;
-        [SerializeField] float fadeInDuration = 0.3f;
-        [SerializeField] float fadeOutDuration = 0.3f;
-        [SerializeField] float countUpDuration = 2f;
+        [SerializeField] float autoDismissDelay = 1.5f;
+        [SerializeField] float fadeInDuration = 0.2f;
+        [SerializeField] float fadeOutDuration = 0.2f;
+        [SerializeField] float countUpDuration = 1f;
 
         /// <summary>Invoked when the victory screen is dismissed (fade-out complete).</summary>
         public Action OnDismissed;
@@ -107,13 +107,38 @@ namespace CardBattle
         {
             if (!_visible || _dismissing) return;
 
-            // Don't allow dismiss during count-up
-            if (_countingUp) return;
-
-            if (Input.anyKeyDown)
+            // Allow click/key to skip at any time (even during count-up)
+            if (Input.anyKeyDown || Input.GetMouseButtonDown(0))
             {
-                Dismiss();
+                if (_countingUp)
+                {
+                    // Skip count-up — show final values immediately, then dismiss
+                    SkipCountUp();
+                }
+                else
+                {
+                    Dismiss();
+                }
             }
+        }
+
+        private void SkipCountUp()
+        {
+            if (_countUpCoroutine != null)
+            {
+                StopCoroutine(_countUpCoroutine);
+                _countUpCoroutine = null;
+            }
+
+            // Show final values
+            string finalRewards = $"+{_targetHours} Hours";
+            if (_isBoss && _targetBadReviews > 0)
+                finalRewards += $"\n+{_targetBadReviews} Bad Reviews";
+            if (rewardsText != null)
+                rewardsText.text = finalRewards;
+
+            _countingUp = false;
+            Dismiss();
         }
 
         /// <summary>Begin dismissing the victory screen.</summary>

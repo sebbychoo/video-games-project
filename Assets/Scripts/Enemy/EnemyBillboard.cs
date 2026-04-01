@@ -31,9 +31,15 @@ public class EnemyBillboard : MonoBehaviour
     {
         if (_cam == null || spriteRenderer == null) return;
 
-        // Rotate THIS sprite to always face the camera (billboard)
+        // Keep sprite perfectly upright, just rotate around Y to face camera
         Vector3 dirToCamera = _cam.position - transform.position;
-        transform.rotation = Quaternion.LookRotation(-dirToCamera);
+        dirToCamera.y = 0;
+        if (dirToCamera.sqrMagnitude > 0.001f)
+        {
+            Quaternion targetRot = Quaternion.LookRotation(-dirToCamera, Vector3.up);
+            // Force no X or Z tilt — only Y rotation
+            transform.rotation = Quaternion.Euler(0, targetRot.eulerAngles.y, 0);
+        }
 
         // Use the ROOT's forward (NavMeshAgent controls this) for sprite selection
         Vector3 rootForward = new Vector3(_root.forward.x, 0, _root.forward.z).normalized;

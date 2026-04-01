@@ -6,7 +6,7 @@ namespace CardBattle
     [Serializable]
     public class RunState
     {
-        public int currentFloor;
+        public int currentFloor = 1;
         public int playerHP;
         public int playerMaxHP;
         public int hours;
@@ -23,5 +23,7 @@ namespace CardBattle
         public float spawnX;
         public float spawnZ;
         public bool hasCustomSpawn;
+        /// <summary>Stable seed for this run, set once at run start.</summary>
+        public int runSeed;
     }
 }

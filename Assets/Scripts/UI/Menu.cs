@@ -20,7 +20,11 @@ public class Menu : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        // Don't open pause menu while interacting with any exploration UI
+        if (Input.GetKeyDown(KeyCode.Escape)
+            && !CardBattle.WorkBoxTrigger.IsInteracting
+            && !CardBattle.BathroomShopTrigger.IsInteracting
+            && !CardBattle.BreakRoomTradeTrigger.IsInteracting)
             SetPause();
     }
 

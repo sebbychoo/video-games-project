@@ -1,11 +1,15 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace CardBattle
 {
     [RequireComponent(typeof(BathroomShop))]
-    public class BathroomShopTrigger : MonoBehaviour
+    public class BathroomShopTrigger : MonoBehaviour, IInteractable
     {
         public static bool IsInteracting { get; private set; }
+        public string InteractPrompt => "Press E to enter bathroom";
+        public float InteractRange => 3f;
 
         [Header("UI References")]
         [SerializeField] private GameObject shopPanel;
@@ -45,23 +49,30 @@ namespace CardBattle
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
+                return;
             }
-            if (_playerInRange && !_isOpen && Input.GetKeyDown(KeyCode.E))
+            if (_playerInRange && Input.GetKeyDown(KeyCode.E))
                 OpenShop();
-            else if (_isOpen && Input.GetKeyDown(KeyCode.Escape))
+        }
+
+        private void LateUpdate()
+        {
+            if (_isOpen && Input.GetKeyDown(KeyCode.Escape))
                 CloseShop();
         }
 
         private void OpenShop()
         {
+            EnsurePlayerRoot();
+
             _isOpen = true;
             IsInteracting = true;
+            SetPlayerControllers(false);
             if (!_shop.IsInitialized) _shop.Initialize();
             if (shopPanel != null) shopPanel.SetActive(true);
-            SetPlayerMovement(false);
             SetEnemiesActive(false);
+            EnsureEventSystem();
 
-            // Req 37.5 — NPC safety line on first interaction while enemies are on the floor
             GetComponent<SafeRoomNPCDialogue>()?.OnPlayerInteract();
         }
 
@@ -71,23 +82,52 @@ namespace CardBattle
             IsInteracting = false;
             _shop.ResetVisit();
             if (shopPanel != null) shopPanel.SetActive(false);
-            SetPlayerMovement(true);
             SetEnemiesActive(true);
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            StartCoroutine(RestorePlayerNextFrame());
         }
 
-        private void SetPlayerMovement(bool enabled)
+        private IEnumerator RestorePlayerNextFrame()
+        {
+            yield return null;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            SetPlayerControllers(true);
+        }
+
+        private void EnsurePlayerRoot()
+        {
+            if (_playerRoot != null) return;
+            GameObject playerGO = GameObject.FindWithTag("Player");
+            if (playerGO != null) _playerRoot = playerGO.transform.root.gameObject;
+        }
+
+        private void SetPlayerControllers(bool enabled)
         {
             if (_playerRoot == null) return;
             foreach (var mb in _playerRoot.GetComponentsInChildren<MonoBehaviour>())
             {
-                if (mb is BathroomShop || mb is BathroomShopTrigger) continue;
-                string fullName = mb.GetType().FullName ?? "";
-                if (fullName.Contains("UnityEngine.EventSystems") || fullName.Contains("UnityEngine.UI")) continue;
-                string t = mb.GetType().Name;
-                if (t.Contains("Movement") || t.Contains("Controller") || t.Contains("Look") || t.Contains("Camera"))
+                string typeName = mb.GetType().Name;
+                if (typeName == "FirstPersonController" || typeName == "StarterAssetsInputs")
+                {
                     mb.enabled = enabled;
+                    if (!enabled && typeName == "StarterAssetsInputs")
+                    {
+                        var lookField = mb.GetType().GetField("look");
+                        lookField?.SetValue(mb, Vector2.zero);
+                        var moveField = mb.GetType().GetField("move");
+                        moveField?.SetValue(mb, Vector2.zero);
+                    }
+                }
+            }
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (EventSystem.current == null)
+            {
+                var go = new GameObject("EventSystem");
+                go.AddComponent<EventSystem>();
+                go.AddComponent<StandaloneInputModule>();
             }
         }
 

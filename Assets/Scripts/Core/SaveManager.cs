@@ -45,6 +45,7 @@ namespace CardBattle
         {
             Instance = this;
             CurrentRun = new RunState();
+            CurrentRun.runSeed = System.Environment.TickCount;
             CurrentMeta = new MetaState();
         }
 
@@ -146,6 +147,7 @@ namespace CardBattle
         public void WipeRun()
         {
             CurrentRun = new RunState();
+            CurrentRun.runSeed = System.Environment.TickCount;
 
             string path = GetPath(RunSaveFile);
             try
