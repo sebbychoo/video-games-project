@@ -14,7 +14,7 @@ public class SceneLoader : MonoBehaviour
     public static SceneLoader Instance;
 
     public Vector3 playerPosition;
-    public bool useDefaultSpawn = false;
+    public bool useDefaultSpawn = true;
 
     public Transform defaultSpawnPoint;
 
@@ -62,6 +62,7 @@ public class SceneLoader : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
             SceneManager.sceneLoaded += OnSceneLoaded;
+            useDefaultSpawn = true; // First load always uses PlayerSpawn marker
             if (defaultSpawnPoint != null)
                 playerPosition = defaultSpawnPoint.position;
         }
@@ -128,9 +129,10 @@ public class SceneLoader : MonoBehaviour
                 GameObject playerSpawnMarker = GameObject.FindWithTag("PlayerSpawn");
                 if (playerSpawnMarker != null)
                 {
+                    Debug.Log($"[Spawn] PlayerSpawn marker at {playerSpawnMarker.transform.position}, player before: {player.transform.position}");
                     player.transform.position = playerSpawnMarker.transform.position;
                     player.transform.rotation = playerSpawnMarker.transform.rotation;
-                    Debug.Log("Spawned at PlayerSpawn marker");
+                    Debug.Log($"[Spawn] Player after: {player.transform.position}");
                 }
                 else if (defaultSpawnPoint != null)
                 {
@@ -286,9 +288,9 @@ public class SceneLoader : MonoBehaviour
         Cursor.visible = false;
 
         if (LoadingScreen.Instance != null)
-            LoadingScreen.Instance.LoadSceneWithFade("Explorationscene", "");
+            LoadingScreen.Instance.LoadSceneWithFade("Explorationscene");
         else if (FindObjectOfType<LoadingScreen>() is LoadingScreen ls3)
-            ls3.LoadSceneWithFade("Explorationscene", "");
+            ls3.LoadSceneWithFade("Explorationscene");
         else
             SceneManager.LoadScene("Explorationscene");
     }

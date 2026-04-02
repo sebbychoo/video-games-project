@@ -154,10 +154,13 @@ MonoBehaviour:
   player: {fileID: 0}
   speed: 3
   wanderRadius: 5
-  wanderInterval: 3
+  wanderInterval: 2
   isAggressive: 1
   chaseRange: 10
   fieldOfView: 90
+  obstacleLayers:
+    serializedVersion: 2
+    m_Bits: 0
   safeRoomGiveUpTime: 5
 --- !u!114 &6917545977857857686
 MonoBehaviour:

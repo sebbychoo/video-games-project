@@ -25,8 +25,27 @@ public class LoadingScreen : MonoBehaviour
     [Header("Default Text (editable)")]
     [SerializeField] private string elevatorText = "Onto the Next";
     [SerializeField] private string battleText = "Fight!";
-    [SerializeField] private string defaultText = "Loading";
     [SerializeField] private bool animateDots = true;
+
+    [Header("Random Loading Tips (editable — add/remove in Inspector)")]
+    [SerializeField] private string[] loadingTips = new string[]
+    {
+        "Untangling the supply cable",
+        "Refilling the coffee machine",
+        "Unjamming the printer",
+        "Sharpening the pencils",
+        "Restocking the stapler",
+        "Sorting the paperwork",
+        "Microwaving leftovers",
+        "Fixing the copier again",
+        "Hiding from the boss",
+        "Pretending to look busy",
+        "Checking the vending machine",
+        "Watering the office plant",
+        "Resetting the Wi-Fi router",
+        "Clearing paper jams",
+        "Organizing sticky notes"
+    };
 
     [Header("Icon Animation")]
     [SerializeField] private Sprite[] iconFrames;
@@ -59,10 +78,13 @@ public class LoadingScreen : MonoBehaviour
         if (blackOverlay != null) blackOverlay.raycastTarget = false;
     }
 
-    /// <summary>Load with custom text. Pass null to use default.</summary>
+    /// <summary>Load with custom text. Pass null to use a random loading tip.</summary>
     public void LoadSceneWithFade(string sceneName, string displayText = null)
     {
-        StartCoroutine(FadeLoadFade(sceneName, displayText));
+        string text = displayText;
+        if (string.IsNullOrEmpty(text))
+            text = GetRandomTip();
+        StartCoroutine(FadeLoadFade(sceneName, text));
     }
 
     /// <summary>Load for elevator — uses elevatorText + animated dots.</summary>
@@ -77,11 +99,18 @@ public class LoadingScreen : MonoBehaviour
         StartCoroutine(FadeLoadFade(sceneName, battleText, false));
     }
 
+    private string GetRandomTip()
+    {
+        if (loadingTips == null || loadingTips.Length == 0)
+            return "Loading";
+        return loadingTips[Random.Range(0, loadingTips.Length)];
+    }
+
     private IEnumerator FadeLoadFade(string sceneName, string text, bool dots = true)
     {
         if (blackOverlay != null) blackOverlay.raycastTarget = true;
 
-        _baseText = string.IsNullOrEmpty(text) ? defaultText : text;
+        _baseText = string.IsNullOrEmpty(text) ? GetRandomTip() : text;
         if (loadingText != null) loadingText.text = _baseText;
 
         // Fade to black

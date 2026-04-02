@@ -59,6 +59,14 @@ namespace CardBattle
         public float interactReachDistance = 0.12f;
         public float interactDuration = 0.25f;
 
+        [Header("Sprite Animations (frame arrays — leave empty to use position bob)")]
+        [SerializeField] Sprite[] idleFrames;
+        [SerializeField] Sprite[] walkFrames;
+        [SerializeField] Sprite[] sprintFrames;
+        [SerializeField] Sprite[] interactFrames;
+        [SerializeField] float animFrameRate = 8f;
+        [SerializeField] float idleTimeout = 3f;
+
         [Header("Speed Thresholds")]
         public float walkSpeedThreshold = 0.1f;
         public float sprintSpeedThreshold = 5.5f;
@@ -74,6 +82,10 @@ namespace CardBattle
         private float _bobTimer;
         private bool _isInteracting;
         private bool _hidden;
+        private Sprite[] _currentAnim;
+        private int _animFrame;
+        private float _animTimer;
+        private float _idleTimer;
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
@@ -112,9 +124,14 @@ namespace CardBattle
             float speed = GetHorizontalSpeed();
             bool sprinting = IsSprinting();
 
+            // Pick the right animation based on state
+            Sprite[] targetAnim = null;
             if (speed > walkSpeedThreshold)
             {
-                // Walk or sprint bob
+                _idleTimer = 0f;
+                targetAnim = sprinting ? sprintFrames : walkFrames;
+
+                // Position bob (still works even with sprite anim)
                 float amp  = sprinting ? sprintBobAmplitude  : walkBobAmplitude;
                 float freq = sprinting ? sprintBobFrequency  : walkBobFrequency;
                 _bobTimer += Time.deltaTime * freq * Mathf.PI * 2f;
@@ -123,11 +140,46 @@ namespace CardBattle
             }
             else
             {
+                _idleTimer += Time.deltaTime;
+                targetAnim = (_idleTimer >= idleTimeout && idleFrames != null && idleFrames.Length > 0)
+                    ? idleFrames : null;
+
                 // Idle breathing
                 float breath = Mathf.Sin(Time.time * breathFrequency * Mathf.PI * 2f) * breathAmplitude;
                 ApplyVerticalOffset(breath);
-                _bobTimer = 0f; // reset so bob starts cleanly on next move
+                _bobTimer = 0f;
             }
+
+            // Sprite frame animation
+            UpdateSpriteAnimation(targetAnim);
+        }
+
+        private void UpdateSpriteAnimation(Sprite[] frames)
+        {
+            if (frames == null || frames.Length == 0)
+            {
+                _currentAnim = null;
+                return;
+            }
+
+            if (_currentAnim != frames)
+            {
+                _currentAnim = frames;
+                _animFrame = 0;
+                _animTimer = 0f;
+            }
+
+            _animTimer += Time.deltaTime;
+            float interval = 1f / Mathf.Max(animFrameRate, 1f);
+            if (_animTimer >= interval)
+            {
+                _animTimer -= interval;
+                _animFrame = (_animFrame + 1) % _currentAnim.Length;
+            }
+
+            Sprite s = _currentAnim[_animFrame];
+            if (leftHand != null) leftHand.sprite = s;
+            if (rightHand != null) rightHand.sprite = s;
         }
 
         // ── Public API ─────────────────────────────────────────────────────────
@@ -230,6 +282,22 @@ namespace CardBattle
         private IEnumerator InteractCoroutine()
         {
             _isInteracting = true;
+
+            // Play interact sprite frames if available
+            if (interactFrames != null && interactFrames.Length > 0)
+            {
+                float interval = 1f / Mathf.Max(animFrameRate, 1f);
+                for (int i = 0; i < interactFrames.Length; i++)
+                {
+                    if (leftHand != null) leftHand.sprite = interactFrames[i];
+                    if (rightHand != null) rightHand.sprite = interactFrames[i];
+                    yield return new WaitForSeconds(interval);
+                }
+                _isInteracting = false;
+                yield break;
+            }
+
+            // Fallback: position-based reach animation
 
             // Reach forward: move right hand toward screen center and scale up slightly
             Vector3 startPos   = rightHandBasePos;

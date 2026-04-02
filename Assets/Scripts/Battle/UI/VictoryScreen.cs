@@ -158,9 +158,9 @@ namespace CardBattle
                 _countUpCoroutine = null;
             }
 
-            if (_fadeCoroutine != null)
-                StopCoroutine(_fadeCoroutine);
-            _fadeCoroutine = StartCoroutine(FadeOut());
+            // Skip fade-out — go straight to dismiss while keeping screen black
+            // The loading screen will handle the transition
+            FinishDismiss();
         }
 
         private IEnumerator FadeIn()
@@ -274,8 +274,25 @@ namespace CardBattle
             _visible = false;
             _dismissing = false;
             _countingUp = false;
-            gameObject.SetActive(false);
+            // DON'T hide the black overlay or deactivate — keep screen black
+            // until the loading screen takes over
+            if (canvasGroup != null)
+            {
+                canvasGroup.interactable = false;
+                canvasGroup.blocksRaycasts = false;
+            }
+            // Hide text but keep black overlay visible
+            if (victoryText != null) victoryText.alpha = 0f;
+            if (rewardsText != null) rewardsText.alpha = 0f;
             OnDismissed?.Invoke();
+            // Now deactivate after a short delay to let loading screen fade in
+            StartCoroutine(DeactivateAfterDelay());
+        }
+
+        private IEnumerator DeactivateAfterDelay()
+        {
+            yield return new WaitForSecondsRealtime(0.5f);
+            gameObject.SetActive(false);
         }
     }
 }

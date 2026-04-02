@@ -88,6 +88,11 @@ namespace Procedural
             if (_spawnedFloor != null)
                 Destroy(_spawnedFloor);
             _spawnedFloor = null;
+
+            // Destroy all dynamically spawned children (enemies, workboxes, etc.)
+            // They're parented to this transform, not the floor
+            for (int i = transform.childCount - 1; i >= 0; i--)
+                Destroy(transform.GetChild(i).gameObject);
         }
 
         // ── Floor selection ────────────────────────────────────────────────────
@@ -135,7 +140,6 @@ namespace Procedural
         {
             if (elevatorPrefab == null) return;
 
-            // Find all ElevatorSpawn points in the floor prefab and pick one randomly
             Transform[] points = GetAllTaggedPoints("ElevatorSpawn");
             if (points.Length == 0)
             {
@@ -143,19 +147,80 @@ namespace Procedural
                 return;
             }
 
-            Transform chosen = points[Random.Range(0, points.Length)];
-            GameObject elev = Instantiate(elevatorPrefab, chosen.position, chosen.rotation, _spawnedFloor.transform);
-            elev.name = "Elevator";
-
-            // Store elevator position as spawn point on next floor
-            ElevatorSpawnPosition = chosen.position;
-
-            // Wire BossFloorGate if needed
-            if (IsBossFloor(_currentFloor))
+            // On floor 2+, spawn a closed "out of order" elevator where the player arrives
+            // and the working elevator at a different spawn point
+            if (_currentFloor > 1 && points.Length >= 2)
             {
-                BossFloorGate gate = elev.GetComponent<BossFloorGate>();
-                if (gate == null) gate = elev.AddComponent<BossFloorGate>();
-                gate.SetFloor(_currentFloor);
+                // Find the spawn point closest to the player's arrival position
+                Transform arrivalPoint = points[0];
+                float closestDist = float.MaxValue;
+                SaveManager sm = SaveManager.Instance;
+                if (sm != null && sm.CurrentRun != null && sm.CurrentRun.hasCustomSpawn)
+                {
+                    Vector3 spawnPos = new Vector3(sm.CurrentRun.spawnX, 0, sm.CurrentRun.spawnZ);
+                    foreach (var p in points)
+                    {
+                        float d = Vector3.Distance(new Vector3(p.position.x, 0, p.position.z), spawnPos);
+                        if (d < closestDist) { closestDist = d; arrivalPoint = p; }
+                    }
+                }
+
+                // Spawn closed elevator at arrival point
+                GameObject closedElev = Instantiate(elevatorPrefab, arrivalPoint.position, arrivalPoint.rotation, _spawnedFloor.transform);
+                closedElev.name = "Elevator_Closed";
+                var closedScript = closedElev.GetComponent<Elevator>();
+                if (closedScript != null) closedScript.SetClosed();
+
+                // Pick a different point for the working elevator
+                Transform exitPoint = null;
+                float farthestDist = 0f;
+                foreach (var p in points)
+                {
+                    if (p == arrivalPoint) continue;
+                    float d = Vector3.Distance(p.position, arrivalPoint.position);
+                    if (d > farthestDist) { farthestDist = d; exitPoint = p; }
+                }
+
+                if (exitPoint != null)
+                {
+                    GameObject elev = Instantiate(elevatorPrefab, exitPoint.position, exitPoint.rotation, _spawnedFloor.transform);
+                    elev.name = "Elevator";
+                    ElevatorSpawnPosition = exitPoint.position;
+
+                    if (IsBossFloor(_currentFloor))
+                    {
+                        BossFloorGate gate = elev.GetComponent<BossFloorGate>();
+                        if (gate == null) gate = elev.AddComponent<BossFloorGate>();
+                        gate.SetFloor(_currentFloor);
+                    }
+                }
+            }
+            else
+            {
+                // Floor 1 or only one spawn point — pick farthest from PlayerSpawn
+                Transform playerSpawn = GetRandomTaggedPoint("PlayerSpawn");
+                Transform chosen = points[0];
+
+                if (playerSpawn != null && points.Length > 1)
+                {
+                    float farthest = 0f;
+                    foreach (var p in points)
+                    {
+                        float d = Vector3.Distance(p.position, playerSpawn.position);
+                        if (d > farthest) { farthest = d; chosen = p; }
+                    }
+                }
+
+                GameObject elev = Instantiate(elevatorPrefab, chosen.position, chosen.rotation, _spawnedFloor.transform);
+                elev.name = "Elevator";
+                ElevatorSpawnPosition = chosen.position;
+
+                if (IsBossFloor(_currentFloor))
+                {
+                    BossFloorGate gate = elev.GetComponent<BossFloorGate>();
+                    if (gate == null) gate = elev.AddComponent<BossFloorGate>();
+                    gate.SetFloor(_currentFloor);
+                }
             }
         }
 
@@ -183,6 +248,15 @@ namespace Procedural
 
                 GameObject go = Instantiate(prefabToUse, shuffled[i].position, shuffled[i].rotation, transform);
                 go.name = $"Enemy_{data.enemyName}_{i}";
+
+                // Wire the enemy data into the battle trigger so hours/rewards work
+                var trigger = go.GetComponent<Battlescene_Trigger>();
+                if (trigger != null)
+                {
+                    var field = trigger.GetType().GetField("singleEnemyData",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    field?.SetValue(trigger, data);
+                }
             }
         }
 

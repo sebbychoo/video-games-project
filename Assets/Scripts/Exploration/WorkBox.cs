@@ -788,9 +788,17 @@ namespace CardBattle
 
         private void ShowInventory()
         {
+            Debug.Log($"[WorkBox] ShowInventory — OfficeBoxUI.Instance={OfficeBoxUI.Instance != null}");
+
+            if (OfficeBoxUI.Instance != null)
+            {
+                OfficeBoxUI.Instance.Show(this);
+                return;
+            }
+
+            Debug.LogWarning("[WorkBox] OfficeBoxUI.Instance is NULL — falling back to old panel");
             if (inventoryPanel != null)
                 inventoryPanel.SetActive(true);
-
             SpawnCardTiles();
             SpawnDeckTiles();
         }
@@ -800,13 +808,14 @@ namespace CardBattle
         /// </summary>
         public void CloseInventory()
         {
+            if (OfficeBoxUI.Instance != null)
+                OfficeBoxUI.Instance.Hide();
+
             if (inventoryPanel != null)
                 inventoryPanel.SetActive(false);
 
             ShowKeepLeaveButtons(false);
             _selectedCardIndex = -1;
-
-            // Don't touch cursor here — let WorkBoxTrigger handle it
         }
 
         /// <summary>

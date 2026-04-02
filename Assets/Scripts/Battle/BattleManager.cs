@@ -1142,12 +1142,28 @@ namespace CardBattle
             List<string> enemyNames = new List<string>();
             foreach (EnemyCombatant enemy in _enemies)
             {
-                if (enemy != null)
+                // Unity destroys the GO but the C# reference isn't null — use ReferenceEquals check
+                if (enemy == null) continue;
+
+                Debug.Log($"[Victory] Enemy: {(enemy.Data != null ? enemy.Data.enemyName : "NULL DATA")}, HoursReward: {enemy.HoursReward}, IsAlive: {enemy.IsAlive}");
+                _victoryHours += enemy.HoursReward;
+                if (enemy.Data != null && !string.IsNullOrEmpty(enemy.Data.enemyName))
+                    enemyNames.Add(enemy.Data.enemyName);
+            }
+
+            // If no hours were collected (enemies destroyed), use cached encounter data
+            if (_victoryHours == 0 && _currentEncounter != null && _currentEncounter.enemies != null)
+            {
+                foreach (var enemyData in _currentEncounter.enemies)
                 {
-                    _victoryHours += enemy.HoursReward;
-                    if (enemy.Data != null && !string.IsNullOrEmpty(enemy.Data.enemyName))
-                        enemyNames.Add(enemy.Data.enemyName);
+                    if (enemyData != null)
+                    {
+                        _victoryHours += enemyData.hoursReward;
+                        if (!string.IsNullOrEmpty(enemyData.enemyName))
+                            enemyNames.Add(enemyData.enemyName);
+                    }
                 }
+                Debug.Log($"[Victory] Fallback from EncounterData: {_victoryHours} hours");
             }
 
             // Determine boss rewards

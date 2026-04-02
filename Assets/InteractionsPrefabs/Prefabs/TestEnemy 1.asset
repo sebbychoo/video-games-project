@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: TestEnemy 1
   m_EditorClassIdentifier: CardBattle::CardBattle.EnemyCombatantData
   enemyName: Joe Biden
-  maxHP: 30
-  hoursReward: 50
+  maxHP: 10
+  hoursReward: 67
   variant: 0
   sprite: {fileID: 0}
   explorationPrefab: {fileID: 319367816001114415, guid: b646587af54ea274894f622811699d72, type: 3}

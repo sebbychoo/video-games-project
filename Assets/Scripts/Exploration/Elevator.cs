@@ -13,8 +13,8 @@ namespace CardBattle
     /// </summary>
     public class Elevator : MonoBehaviour, IInteractable
     {
-        public string InteractPrompt => "Press E to descend";
-        public float InteractRange => 4f;
+        public string InteractPrompt => _closedLineOverride ?? (_closed ? "Press E to check" : "Press E to descend");
+        public float InteractRange => interactRange;
         [SerializeField] float interactRange = 2f;
 
         [Header("Floor Display")]
@@ -26,8 +26,26 @@ namespace CardBattle
         [SerializeField] Sprite[] doorOpenFrames;
         [SerializeField] float frameRate = 8f;
 
+        [Header("Out of Order (broken elevator)")]
+        [SerializeField] Sprite[] outOfOrderFrames;
+        [SerializeField] float outOfOrderFrameRate = 4f;
+        [SerializeField] string[] closedLines = new string[]
+        {
+            "I can only keep going...",
+            "It's broken... I think.",
+            "I can only go down.",
+            "Out of order. Great.",
+            "No going back now.",
+            "This one's done for.",
+            "Guess I'm stuck going deeper.",
+            "The button doesn't work anymore."
+        };
+
         private bool _playerInRange;
+        private bool _closed;
         private BossFloorGate _gate;
+        private float _lineCooldown;
+        private string _closedLineOverride;
 
         private static bool _anyElevatorDescending;
         public static bool IsDescending => _anyElevatorDescending;
@@ -70,15 +88,40 @@ namespace CardBattle
                 floorLabel.text = $"{floor}";
         }
 
+        /// <summary>Mark this elevator as closed/out of order. Disables interaction.</summary>
+        public void SetClosed()
+        {
+            _closed = true;
+
+            // Hide floor number on broken elevator
+            if (floorLabel != null)
+                floorLabel.gameObject.SetActive(false);
+
+            // Start out-of-order looping animation
+            if (outOfOrderFrames != null && outOfOrderFrames.Length > 0)
+            {
+                if (doorSprite != null)
+                    doorSprite.sprite = outOfOrderFrames[0];
+                StartCoroutine(PlayOutOfOrderLoop());
+            }
+        }
+
+        private IEnumerator PlayOutOfOrderLoop()
+        {
+            float interval = 1f / Mathf.Max(outOfOrderFrameRate, 1f);
+            int frame = 0;
+            while (true)
+            {
+                if (doorSprite != null)
+                    doorSprite.sprite = outOfOrderFrames[frame];
+                frame = (frame + 1) % outOfOrderFrames.Length;
+                yield return new WaitForSeconds(interval);
+            }
+        }
+
         private void LateUpdate()
         {
-            if (floorLabel != null && Camera.main != null)
-            {
-                Vector3 dir = Camera.main.transform.position - floorLabel.transform.position;
-                dir.y = 0;
-                if (dir.sqrMagnitude > 0.001f)
-                    floorLabel.transform.rotation = Quaternion.LookRotation(dir);
-            }
+            // Floor label stays fixed to the elevator — no billboard
         }
 
         private void OnTriggerEnter(Collider other)
@@ -95,9 +138,29 @@ namespace CardBattle
 
         private void Update()
         {
-            if (_anyElevatorDescending) return;
+            if (_lineCooldown > 0)
+            {
+                _lineCooldown -= Time.deltaTime;
+                if (_lineCooldown <= 0) _closedLineOverride = null;
+            }
+
             if (!_playerInRange) return;
             if (!Input.GetKeyDown(KeyCode.E)) return;
+
+            // Closed elevator — show a random line (ignore descending flag)
+            if (_closed)
+            {
+                if (_lineCooldown <= 0 && closedLines.Length > 0)
+                {
+                    string line = closedLines[Random.Range(0, closedLines.Length)];
+                    _closedLineOverride = line;
+                    _lineCooldown = 2.5f;
+                }
+                return;
+            }
+
+            // Working elevator — check descending flag
+            if (_anyElevatorDescending) return;
 
             if (_gate != null && !_gate.TryExit())
                 return;
