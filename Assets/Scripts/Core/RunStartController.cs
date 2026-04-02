@@ -58,7 +58,7 @@ public class RunStartController : MonoBehaviour
 
         // Unfreeze
         Time.timeScale = 1f;
-        Cursor.lockState = CursorLockMode.Confined;
+        Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 }

@@ -34,7 +34,7 @@ public class Menu : MonoBehaviour
 
         menuCanvas.SetActive(menuOpen);
         Time.timeScale = menuOpen ? 0f : 1f;
-        Cursor.lockState = menuOpen ? CursorLockMode.None : CursorLockMode.Confined;
+        Cursor.lockState = menuOpen ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = menuOpen;
 
         if (playerCapsule != null)
@@ -47,7 +47,7 @@ public class Menu : MonoBehaviour
     public void Restart()
     {
         Time.timeScale = 1f;
-        Cursor.lockState = CursorLockMode.Confined;
+        Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         SceneManager.LoadScene(0);
     }

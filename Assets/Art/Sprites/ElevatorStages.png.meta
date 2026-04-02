@@ -113,10 +113,10 @@ TextureImporter:
       name: ElevatorAnim_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 115
-        width: 109
-        height: 105
+        x: 1
+        y: 120
+        width: 98
+        height: 96
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -135,10 +135,10 @@ TextureImporter:
       name: ElevatorAnim_1
       rect:
         serializedVersion: 2
-        x: 109
-        y: 115
-        width: 109
-        height: 105
+        x: 116
+        y: 120
+        width: 98
+        height: 96
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -157,10 +157,10 @@ TextureImporter:
       name: ElevatorAnim_2
       rect:
         serializedVersion: 2
-        x: 0
-        y: 10
-        width: 109
-        height: 105
+        x: 2
+        y: 14
+        width: 98
+        height: 96
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -179,10 +179,10 @@ TextureImporter:
       name: ElevatorAnim_3
       rect:
         serializedVersion: 2
-        x: 109
-        y: 10
-        width: 109
-        height: 105
+        x: 116
+        y: 14
+        width: 98
+        height: 96
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}

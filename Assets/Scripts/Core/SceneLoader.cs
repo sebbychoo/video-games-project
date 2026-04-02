@@ -284,7 +284,7 @@ public class SceneLoader : MonoBehaviour
 
     public void LoadExploration()
     {
-        Cursor.lockState = CursorLockMode.Confined;
+        Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
         if (LoadingScreen.Instance != null)
