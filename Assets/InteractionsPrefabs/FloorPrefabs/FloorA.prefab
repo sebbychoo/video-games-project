@@ -93,8 +93,8 @@ MonoBehaviour:
   useRendererBounds: 1
   ceilingPadding: 1
   ceilingMaterial: {fileID: 0}
-  ceilingTexture: {fileID: 0}
-  ceilingTilesPerUnit: 0.5
+  ceilingTexture: {fileID: 2800000, guid: 90553e3d646ef4d4e9f2144f724c7909, type: 3}
+  ceilingTilesPerUnit: 0.6
   ceilingColor: {r: 0.57861626, g: 0.57861626, b: 0.57861626, a: 1}
   lightSpacing: 8
   lightColor: {r: 1, g: 1, b: 1, a: 1}
@@ -106,8 +106,9 @@ MonoBehaviour:
   ceilingGlowIntensity: 1
   ceilingGlowRange: 4
   fixtureLength: 4
-  fixtureWidth: 2
+  fixtureWidth: 3
   fixtureDepth: 0.08
+  fixtureTexture: {fileID: 2800000, guid: 8a73ed6bfdfb1794b9a32613b3925391, type: 3}
   wallMargin: 3.5
   enableFlicker: 0
   flickerStrength: 0.05
@@ -117,6 +118,10 @@ MonoBehaviour:
   lightFlickerMultiplier: 1.8
   flickerRandomness: 0.8
   floorLayerName: Default
+  maxLights: 20
+  enableSpotLights: 0
+  ambientColor: {r: 0.8039216, g: 0.8039216, b: 0.8039216, a: 1}
+  directionalIntensity: 1.2
 --- !u!1 &2333366227713069565
 GameObject:
   m_ObjectHideFlags: 0

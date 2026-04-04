@@ -78,6 +78,9 @@ namespace Procedural
         [Tooltip("Thickness/depth of the fixture box. Increase for more 3D look.")]
         [SerializeField] float fixtureDepth = 0.05f;
 
+        [Tooltip("Custom texture for the light fixture panels. Leave null for default emissive white.")]
+        [SerializeField] Texture2D fixtureTexture;
+
         [Tooltip("Minimum distance from room edge before a light can spawn. Prevents lights clipping into walls.")]
         [SerializeField] float wallMargin = 1.5f;
 
@@ -111,7 +114,23 @@ namespace Procedural
         [Tooltip("Layer name for the floor. Spot lights will ONLY illuminate this layer so walls stay clean.")]
         [SerializeField] string floorLayerName = "Default";
 
+        [Header("Performance")]
+        [Tooltip("Maximum number of light fixtures to spawn. Keeps performance in check on large floors.")]
+        [SerializeField] int maxLights = 8;
+
+        [Tooltip("If false, fixture visuals are shown but no real-time spot lights are created. Big performance win.")]
+        [SerializeField] bool enableSpotLights = true;
+
+        [Header("Floor Atmosphere")]
+        [Tooltip("Override ambient light color for this floor. Bright = well-lit office, dark = creepy.")]
+        [SerializeField] Color ambientColor = new Color(0.63f, 0.63f, 0.63f); // ~160,160,160
+
+        [Tooltip("Directional light intensity for this floor. 0 = no directional, 0.5 = normal office.")]
+        [Range(0f, 2f)]
+        [SerializeField] float directionalIntensity = 0.4f;
+
         private GameObject _ceilingRoot;
+        private Material _sharedFixtureMat;
 
         private void Start()
         {
@@ -126,10 +145,75 @@ namespace Procedural
             _ceilingRoot = new GameObject("Ceiling");
             _ceilingRoot.transform.SetParent(transform, false);
 
+            // Create shared materials once (not per fixture)
+            _sharedFixtureMat = BuildFixtureMaterial();
+
+            // Apply floor atmosphere
+            ApplyFloorLighting();
+
             Bounds roomBounds = ComputeRoomBounds();
-            Debug.Log($"[OfficeCeiling] Room bounds center={roomBounds.center} size={roomBounds.size} | Ceiling Y={transform.position.y + ceilingHeight}");
             CreateCeilingQuad(roomBounds);
             CreateLightGrid(roomBounds);
+        }
+
+        private void ApplyFloorLighting()
+        {
+            // Set ambient color for this floor
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = ambientColor;
+
+            // Find and adjust the directional light
+            Light[] allLights = FindObjectsOfType<Light>();
+            foreach (var light in allLights)
+            {
+                if (light.type == LightType.Directional)
+                {
+                    light.intensity = directionalIntensity;
+                    break;
+                }
+            }
+        }
+
+        private Material BuildFixtureMaterial()
+        {
+            if (fixtureTexture != null)
+            {
+                // Unlit with alpha cutout so dark/transparent areas are see-through
+                Shader unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
+                if (unlitShader == null) unlitShader = Shader.Find("Unlit/Transparent");
+                Material mat = new Material(unlitShader);
+                mat.mainTexture = fixtureTexture;
+                if (mat.HasProperty("_BaseMap"))
+                    mat.SetTexture("_BaseMap", fixtureTexture);
+                mat.SetColor("_BaseColor", Color.white);
+                mat.color = Color.white;
+                // Enable alpha clipping to cut out the dark background
+                mat.SetFloat("_Cutoff", 0.1f);
+                mat.SetInt("_AlphaClip", 1);
+                mat.EnableKeyword("_ALPHATEST_ON");
+                mat.renderQueue = 2450;
+                return mat;
+            }
+
+            // No texture — use emissive Lit for default glow
+            Material emissive;
+            Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
+            if (urpLit != null)
+            {
+                emissive = new Material(urpLit);
+                emissive.SetColor("_BaseColor", lightColor);
+                emissive.EnableKeyword("_EMISSION");
+                emissive.SetColor("_EmissionColor", lightColor * lightIntensity * 2f);
+                emissive.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            }
+            else
+            {
+                emissive = new Material(Shader.Find("Standard"));
+                emissive.color = lightColor;
+                emissive.EnableKeyword("_EMISSION");
+                emissive.SetColor("_EmissionColor", lightColor * lightIntensity);
+            }
+            return emissive;
         }
 
         /// <summary>
@@ -215,11 +299,20 @@ namespace Procedural
             {
                 mat.mainTexture = ceilingTexture;
                 mat.SetColor("_BaseColor", Color.white);
+                if (mat.HasProperty("_BaseMap"))
+                    mat.SetTexture("_BaseMap", ceilingTexture);
                 float tilingX = roomBounds.size.x * ceilingTilesPerUnit;
                 float tilingZ = roomBounds.size.z * ceilingTilesPerUnit;
+                // Round to whole tiles so they never cut off at edges
+                tilingX = Mathf.Max(1f, Mathf.Round(tilingX));
+                tilingZ = Mathf.Max(1f, Mathf.Round(tilingZ));
                 mat.mainTextureScale = new Vector2(tilingX, tilingZ);
-                // Dim emission based on ceiling color
-                mat.SetColor("_EmissionColor", baseCol * ceilingGlowIntensity * 0.3f);
+                if (mat.HasProperty("_BaseMap_ST"))
+                    mat.SetVector("_BaseMap_ST", new Vector4(tilingX, tilingZ, 0, 0));
+                // Use texture as emission map too so the tile pattern shows through the glow
+                if (mat.HasProperty("_EmissionMap"))
+                    mat.SetTexture("_EmissionMap", ceilingTexture);
+                mat.SetColor("_EmissionColor", Color.white * ceilingGlowIntensity * 0.3f);
             }
             else
             {
@@ -257,6 +350,7 @@ namespace Procedural
                 float x = countX > 1 ? minX + stepX * ix : (minX + maxX) * 0.5f;
                 for (int iz = 0; iz < countZ; iz++)
                 {
+                    if (index >= maxLights) return;
                     float z = countZ > 1 ? minZ + stepZ * iz : (minZ + maxZ) * 0.5f;
                     CreateLightFixture(new Vector3(x, y, z), index);
                     index++;
@@ -266,40 +360,31 @@ namespace Procedural
 
         private void CreateLightFixture(Vector3 position, int index)
         {
-            // --- Fixture housing (thin 3D box for slight depth) ---
-            GameObject fixture = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            // Use quad when texture is assigned (clean UV mapping), cube otherwise (3D look)
+            GameObject fixture;
+            if (fixtureTexture != null)
+            {
+                fixture = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                fixture.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+                fixture.transform.localScale = new Vector3(fixtureLength, fixtureWidth, 1f);
+            }
+            else
+            {
+                fixture = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                fixture.transform.localScale = new Vector3(fixtureLength, fixtureDepth, fixtureWidth);
+            }
+
             fixture.name = $"LightFixture_{index}";
             fixture.transform.SetParent(_ceilingRoot.transform, false);
             fixture.transform.position = position;
-            fixture.transform.localScale = new Vector3(fixtureLength, fixtureDepth, fixtureWidth);
 
             Collider col = fixture.GetComponent<Collider>();
             if (col != null) Destroy(col);
 
-            // Don't cast shadows
             Renderer rend = fixture.GetComponent<Renderer>();
             rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             rend.receiveShadows = false;
-
-            // Emissive material (URP compatible) — the glowing panel face
-            Material emissive;
-            Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
-            if (urpLit != null)
-            {
-                emissive = new Material(urpLit);
-                emissive.SetColor("_BaseColor", lightColor);
-                emissive.EnableKeyword("_EMISSION");
-                emissive.SetColor("_EmissionColor", lightColor * lightIntensity * 2f);
-                emissive.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
-            }
-            else
-            {
-                emissive = new Material(Shader.Find("Standard"));
-                emissive.color = lightColor;
-                emissive.EnableKeyword("_EMISSION");
-                emissive.SetColor("_EmissionColor", lightColor * lightIntensity);
-            }
-            rend.material = emissive;
+            rend.material = _sharedFixtureMat;
 
             // --- Flicker / buzz effect (only if enabled for this floor) ---
             if (enableFlicker)
@@ -316,87 +401,31 @@ namespace Procedural
                 );
             }
 
-            // --- Spot light pointing down ---
-            GameObject lightObj = new GameObject($"Light_{index}");
-            lightObj.transform.SetParent(fixture.transform, false);
-            lightObj.transform.localPosition = new Vector3(0f, -0.03f, 0f);
-            lightObj.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-
-            Light spotLight = lightObj.AddComponent<Light>();
-            spotLight.type = LightType.Spot;
-            spotLight.color = lightColor;
-            spotLight.intensity = lightIntensity;
-            spotLight.range = lightRange;
-            spotLight.spotAngle = spotAngle;
-            spotLight.innerSpotAngle = innerSpotAngle;
-            spotLight.shadows = LightShadows.None;
-
-            // Only light the floor layer so walls stay clean
-            int floorLayer = LayerMask.NameToLayer(floorLayerName);
-            if (floorLayer >= 0)
-                spotLight.cullingMask = 1 << floorLayer;
-
-            if (lightCookie != null)
-                spotLight.cookie = lightCookie;
-
-            // --- Ceiling glow halo around fixture ---
-            if (ceilingGlowIntensity > 0f)
+            // --- Spot light pointing down (skip if disabled for performance) ---
+            if (enableSpotLights)
             {
-                CreateCeilingGlowHalo(fixture.transform, position, index);
+                GameObject lightObj = new GameObject($"Light_{index}");
+                lightObj.transform.SetParent(fixture.transform, false);
+                lightObj.transform.localPosition = new Vector3(0f, -0.03f, 0f);
+                lightObj.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+                Light spotLight = lightObj.AddComponent<Light>();
+                spotLight.type = LightType.Spot;
+                spotLight.color = lightColor;
+                spotLight.intensity = lightIntensity;
+                spotLight.range = lightRange;
+                spotLight.spotAngle = spotAngle;
+                spotLight.innerSpotAngle = innerSpotAngle;
+                spotLight.shadows = LightShadows.None;
+
+                int floorLayer = LayerMask.NameToLayer(floorLayerName);
+                if (floorLayer >= 0)
+                    spotLight.cullingMask = 1 << floorLayer;
+
+                if (lightCookie != null)
+                    spotLight.cookie = lightCookie;
             }
         }
 
-        private void CreateCeilingGlowHalo(Transform parent, Vector3 fixturePos, int index)
-        {
-            // Emissive quad sitting just below the ceiling, larger than the fixture,
-            // faking the light halo you'd see around a fluorescent panel
-            GameObject halo = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            halo.name = $"CeilingGlow_{index}";
-            halo.transform.SetParent(_ceilingRoot.transform, false);
-
-            // Position just barely below the ceiling so it doesn't z-fight
-            Vector3 pos = fixturePos;
-            pos.y += 0.01f;
-            halo.transform.position = pos;
-            halo.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
-
-            // Glow area is bigger than the fixture
-            float glowSize = ceilingGlowRange;
-            halo.transform.localScale = new Vector3(
-                fixtureLength + glowSize * 2f,
-                fixtureWidth + glowSize * 2f,
-                1f);
-
-            Collider col = halo.GetComponent<Collider>();
-            if (col != null) Destroy(col);
-
-            Renderer rend = halo.GetComponent<Renderer>();
-            rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            rend.receiveShadows = false;
-
-            // Semi-transparent emissive material for the glow
-            Shader urpLit = Shader.Find("Universal Render Pipeline/Unlit");
-            if (urpLit == null) urpLit = Shader.Find("Unlit/Color");
-            Material glowMat = new Material(urpLit);
-
-            // Transparent blend so it fades at edges
-            glowMat.SetInt("_Surface", 1); // Transparent
-            glowMat.SetInt("_Blend", 0);   // Alpha
-            glowMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
-            glowMat.SetInt("_ZWrite", 0);
-            glowMat.SetFloat("_DstBlend", 10); // OneMinusSrcAlpha
-            glowMat.SetFloat("_SrcBlend", 5);  // SrcAlpha
-            glowMat.renderQueue = 3000;
-            glowMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            glowMat.EnableKeyword("_ALPHAPREMULTIPLY_ON");
-
-            Color glowColor = lightColor;
-            glowColor.a = Mathf.Clamp01(ceilingGlowIntensity * 0.4f);
-            glowMat.color = glowColor;
-            if (glowMat.HasProperty("_BaseColor"))
-                glowMat.SetColor("_BaseColor", glowColor);
-
-            rend.material = glowMat;
-        }
     }
 }
