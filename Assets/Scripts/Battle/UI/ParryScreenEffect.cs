@@ -35,25 +35,118 @@ namespace CardBattle
         {
             if (flashOverlay != null)
                 flashOverlay.gameObject.SetActive(false);
+
+            // Find volumes while they might be active, then deactivate
+            _grayscaleVolObj = GameObject.FindWithTag(grayscaleVolumeTag);
+            _invertVolObj = GameObject.FindWithTag(invertVolumeTag);
+
+            // If not found (they started inactive), search all objects manually
+            if (_grayscaleVolObj == null || _invertVolObj == null)
+            {
+                foreach (GameObject go in Resources.FindObjectsOfTypeAll<GameObject>())
+                {
+                    if (go.scene.name == null) continue; // skip assets
+                    if (_grayscaleVolObj == null && go.CompareTag(grayscaleVolumeTag))
+                        _grayscaleVolObj = go;
+                    if (_invertVolObj == null && go.CompareTag(invertVolumeTag))
+                        _invertVolObj = go;
+                }
+            }
+
+            if (_grayscaleVolObj != null) _grayscaleVolObj.SetActive(false);
+            if (_invertVolObj != null) _invertVolObj.SetActive(false);
+
+            Debug.Log($"[ParryEffect] Grayscale: {(_grayscaleVolObj != null ? _grayscaleVolObj.name : "NOT FOUND")}, Invert: {(_invertVolObj != null ? _invertVolObj.name : "NOT FOUND")}");
         }
 
-        private GameObject FindVolume(string tag, ref GameObject cached)
+        [Header("Warning (during fast dash, before parry window)")]
+        [Tooltip("Warning icon sprite (like a ⚠ symbol). Tinted to attack color.")]
+        [SerializeField] Image warningIcon;
+        [Tooltip("Full-screen overlay tinted to attack color during warning.")]
+        [SerializeField] Image warningOverlay;
+        [SerializeField] float warningOverlayAlpha = 0.2f;
+
+        [Header("Intent Color Mapping")]
+        [SerializeField] Color whiteIntentColor = Color.white;
+        [SerializeField] Color yellowIntentColor = new Color(1f, 0.85f, 0f);
+        [SerializeField] Color redIntentColor = new Color(1f, 0.2f, 0.2f);
+
+        public void ShowWarning(IntentColor intentColor = IntentColor.White)
         {
-            if (cached != null) return cached;
-            cached = GameObject.FindWithTag(tag);
-            return cached;
+            Color tint = GetIntentColor(intentColor);
+
+            if (warningIcon != null)
+            {
+                warningIcon.color = tint;
+                warningIcon.gameObject.SetActive(true);
+            }
+            if (warningOverlay != null)
+            {
+                Color overlayTint = tint;
+                overlayTint.a = warningOverlayAlpha;
+                warningOverlay.color = overlayTint;
+                warningOverlay.gameObject.SetActive(true);
+            }
         }
+
+        public void HideWarning()
+        {
+            if (warningIcon != null)
+                warningIcon.gameObject.SetActive(false);
+            if (warningOverlay != null)
+                warningOverlay.gameObject.SetActive(false);
+        }
+
+        private Color GetIntentColor(IntentColor intent)
+        {
+            switch (intent)
+            {
+                case IntentColor.Yellow: return yellowIntentColor;
+                case IntentColor.Red: return redIntentColor;
+                default: return whiteIntentColor;
+            }
+        }
+
+        [Header("Transition")]
+        [Tooltip("Brief white flash before B&W kicks in, like a camera flash.")]
+        [SerializeField] float transitionFlashDuration = 0.08f;
+        [SerializeField] Color transitionFlashColor = new Color(1, 1, 1, 0.6f);
 
         public void StartParryWindow()
         {
-            GameObject vol = FindVolume(grayscaleVolumeTag, ref _grayscaleVolObj);
-            if (vol != null) vol.SetActive(true);
+            if (_flashRoutine != null) StopCoroutine(_flashRoutine);
+            _flashRoutine = StartCoroutine(TransitionToGrayscale());
         }
 
         public void EndParryWindow()
         {
-            GameObject vol = FindVolume(grayscaleVolumeTag, ref _grayscaleVolObj);
-            if (vol != null) vol.SetActive(false);
+            if (_grayscaleVolObj != null) _grayscaleVolObj.SetActive(false);
+        }
+
+        private IEnumerator TransitionToGrayscale()
+        {
+            // Brief white flash
+            if (flashOverlay != null)
+            {
+                flashOverlay.gameObject.SetActive(true);
+                flashOverlay.color = transitionFlashColor;
+
+                float elapsed = 0f;
+                while (elapsed < transitionFlashDuration)
+                {
+                    elapsed += Time.deltaTime;
+                    float t = elapsed / transitionFlashDuration;
+                    Color c = transitionFlashColor;
+                    c.a = Mathf.Lerp(transitionFlashColor.a, 0f, t);
+                    flashOverlay.color = c;
+                    yield return null;
+                }
+                flashOverlay.gameObject.SetActive(false);
+            }
+
+            // Now snap to B&W
+            if (_grayscaleVolObj != null) _grayscaleVolObj.SetActive(true);
+            _flashRoutine = null;
         }
 
         public void FlashParrySuccess()
@@ -94,13 +187,12 @@ namespace CardBattle
 
         private IEnumerator InvertFlashRoutine()
         {
-            // Turn on the invert volume for a brief flash
-            GameObject vol = FindVolume(invertVolumeTag, ref _invertVolObj);
-            if (vol != null) vol.SetActive(true);
+            if (_invertVolObj != null) _invertVolObj.SetActive(true);
+            else Debug.LogWarning("[ParryEffect] Invert volume not found!");
 
             yield return new WaitForSeconds(invertFlashDuration);
 
-            if (vol != null) vol.SetActive(false);
+            if (_invertVolObj != null) _invertVolObj.SetActive(false);
             _flashRoutine = null;
         }
     }

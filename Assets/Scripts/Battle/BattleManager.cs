@@ -505,6 +505,10 @@ namespace CardBattle
                     {
                         // Two-phase dash: fast start, slow finish over parry window duration
                         bool slowPhaseStarted = false;
+
+                        // Show warning during fast phase — enemy is approaching
+                        if (parryScreenEffect != null) parryScreenEffect.ShowWarning(_lastExecutedEnemyAction.intentColor);
+
                         battleAnimations.PlayDashWithSlowdown(
                             enemy.transform,
                             playerHealth.transform,
@@ -516,6 +520,8 @@ namespace CardBattle
                         while (!slowPhaseStarted)
                             yield return null;
 
+                        // Transition from warning to B&W parry window
+                        if (parryScreenEffect != null) parryScreenEffect.HideWarning();
                         parrySystem.StartParryWindow(_lastExecutedEnemyAction, enemy);
                         if (parryScreenEffect != null) parryScreenEffect.StartParryWindow();
 

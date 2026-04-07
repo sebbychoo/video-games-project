@@ -169,20 +169,21 @@ namespace CardBattle
             RectTransform rt = tooltipPanel.GetComponent<RectTransform>();
             if (rt == null) return;
 
-            // Anchor to top-left of canvas so anchoredPosition = screen position
+            Canvas canvas = tooltipPanel.GetComponentInParent<Canvas>();
+            if (canvas == null) return;
+
             rt.anchorMin = new Vector2(0, 0);
             rt.anchorMax = new Vector2(0, 0);
             rt.pivot = new Vector2(1f, 0.5f);
 
-            Canvas canvas = tooltipPanel.GetComponentInParent<Canvas>();
-            if (canvas == null) return;
+            RectTransform canvasRT = canvas.GetComponent<RectTransform>();
+            Vector2 localPos;
+            Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRT, Input.mousePosition, cam, out localPos);
 
-            // Scale mouse position by canvas scale factor
-            float scaleFactor = canvas.scaleFactor > 0 ? canvas.scaleFactor : 1f;
-            Vector2 mousePos = Input.mousePosition;
-            Vector2 scaledPos = mousePos / scaleFactor;
-
-            rt.anchoredPosition = new Vector2(scaledPos.x - 10f, scaledPos.y);
+            // Offset to the left, convert from canvas center to bottom-left origin
+            Vector2 canvasSize = canvasRT.sizeDelta;
+            rt.anchoredPosition = new Vector2(localPos.x + canvasSize.x * 0.5f - 10f, localPos.y + canvasSize.y * 0.5f);
         }
 
         public void HideTooltip()
