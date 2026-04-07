@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 7456411117303965948}
   - component: {fileID: 5260231490054535479}
   - component: {fileID: 3295479572685017781}
+  - component: {fileID: 6759086203493987339}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Untagged
@@ -123,7 +124,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: e07e9ad4faf8c79408b1a8219ad84b16, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ff33eaea09981b14d8c2bd333710706a, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -191,3 +192,18 @@ MonoBehaviour:
   encounterData: {fileID: 11400000, guid: 5743242e83fe708408d0f439a8de05e0, type: 2}
   singleEnemyData: {fileID: 0}
   enemyId: 
+--- !u!114 &6759086203493987339
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7471770255134837283}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d2615674640cd84f918c4cb415a80ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CardBattle::CardBattle.WorldIntentBubble
+  offset: {x: -1, y: 1.8, z: 0}
+  spriteScale: 2
+  intentRenderer: {fileID: 0}

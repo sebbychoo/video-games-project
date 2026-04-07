@@ -42,3 +42,8 @@ MonoBehaviour:
   baseParryWindowDuration: 0
   preFightDialogue: hey jew
   postFightDialogue: bye jew
+  badgeHealthy: {fileID: 21300000, guid: 9243917fba7d87a4fa3b83c137974d1f, type: 3}
+  badgeConcerned: {fileID: 21300000, guid: 9d418ca56f56a8b4fa2326518013d735, type: 3}
+  badgeStressed: {fileID: 21300000, guid: 2284e069259b62f4ca8bba53de79de8d, type: 3}
+  badgeCritical: {fileID: 21300000, guid: fe3400612ad70a54189d2bce424b46a6, type: 3}
+  badgeDead: {fileID: 21300000, guid: 9243917fba7d87a4fa3b83c137974d1f, type: 3}

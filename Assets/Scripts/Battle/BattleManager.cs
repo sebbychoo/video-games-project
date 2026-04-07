@@ -44,6 +44,7 @@ namespace CardBattle
         [SerializeField] StatusEffectIconStack enemyStatusEffectIcons;
         [SerializeField] OvertimeMeterUI       overtimeMeterUI;
         [SerializeField] DeckCounterUI         deckCounterUI;
+        [SerializeField] GameObject            enemyBadgePrefab;
         [SerializeField] BlockDisplay          blockDisplay;
         [SerializeField] TurnCounterUI         turnCounterUI;
         [SerializeField] VictoryScreen         victoryScreen;
@@ -59,6 +60,7 @@ namespace CardBattle
         // ── State ─────────────────────────────────────────────────────────────
         private List<EnemyCombatant>    _enemies = new List<EnemyCombatant>();
         private List<EnemyHPBar>        _enemyHPBars = new List<EnemyHPBar>();
+        private List<EnemyBadgeHP>      _enemyBadges = new List<EnemyBadgeHP>();
         private List<EnemyIntentDisplay> _enemyIntents = new List<EnemyIntentDisplay>();
         private int                  _handSize;
         private int                  _lastEndTurnFrame = -1;
@@ -214,6 +216,9 @@ namespace CardBattle
 
             // Spawn enemies
             SpawnEnemies(encounter);
+
+            // Show battle UI (badges) — delayed so loading screen finishes first
+            Invoke(nameof(ShowBattleUI), 0.5f);
 
             // Initialize deck from RunState or fallback
             InitializeDeck();
@@ -884,6 +889,7 @@ namespace CardBattle
             }
             _enemies.Clear();
             _enemyHPBars.Clear();
+            _enemyBadges.Clear();
             _enemyIntents.Clear();
 
             // If no enemy prefab is set, try to use existing scene enemies
@@ -976,6 +982,32 @@ namespace CardBattle
             {
                 intentDisplay.Initialize(combatant);
                 _enemyIntents.Add(intentDisplay);
+            }
+
+            // Set up enemy badge
+            if (enemyBadgePrefab != null)
+            {
+                Canvas canvas = FindObjectOfType<Canvas>();
+                if (canvas != null)
+                {
+                    GameObject badgeGO = Instantiate(enemyBadgePrefab, canvas.transform);
+                    badgeGO.SetActive(false); // Start hidden, ShowBattleUI will reveal
+                    EnemyBadgeHP badge = badgeGO.GetComponent<EnemyBadgeHP>();
+                    if (badge != null)
+                    {
+                        badge.Initialize(
+                            enemyData.enemyName,
+                            combatant.CurrentHP,
+                            combatant.MaxHP,
+                            enemyData.badgeHealthy,
+                            enemyData.badgeConcerned,
+                            enemyData.badgeStressed,
+                            enemyData.badgeCritical,
+                            enemyData.badgeDead
+                        );
+                        _enemyBadges.Add(badge);
+                    }
+                }
             }
 
             // Initialize screen-space enemy HP bar for first enemy
@@ -1128,9 +1160,34 @@ namespace CardBattle
             if (idx >= 0 && idx < _enemyHPBars.Count && _enemyHPBars[idx] != null)
                 _enemyHPBars[idx].UpdateHP(enemy.CurrentHP, enemy.MaxHP);
 
+            // Update enemy badge
+            if (idx >= 0 && idx < _enemyBadges.Count && _enemyBadges[idx] != null)
+                _enemyBadges[idx].UpdateHP(enemy.CurrentHP, enemy.MaxHP);
+
             // Update screen-space enemy HP bar if it's tracking this enemy
             if (screenEnemyHPBar != null && screenEnemyHPBar.TrackedEnemy == enemy)
                 screenEnemyHPBar.UpdateHP(enemy.CurrentHP, enemy.MaxHP);
+        }
+
+        private void ShowBattleUI()
+        {
+            if (playerBadge != null)
+                playerBadge.gameObject.SetActive(true);
+
+            foreach (var badge in _enemyBadges)
+                if (badge != null) badge.gameObject.SetActive(true);
+        }
+
+        private void HideBattleUI()
+        {
+            // Hide player badge
+            if (playerBadge != null)
+                playerBadge.gameObject.SetActive(false);
+
+            // Destroy enemy badges
+            foreach (var badge in _enemyBadges)
+                if (badge != null) Destroy(badge.gameObject);
+            _enemyBadges.Clear();
         }
 
         // ── Victory / Defeat ──────────────────────────────────────────────────
@@ -1142,6 +1199,9 @@ namespace CardBattle
             // Stop visual effects
             if (battleAnimations != null)
                 battleAnimations.StopOverflowGlow();
+
+            // Hide badges
+            HideBattleUI();
 
             // Clear player status effects on encounter end
             statusEffectSystem.ClearAll(playerObject ?? gameObject);
@@ -1214,6 +1274,9 @@ namespace CardBattle
             // Stop visual effects
             if (battleAnimations != null)
                 battleAnimations.StopOverflowGlow();
+
+            // Hide badges
+            HideBattleUI();
 
             // Clear player status effects
             statusEffectSystem.ClearAll(playerObject ?? gameObject);

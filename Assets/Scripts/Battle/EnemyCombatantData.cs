@@ -21,5 +21,12 @@ namespace CardBattle
         public float baseParryWindowDuration;
         [TextArea] public string preFightDialogue;
         [TextArea] public string postFightDialogue;
+
+        [Header("Badge Sprites (for battle UI — 5 states)")]
+        public Sprite badgeHealthy;    // 75-100%
+        public Sprite badgeConcerned;  // 50-74%
+        public Sprite badgeStressed;   // 25-49%
+        public Sprite badgeCritical;   // 1-24%
+        public Sprite badgeDead;       // 0%
     }
 }
