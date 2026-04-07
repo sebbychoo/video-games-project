@@ -19,6 +19,7 @@ namespace CardBattle
         [SerializeField] OverflowBuffer        overflowBuffer;
         [SerializeField] BlockSystem           blockSystem;
         [SerializeField] ParrySystem           parrySystem;
+        [SerializeField] ParryScreenEffect     parryScreenEffect;
         [SerializeField] StatusEffectSystem    statusEffectSystem;
         [SerializeField] CardEffectResolver    cardEffectResolver;
         [SerializeField] DeckManager           deckManager;
@@ -516,6 +517,7 @@ namespace CardBattle
                             yield return null;
 
                         parrySystem.StartParryWindow(_lastExecutedEnemyAction, enemy);
+                        if (parryScreenEffect != null) parryScreenEffect.StartParryWindow();
 
                         // Tick parry window alongside the slow dash
                         while (!dashComplete && parrySystem.IsParryWindowActive)
@@ -531,6 +533,7 @@ namespace CardBattle
                         if (parrySystem.ParrySucceeded)
                             parried = true;
                         parrySystem.CloseParryWindow();
+                        if (parryScreenEffect != null) parryScreenEffect.EndParryWindow();
 
                         // Wait for dash to finish if parry didn't interrupt
                         while (!dashComplete && !parried)
@@ -557,6 +560,7 @@ namespace CardBattle
 
                         // Parry succeeded — green flash, small shake, gain 1 OT, dash back
                         Debug.Log("[BattleManager] Parry SUCCESS — no damage dealt, +1 OT.");
+                        if (parryScreenEffect != null) parryScreenEffect.FlashParrySuccess();
                         if (battleAnimations != null)
                         {
                             battleAnimations.PlayParryFlash();
@@ -579,6 +583,7 @@ namespace CardBattle
                     }
 
                     // Parry missed or unparryable — hit shake then dash back
+                    if (parryScreenEffect != null) parryScreenEffect.FlashParryFail();
                     if (battleAnimations != null)
                         battleAnimations.StopActiveDash();
                     if (battleAnimations != null && playerHealth != null)

@@ -2169,9 +2169,22 @@ MonoBehaviour:
   gameConfig: {fileID: 11400000, guid: e2db6856b87e73b479fad57797e95505, type: 2}
   seed: -1
   testFloor: 1
-  floorPrefabs:
-  - {fileID: 1538143801608504155, guid: cfbba9763f9360c40890e8e1097a2720, type: 3}
+  floorPrefabs: []
   bossFloorPrefabs: []
+  firstFloorPrefab: {fileID: 1538143801608504155, guid: cfbba9763f9360c40890e8e1097a2720, type: 3}
+  floorPool:
+  - prefab: {fileID: 1538143801608504155, guid: cfbba9763f9360c40890e8e1097a2720, type: 3}
+    minFloor: 0
+    maxFloor: 1
+    uniquePerRun: 0
+  - prefab: {fileID: 1538143801608504155, guid: e8fe064a272231040b71594472f3d971, type: 3}
+    minFloor: 2
+    maxFloor: 10
+    uniquePerRun: 0
+  - prefab: {fileID: 1538143801608504155, guid: e5cadd041c11f964db29beae332aca9e, type: 3}
+    minFloor: 2
+    maxFloor: 10
+    uniquePerRun: 0
   elevatorPrefab: {fileID: 3672185605594202346, guid: e84bf6f70733d784d93a4e317736af23, type: 3}
   workBoxPrefab: {fileID: 7405318780203856135, guid: e2fafd909c0ed3b4290150fd0ab2a94b, type: 3}
   workBoxCountMin: 1

@@ -12,6 +12,8 @@ TagManager:
   - ElevatorSpawn
   - PlayerSpawn
   - CubicleSpawn
+  - ParryVolume
+  - InvertVolume
   layers:
   - Default
   - TransparentFX

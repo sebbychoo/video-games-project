@@ -206,6 +206,7 @@ namespace CardBattle
                     rt.offsetMax = Vector2.zero;
                 }
                 inspectionPanel.SetActive(true);
+                inspectionPanel.transform.SetAsLastSibling(); // render on top of badges
             }
         }
 

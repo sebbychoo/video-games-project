@@ -24,8 +24,13 @@ namespace Procedural
         [SerializeField] int testFloor = 1;
 
         [Header("Floor Prefabs")]
-        [SerializeField] List<GameObject> floorPrefabs;        // normal floors
+        [SerializeField] List<GameObject> floorPrefabs;        // normal floors (legacy, still works)
         [SerializeField] List<GameObject> bossFloorPrefabs;    // boss-specific floors (optional)
+
+        [Header("Floor Prefabs (Advanced — with floor restrictions)")]
+        [Tooltip("Floor 1 always uses this prefab. Leave null to use the regular pool.")]
+        [SerializeField] GameObject firstFloorPrefab;
+        [SerializeField] List<FloorPrefabEntry> floorPool;     // floors with min/max restrictions
 
         [Header("Dynamic Content Prefabs")]
         [SerializeField] GameObject elevatorPrefab;
@@ -47,13 +52,14 @@ namespace Procedural
         private int _currentFloor;
         private GameObject _spawnedFloor;
         private static bool _suicidalWorkerPlacedThisRun = false;
+        private static HashSet<GameObject> _usedUniqueFloors = new HashSet<GameObject>();
 
         /// <summary>World position of the elevator interior — used as spawn point on next floor.</summary>
         public Vector3 ElevatorSpawnPosition { get; private set; }
 
         // ── Public API ─────────────────────────────────────────────────────────
 
-        public static void ResetRunFlags() => _suicidalWorkerPlacedThisRun = false;
+        public static void ResetRunFlags() { _suicidalWorkerPlacedThisRun = false; _usedUniqueFloors.Clear(); }
 
         private void Start()
         {
@@ -99,16 +105,53 @@ namespace Procedural
 
         private void SpawnFloor()
         {
-            List<GameObject> pool = (IsBossFloor(_currentFloor) && bossFloorPrefabs != null && bossFloorPrefabs.Count > 0)
-                ? bossFloorPrefabs : floorPrefabs;
+            GameObject chosen = null;
 
-            if (pool == null || pool.Count == 0)
+            // Floor 1 always uses firstFloorPrefab if set
+            if (_currentFloor == 1 && firstFloorPrefab != null)
             {
-                Debug.LogWarning("LevelGenerator: No floor prefabs assigned.");
+                chosen = firstFloorPrefab;
+            }
+            // Boss floors use boss pool
+            else if (IsBossFloor(_currentFloor) && bossFloorPrefabs != null && bossFloorPrefabs.Count > 0)
+            {
+                chosen = bossFloorPrefabs[Random.Range(0, bossFloorPrefabs.Count)];
+            }
+            // Advanced pool with floor restrictions
+            else if (floorPool != null && floorPool.Count > 0)
+            {
+                List<FloorPrefabEntry> valid = new List<FloorPrefabEntry>();
+                foreach (var entry in floorPool)
+                {
+                    if (entry.prefab == null) continue;
+                    if (!entry.IsValidForFloor(_currentFloor)) continue;
+                    if (entry.uniquePerRun && _usedUniqueFloors.Contains(entry.prefab)) continue;
+                    valid.Add(entry);
+                }
+
+                if (valid.Count > 0)
+                {
+                    FloorPrefabEntry pick = valid[Random.Range(0, valid.Count)];
+                    chosen = pick.prefab;
+                    if (pick.uniquePerRun)
+                        _usedUniqueFloors.Add(pick.prefab);
+                }
+            }
+
+            // Fallback to legacy pool
+            if (chosen == null && floorPrefabs != null && floorPrefabs.Count > 0)
+                chosen = floorPrefabs[Random.Range(0, floorPrefabs.Count)];
+
+            // Last resort — use firstFloorPrefab
+            if (chosen == null && firstFloorPrefab != null)
+                chosen = firstFloorPrefab;
+
+            if (chosen == null)
+            {
+                Debug.LogWarning("LevelGenerator: No valid floor prefab found.");
                 return;
             }
 
-            GameObject chosen = pool[Random.Range(0, pool.Count)];
             _spawnedFloor = Instantiate(chosen, Vector3.zero, Quaternion.identity, transform);
             _spawnedFloor.name = $"Floor_{_currentFloor}";
         }
@@ -274,7 +317,17 @@ namespace Procedural
                 (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
             }
 
-            int count = Mathf.Min(Random.Range(workBoxCountMin, workBoxCountMax + 1), shuffled.Count);
+            // Use per-floor settings if available, otherwise use defaults
+            int min = workBoxCountMin;
+            int max = workBoxCountMax;
+            FloorSettings fs = _spawnedFloor != null ? _spawnedFloor.GetComponent<FloorSettings>() : null;
+            if (fs != null)
+            {
+                min = fs.minWorkBoxes;
+                max = fs.maxWorkBoxes;
+            }
+
+            int count = Mathf.Min(Random.Range(min, max + 1), shuffled.Count);
             for (int i = 0; i < count; i++)
             {
                 WorkBoxSize size = RollWorkBoxSize(_currentFloor);
