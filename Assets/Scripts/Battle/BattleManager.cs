@@ -38,6 +38,7 @@ namespace CardBattle
         [Header("UI")]
         [SerializeField] PlayerHPStack         playerHPStack;
         [SerializeField] EnemyHPBar            playerHPBar;
+        [SerializeField] PlayerBadgeHP         playerBadge;
         [SerializeField] EnemyHPBar            screenEnemyHPBar;
         [SerializeField] EnemyIntentDisplay    screenEnemyIntent;
         [SerializeField] StatusEffectIconStack enemyStatusEffectIcons;
@@ -372,6 +373,8 @@ namespace CardBattle
                 playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
             if (playerHPBar != null && playerHealth != null)
                 playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+            if (playerBadge != null && playerHealth != null)
+                playerBadge.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
 
             // Check for enemy deaths after card resolution
             CheckEnemyDeaths();
@@ -608,6 +611,8 @@ namespace CardBattle
                         playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
                     if (playerHPBar != null && playerHealth != null)
                         playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+                    if (playerBadge != null && playerHealth != null)
+                        playerBadge.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
 
                     // Refresh OT UI after damage-to-OT gain
                     if (overtimeMeterUI != null)
@@ -726,6 +731,8 @@ namespace CardBattle
                     playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
                 if (playerHPBar != null && playerHealth != null)
                     playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+                if (playerBadge != null && playerHealth != null)
+                    playerBadge.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
 
                 if (BattleEventBus.Instance != null)
                 {
@@ -863,6 +870,8 @@ namespace CardBattle
             }
             if (playerHPBar != null && playerHealth != null)
                 playerHPBar.Initialize(playerHealth.currentHealth, playerHealth.maxHealth);
+            if (playerBadge != null && playerHealth != null)
+                playerBadge.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
         }
 
         private void SpawnEnemies(EncounterData encounter)
