@@ -191,17 +191,33 @@ namespace CardBattle
             sm.CurrentRun.currentFloor++;
             int nextFloor = sm.CurrentRun.currentFloor;
 
+            int maxFloor = 3; // number of floors we have
+            if (nextFloor > maxFloor)
+            {
+                if (SceneLoader.Instance != null)
+                    SceneLoader.Instance.LoadSceneUI("Menu");
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                yield break; // stops coroutine
+            }
+
+            // otherwise, proceed with next floor
             if (SceneLoader.Instance != null)
                 SceneLoader.Instance.useDefaultSpawn = true;
 
-            // 3. Load with loading screen (door open plays on Start of new elevator)
             LoadingScreen ls = LoadingScreen.Instance;
-            if (ls == null) ls = FindObjectOfType<LoadingScreen>();
-
             if (ls != null)
                 ls.LoadElevator("Explorationscene");
-            else
-                FindObjectOfType<SceneLoader>()?.LoadExploration();
+
+
+            //// 3. Load with loading screen (door open plays on Start of new elevator)
+            //LoadingScreen ls = LoadingScreen.Instance;
+            //if (ls == null) ls = FindObjectOfType<LoadingScreen>();
+
+            //if (ls != null)
+            //    ls.LoadElevator("Explorationscene");
+            //else
+            //    FindObjectOfType<SceneLoader>()?.LoadExploration();
         }
 
         /// <summary>
