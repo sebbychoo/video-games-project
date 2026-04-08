@@ -294,4 +294,14 @@ public class SceneLoader : MonoBehaviour
         else
             SceneManager.LoadScene("Explorationscene");
     }
+    public void LoadSceneUI(string sceneName)
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        if(LoadingScreen.Instance != null)
+            LoadingScreen.Instance.LoadSceneWithFade(sceneName);
+        else
+            SceneManager.LoadScene(sceneName);
+    }
 }
