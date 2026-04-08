@@ -18,6 +18,7 @@ namespace CardBattle
         [Header("Attack Dash")]
         [SerializeField] float dashDistance = 1.5f;
         [SerializeField] float dashDuration = 0.25f;
+        [SerializeField] GameConfig gameConfig;
 
         [Header("Death Animation")]
         [SerializeField] float deathTipDuration = 0.6f;
@@ -50,6 +51,13 @@ namespace CardBattle
         {
             if (Instance != null && Instance != this) { Destroy(this); return; }
             Instance = this;
+
+            // Override local dash settings from GameConfig if assigned
+            if (gameConfig != null)
+            {
+                dashDistance = gameConfig.enemyDashDistance;
+                dashDuration = gameConfig.enemyDashDuration;
+            }
         }
 
         private void OnDestroy()

@@ -49,6 +49,7 @@ namespace CardBattle
         [SerializeField] BlockDisplay          blockDisplay;
         [SerializeField] TurnCounterUI         turnCounterUI;
         [SerializeField] VictoryScreen         victoryScreen;
+        [SerializeField] Canvas                battleCanvas;
 
         [Header("Spawning")]
         [SerializeField] GameObject            enemyPrefab;
@@ -1200,6 +1201,10 @@ namespace CardBattle
 
         private void HideBattleUI()
         {
+            // Hide the entire battle canvas so nothing bleeds through the loading screen
+            if (battleCanvas != null)
+                battleCanvas.enabled = false;
+
             // Hide player badge
             if (playerBadge != null)
                 playerBadge.gameObject.SetActive(false);

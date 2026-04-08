@@ -34,6 +34,8 @@ MonoBehaviour:
   minimumDeckSize: 1
   maximumDeckSize: 25
   safeRoomChaseTimeout: 5
-  baseParryWindowDuration: 1.5
-  parryWindowFloorScaling: 0.02
-  parryWindowMinDuration: 0.3
+  baseParryWindowDuration: 1
+  parryWindowFloorScaling: 0.05
+  parryWindowMinDuration: 0.25
+  enemyDashDistance: 7
+  enemyDashDuration: 0.3

@@ -23,7 +23,7 @@ namespace CardBattle
         [SerializeField] Image flashOverlay;
 
         [Header("Flash Settings")]
-        [SerializeField] Color parrySuccessColor = new Color(0, 1, 0, 0.4f);
+        [SerializeField] Color parrySuccessColor = new Color(0, 1, 0, 0.55f);
         [SerializeField] float flashDuration = 0.15f;
         [SerializeField] float invertFlashDuration = 0.2f;
 
@@ -31,10 +31,38 @@ namespace CardBattle
         private GameObject _invertVolObj;
         private Coroutine _flashRoutine;
 
+        private Canvas _flashOverlayCanvas;
+
         private void Awake()
         {
             if (flashOverlay != null)
+            {
                 flashOverlay.gameObject.SetActive(false);
+
+                // If the flash overlay's parent Canvas is Screen Space - Camera,
+                // the 3D scene lighting bleeds through even at alpha 1.0.
+                // Fix: give the flash overlay its own Canvas in Overlay mode.
+                Canvas parentCanvas = flashOverlay.GetComponentInParent<Canvas>();
+                if (parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                {
+                    GameObject overlayGO = new GameObject("ParryFlashCanvas");
+                    overlayGO.transform.SetParent(parentCanvas.transform.parent, false);
+                    _flashOverlayCanvas = overlayGO.AddComponent<Canvas>();
+                    _flashOverlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                    _flashOverlayCanvas.sortingOrder = 998;
+                    overlayGO.AddComponent<CanvasScaler>();
+
+                    // Reparent the flash overlay Image to the new overlay canvas
+                    flashOverlay.transform.SetParent(_flashOverlayCanvas.transform, false);
+
+                    // Stretch to fill
+                    RectTransform rt = flashOverlay.rectTransform;
+                    rt.anchorMin = Vector2.zero;
+                    rt.anchorMax = Vector2.one;
+                    rt.offsetMin = Vector2.zero;
+                    rt.offsetMax = Vector2.zero;
+                }
+            }
 
             // Find volumes while they might be active, then deactivate
             _grayscaleVolObj = GameObject.FindWithTag(grayscaleVolumeTag);
@@ -56,15 +84,51 @@ namespace CardBattle
             if (_grayscaleVolObj != null) _grayscaleVolObj.SetActive(false);
             if (_invertVolObj != null) _invertVolObj.SetActive(false);
 
+            // Also reparent the warning overlay to the overlay canvas if it's separate
+            if (warningOverlay != null && warningOverlay != flashOverlay)
+                ReparentToOverlayCanvas(warningOverlay);
+
+            // Reparent warning icon to the overlay canvas so it renders on top of the flash
+            if (warningIcon != null && _flashOverlayCanvas != null)
+            {
+                warningIcon.transform.SetParent(_flashOverlayCanvas.transform, false);
+                // Keep the icon's anchoring as-is (centered or wherever it was designed)
+                warningIcon.transform.SetAsLastSibling(); // render on top of overlay
+            }
+
             Debug.Log($"[ParryEffect] Grayscale: {(_grayscaleVolObj != null ? _grayscaleVolObj.name : "NOT FOUND")}, Invert: {(_invertVolObj != null ? _invertVolObj.name : "NOT FOUND")}");
         }
 
         [Header("Warning (during fast dash, before parry window)")]
         [Tooltip("Warning icon sprite (like a ⚠ symbol). Tinted to attack color.")]
         [SerializeField] Image warningIcon;
-        [Tooltip("Full-screen overlay tinted to attack color during warning.")]
+        [Tooltip("Full-screen overlay tinted to attack color during warning. Falls back to flashOverlay if not assigned.")]
         [SerializeField] Image warningOverlay;
-        [SerializeField] float warningOverlayAlpha = 0.2f;
+        [SerializeField] float warningOverlayAlpha = 0.35f;
+
+        /// <summary>Returns the best available full-screen overlay for the warning tint.</summary>
+        private Image WarningOverlayImage
+        {
+            get
+            {
+                if (warningOverlay != null) return warningOverlay;
+                return flashOverlay;
+            }
+        }
+
+        private void ReparentToOverlayCanvas(Image img)
+        {
+            if (img == null || _flashOverlayCanvas == null) return;
+            // Only reparent if not already under the overlay canvas
+            if (img.transform.IsChildOf(_flashOverlayCanvas.transform)) return;
+
+            img.transform.SetParent(_flashOverlayCanvas.transform, false);
+            RectTransform rt = img.rectTransform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
 
         [Header("Intent Color Mapping")]
         [SerializeField] Color whiteIntentColor = Color.white;
@@ -75,26 +139,34 @@ namespace CardBattle
         {
             Color tint = GetIntentColor(intentColor);
 
+            // Overlay is on a Screen Space - Overlay canvas, so semi-transparency
+            // looks uniform (no 3D lighting bleed).
+            Image overlay = WarningOverlayImage;
+            if (overlay != null)
+            {
+                Color overlayTint = tint;
+                overlayTint.a = warningOverlayAlpha;
+                overlay.color = overlayTint;
+                overlay.gameObject.SetActive(true);
+            }
+
+            // Show warning icon on top of the overlay — both appear and disappear together
             if (warningIcon != null)
             {
                 warningIcon.color = tint;
                 warningIcon.gameObject.SetActive(true);
-            }
-            if (warningOverlay != null)
-            {
-                Color overlayTint = tint;
-                overlayTint.a = warningOverlayAlpha;
-                warningOverlay.color = overlayTint;
-                warningOverlay.gameObject.SetActive(true);
+                warningIcon.transform.SetAsLastSibling();
             }
         }
 
         public void HideWarning()
         {
+            Image overlay = WarningOverlayImage;
+            if (overlay != null)
+                overlay.gameObject.SetActive(false);
+
             if (warningIcon != null)
                 warningIcon.gameObject.SetActive(false);
-            if (warningOverlay != null)
-                warningOverlay.gameObject.SetActive(false);
         }
 
         private Color GetIntentColor(IntentColor intent)
@@ -167,6 +239,8 @@ namespace CardBattle
         {
             if (flashOverlay == null) yield break;
 
+            // The overlay is on a Screen Space - Overlay canvas so semi-transparency
+            // looks uniform (no 3D lighting bleed). Use the color's original alpha.
             flashOverlay.gameObject.SetActive(true);
             flashOverlay.color = flashColor;
 

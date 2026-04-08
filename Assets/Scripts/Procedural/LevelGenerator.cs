@@ -202,18 +202,24 @@ namespace Procedural
             // and the working elevator at a different spawn point
             if (_currentFloor > 1 && points.Length >= 2)
             {
-                // Find the spawn point closest to the player's arrival position
+                // The player always spawns next to the elevator that brought them down.
+                // That elevator saved its position to spawnX/spawnZ before loading this scene.
+                // We read those values directly (ignoring hasCustomSpawn which may have been
+                // cleared by SetSpawn before DelayedGenerate re-runs PlaceElevator).
+                SaveManager sm = SaveManager.Instance;
+                Vector3 playerSpawnPos;
+                if (sm != null && sm.CurrentRun != null && (sm.CurrentRun.spawnX != 0f || sm.CurrentRun.spawnZ != 0f))
+                    playerSpawnPos = new Vector3(sm.CurrentRun.spawnX, 0, sm.CurrentRun.spawnZ);
+                else
+                    playerSpawnPos = new Vector3(points[0].position.x, 0, points[0].position.z);
+
+                // Find the spawn point closest to the player — that's the arrival elevator
                 Transform arrivalPoint = points[0];
                 float closestDist = float.MaxValue;
-                SaveManager sm = SaveManager.Instance;
-                if (sm != null && sm.CurrentRun != null && sm.CurrentRun.hasCustomSpawn)
+                foreach (var p in points)
                 {
-                    Vector3 spawnPos = new Vector3(sm.CurrentRun.spawnX, 0, sm.CurrentRun.spawnZ);
-                    foreach (var p in points)
-                    {
-                        float d = Vector3.Distance(new Vector3(p.position.x, 0, p.position.z), spawnPos);
-                        if (d < closestDist) { closestDist = d; arrivalPoint = p; }
-                    }
+                    float d = Vector3.Distance(new Vector3(p.position.x, 0, p.position.z), playerSpawnPos);
+                    if (d < closestDist) { closestDist = d; arrivalPoint = p; }
                 }
 
                 // Spawn closed elevator at arrival point
@@ -222,13 +228,14 @@ namespace Procedural
                 var closedScript = closedElev.GetComponent<Elevator>();
                 if (closedScript != null) closedScript.SetClosed();
 
-                // Pick a different point for the working elevator
+                // Pick the exit elevator as the farthest point from the PLAYER spawn,
+                // not from the arrival elevator — ensures the exit is always far from the player
                 Transform exitPoint = null;
                 float farthestDist = 0f;
                 foreach (var p in points)
                 {
                     if (p == arrivalPoint) continue;
-                    float d = Vector3.Distance(p.position, arrivalPoint.position);
+                    float d = Vector3.Distance(new Vector3(p.position.x, 0, p.position.z), playerSpawnPos);
                     if (d > farthestDist) { farthestDist = d; exitPoint = p; }
                 }
 

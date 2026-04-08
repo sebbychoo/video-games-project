@@ -30,5 +30,11 @@ namespace CardBattle
         public float baseParryWindowDuration = 1.5f;
         public float parryWindowFloorScaling = 0.02f;
         public float parryWindowMinDuration = 0.3f;
+
+        [Header("Enemy Attack Animation")]
+        [Tooltip("How far the enemy dashes toward the player (world units).")]
+        public float enemyDashDistance = 1.5f;
+        [Tooltip("Base dash duration in seconds (fast phase uses half of this).")]
+        public float enemyDashDuration = 0.25f;
     }
 }

@@ -1611,6 +1611,81 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &801194882
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 801194883}
+  - component: {fileID: 801194885}
+  - component: {fileID: 801194884}
+  m_Layer: 5
+  m_Name: WarningIcon
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &801194883
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801194882}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2036703533}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -627, y: 76}
+  m_SizeDelta: {x: 225, y: 225}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &801194884
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801194882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: e451cb0c082db584e852bf9d4b7957d6, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &801194885
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801194882}
+  m_CullTransparentMesh: 1
 --- !u!1 &823486116
 GameObject:
   m_ObjectHideFlags: 0
@@ -3421,7 +3496,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.521585, g: 1, b: 0.41194963, a: 0.39215687}
+  m_Color: {r: 0.521585, g: 1, b: 0.41194963, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5584,6 +5659,7 @@ MonoBehaviour:
   blockDisplay: {fileID: 1497356123}
   turnCounterUI: {fileID: 1387271234}
   victoryScreen: {fileID: 1084770256}
+  battleCanvas: {fileID: 2036703532}
   enemyPrefab: {fileID: 7471770255134837283, guid: 023cdfc478212e24f8e7b37bd9827901, type: 3}
   enemySpawnPoints:
   - {fileID: 356955122}
@@ -5634,8 +5710,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: CardBattle::CardBattle.BattleAnimations
   shakeDuration: 0.3
   shakeMagnitude: 0.15
-  dashDistance: 3
-  dashDuration: 0.5
+  dashDistance: 7
+  dashDuration: 0.3
+  gameConfig: {fileID: 11400000, guid: e2db6856b87e73b479fad57797e95505, type: 2}
   deathTipDuration: 0.6
   deathSinkDuration: 0.8
   deathSinkDepth: 3
@@ -5823,7 +5900,7 @@ MonoBehaviour:
   parrySuccessColor: {r: 0, g: 1, b: 0, a: 0.4}
   flashDuration: 0.15
   invertFlashDuration: 0.2
-  warningIcon: {fileID: 0}
+  warningIcon: {fileID: 801194884}
   warningOverlay: {fileID: 426460246}
   warningOverlayAlpha: 0.2
   whiteIntentColor: {r: 1, g: 1, b: 1, a: 1}
@@ -5945,6 +6022,7 @@ RectTransform:
   - {fileID: 95054478}
   - {fileID: 426460245}
   - {fileID: 1482420359}
+  - {fileID: 801194883}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
