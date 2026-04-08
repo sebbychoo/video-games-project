@@ -3397,7 +3397,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1482420358}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 14394.382}
+  m_LocalPosition: {x: 0, y: 0, z: 14394.384}
   m_LocalScale: {x: 935.3075, y: 935.3075, z: 935.3075}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3405,7 +3405,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 897895.2, y: 503728.6}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1482420360
@@ -5634,8 +5634,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: CardBattle::CardBattle.BattleAnimations
   shakeDuration: 0.3
   shakeMagnitude: 0.15
-  dashDistance: 1.5
-  dashDuration: 0.25
+  dashDistance: 3
+  dashDuration: 0.5
   deathTipDuration: 0.6
   deathSinkDuration: 0.8
   deathSinkDepth: 3

@@ -37,6 +37,8 @@ namespace CardBattle
         private EnemyCombatant _enemy;
         private bool _hidden;
 
+        public EnemyCombatant TrackedEnemy => _enemy;
+
         public void Initialize(EnemyCombatant enemy)
         {
             _enemy = enemy;
@@ -172,18 +174,22 @@ namespace CardBattle
             Canvas canvas = tooltipPanel.GetComponentInParent<Canvas>();
             if (canvas == null) return;
 
-            rt.anchorMin = new Vector2(0, 0);
-            rt.anchorMax = new Vector2(0, 0);
-            rt.pivot = new Vector2(1f, 0.5f);
+            Camera cam = canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
+            if (cam == null) return;
 
-            RectTransform canvasRT = canvas.GetComponent<RectTransform>();
-            Vector2 localPos;
-            Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRT, Input.mousePosition, cam, out localPos);
+            // Convert mouse screen position to world position on the canvas plane
+            Vector3 mouseScreen = Input.mousePosition;
+            mouseScreen.z = canvas.planeDistance;
+            Vector3 worldPos = cam.ScreenToWorldPoint(mouseScreen);
 
-            // Offset to the left, convert from canvas center to bottom-left origin
-            Vector2 canvasSize = canvasRT.sizeDelta;
-            rt.anchoredPosition = new Vector2(localPos.x + canvasSize.x * 0.5f - 10f, localPos.y + canvasSize.y * 0.5f);
+            // Offset: if mouse on right half, tooltip goes left; otherwise right
+            float offset = 0.15f; // world units
+            if (mouseScreen.x > Screen.width * 0.5f)
+                worldPos.x -= offset;
+            else
+                worldPos.x += offset;
+
+            rt.position = worldPos;
         }
 
         public void HideTooltip()
@@ -192,8 +198,14 @@ namespace CardBattle
                 tooltipPanel.SetActive(false);
         }
 
+        private bool _frozen;
+
+        public void Freeze() => _frozen = true;
+        public void Unfreeze() => _frozen = false;
+
         private void Update()
         {
+            if (_frozen) return;
             if (_enemy == null)
             {
                 if (BattleManager.Instance != null && BattleManager.Instance.Enemies.Count > 0)

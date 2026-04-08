@@ -264,25 +264,40 @@ namespace CardBattle
             Vector3[] corners = new Vector3[4];
             _currentCardRect.GetWorldCorners(corners);
 
-            float cardTopY = corners[1].y;
-            float cardCenterX = (corners[0].x + corners[3].x) * 0.5f;
+            // Convert card top-center to screen space
+            Camera cam = _canvas.worldCamera != null ? _canvas.worldCamera : Camera.main;
+            Vector3 cardTopWorld = new Vector3(
+                (corners[0].x + corners[3].x) * 0.5f,
+                corners[1].y,
+                corners[1].z);
+
+            Vector3 screenPos;
+            if (_canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                screenPos = cardTopWorld;
+            else
+                screenPos = cam != null ? cam.WorldToScreenPoint(cardTopWorld) : cardTopWorld;
+
             float screenMidX = Screen.width * 0.5f;
 
-            Vector2 pos = new Vector2(cardCenterX, cardTopY + 10f);
-
-            float tipWidth = tooltipPanel.rect.width * _canvas.scaleFactor;
-            if (cardCenterX > screenMidX)
-                pos.x -= tipWidth * 0.5f + 20f;
+            // Offset left or right depending on screen position
+            float offsetX = 120f;
+            if (screenPos.x > screenMidX)
+                screenPos.x -= offsetX;
             else
-                pos.x += tipWidth * 0.5f + 20f;
+                screenPos.x += offsetX;
 
+            screenPos.y += 20f;
+
+            // Convert screen position to world position on canvas plane
             if (_canvas.renderMode == RenderMode.ScreenSpaceOverlay)
-                tooltipPanel.position = pos;
-            else
             {
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    _canvasRect, pos, _canvas.worldCamera, out Vector2 lp);
-                tooltipPanel.anchoredPosition = lp;
+                tooltipPanel.position = screenPos;
+            }
+            else if (cam != null)
+            {
+                screenPos.z = _canvas.planeDistance;
+                Vector3 worldPos = cam.ScreenToWorldPoint(screenPos);
+                tooltipPanel.position = worldPos;
             }
         }
     }

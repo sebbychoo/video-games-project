@@ -509,6 +509,9 @@ namespace CardBattle
                         // Show warning during fast phase — enemy is approaching
                         if (parryScreenEffect != null) parryScreenEffect.ShowWarning(_lastExecutedEnemyAction.intentColor);
 
+                        // Hide intent during attack
+                        if (screenEnemyIntent != null) screenEnemyIntent.Hide();
+
                         battleAnimations.PlayDashWithSlowdown(
                             enemy.transform,
                             playerHealth.transform,
@@ -540,6 +543,12 @@ namespace CardBattle
                             parried = true;
                         parrySystem.CloseParryWindow();
                         if (parryScreenEffect != null) parryScreenEffect.EndParryWindow();
+                        // Show intent again with updated action
+                        if (screenEnemyIntent != null)
+                        {
+                            screenEnemyIntent.Unfreeze();
+                            screenEnemyIntent.Initialize(screenEnemyIntent.TrackedEnemy ?? (_enemies.Count > 0 ? _enemies[0] : null));
+                        }
 
                         // Wait for dash to finish if parry didn't interrupt
                         while (!dashComplete && !parried)
