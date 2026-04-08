@@ -1,0 +1,111 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5678398068132356429
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5718188580750610485}
+  - component: {fileID: 7601182931893405361}
+  - component: {fileID: 520605700721294474}
+  m_Layer: 0
+  m_Name: LevelGenerator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5718188580750610485
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5678398068132356429}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7601182931893405361
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5678398068132356429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dccd4dc93c6b4dd478ddef4767a5be85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CardBattle::Procedural.LevelGenerator
+  gameConfig: {fileID: 11400000, guid: e2db6856b87e73b479fad57797e95505, type: 2}
+  seed: -1
+  testFloor: 1
+  floorPrefabs: []
+  bossFloorPrefabs: []
+  firstFloorPrefab: {fileID: 1538143801608504155, guid: cfbba9763f9360c40890e8e1097a2720, type: 3}
+  floorPool:
+  - prefab: {fileID: 1538143801608504155, guid: cfbba9763f9360c40890e8e1097a2720, type: 3}
+    minFloor: 0
+    maxFloor: 1
+    uniquePerRun: 0
+  - prefab: {fileID: 1538143801608504155, guid: e8fe064a272231040b71594472f3d971, type: 3}
+    minFloor: 2
+    maxFloor: 10
+    uniquePerRun: 0
+  - prefab: {fileID: 1538143801608504155, guid: e5cadd041c11f964db29beae332aca9e, type: 3}
+    minFloor: 2
+    maxFloor: 10
+    uniquePerRun: 0
+  elevatorPrefab: {fileID: 3672185605594202346, guid: e84bf6f70733d784d93a4e317736af23, type: 3}
+  workBoxPrefab: {fileID: 7405318780203856135, guid: e2fafd909c0ed3b4290150fd0ab2a94b, type: 3}
+  workBoxCountMin: 1
+  workBoxCountMax: 3
+  enemyPrefab: {fileID: 0}
+  suicidalWorkerPrefab: {fileID: 0}
+  coworkerEnemies:
+  - {fileID: 11400000, guid: e7cb1bf4ad61800448a7c1366ab94c1a, type: 2}
+  creatureEnemies:
+  - {fileID: 11400000, guid: e7cb1bf4ad61800448a7c1366ab94c1a, type: 2}
+  bossEnemies:
+  - {fileID: 11400000, guid: e7cb1bf4ad61800448a7c1366ab94c1a, type: 2}
+  navMeshSurface: {fileID: 520605700721294474}
+--- !u!114 &520605700721294474
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5678398068132356429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshSurface
+  m_SerializedVersion: 0
+  m_AgentTypeID: 0
+  m_CollectObjects: 0
+  m_Size: {x: 10, y: 10, z: 10}
+  m_Center: {x: 0, y: 2, z: 0}
+  m_LayerMask:
+    serializedVersion: 2
+    m_Bits: 255
+  m_UseGeometry: 0
+  m_DefaultArea: 0
+  m_GenerateLinks: 0
+  m_IgnoreNavMeshAgent: 1
+  m_IgnoreNavMeshObstacle: 1
+  m_OverrideTileSize: 0
+  m_TileSize: 256
+  m_OverrideVoxelSize: 1
+  m_VoxelSize: 0.1
+  m_MinRegionArea: 0.1
+  m_NavMeshData: {fileID: 23800000, guid: a73b03d080ea6514fa81a49922838810, type: 2}
+  m_BuildHeightMesh: 0

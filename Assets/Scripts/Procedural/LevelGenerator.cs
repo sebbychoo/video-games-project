@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -63,10 +64,21 @@ namespace Procedural
 
         private void Start()
         {
+            StartCoroutine(DelayedGenerate());
             // Don't auto-generate if SceneLoader exists — it will call Generate
             // with the correct floor number from OnSceneLoaded
-            if (SceneLoader.Instance == null)
-                Generate(testFloor);
+            //if (SceneLoader.Instance == null)
+                //Generate(testFloor);
+        }
+        private IEnumerator DelayedGenerate()
+        {
+            yield return null;
+
+            int floorToGenerate = 1;
+            if (SaveManager.Instance != null && SaveManager.Instance.CurrentRun != null)
+                floorToGenerate = SaveManager.Instance.CurrentRun.currentFloor;
+
+            Generate(floorToGenerate);
         }
 
         public void Generate(int floor)
