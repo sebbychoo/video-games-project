@@ -73,6 +73,8 @@ namespace Procedural
             int floorToGenerate = 1;
             if (SaveManager.Instance != null && SaveManager.Instance.CurrentRun != null)
                 floorToGenerate = SaveManager.Instance.CurrentRun.currentFloor;
+
+            Generate(floorToGenerate);
         }
 
         public void Generate(int floor)
