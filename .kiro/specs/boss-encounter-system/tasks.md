@@ -106,11 +106,11 @@ Implement the boss encounter system in incremental steps: data models first, the
     - Use 200 iterations with randomized string inputs
     - **Validates: Requirements 4.4**
 
-- [ ] 8. Checkpoint - Ensure all tests pass
+- [x] 8. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Implement BossIntroScreen UI component
-  - [ ] 9.1 Create BossIntroScreen MonoBehaviour
+- [x] 9. Implement BossIntroScreen UI component
+  - [x] 9.1 Create BossIntroScreen MonoBehaviour
     - Create `Assets/Scripts/Battle/Boss/BossIntroScreen.cs`
     - Full-screen black background Canvas panel (Req 5.2)
     - Implement `Play(string bossName, string bossTitle, Action onComplete)`
@@ -130,8 +130,8 @@ Implement the boss encounter system in incremental steps: data models first, the
     - Use 200 iterations each
     - **Validates: Requirements 2.2, 5.5, 5.8**
 
-- [ ] 10. Integrate boss intro and animations into BattleManager
-  - [ ] 10.1 Update BattleManager to support boss intro screen
+- [x] 10. Integrate boss intro and animations into BattleManager
+  - [x] 10.1 Update BattleManager to support boss intro screen
     - Add `[SerializeField] BossIntroScreen bossIntroScreen` field
     - In `StartEncounter`, check `encounter.isBossEncounter`
     - If true and `bossIntroScreen` is not null, call `bossIntroScreen.Play()` and defer encounter start until `onComplete` (Req 5.1, 6.3)
@@ -139,7 +139,7 @@ Implement the boss encounter system in incremental steps: data models first, the
     - If `isBossEncounter` is false, start encounter immediately without intro (Req 5.8, 6.1)
     - _Requirements: 5.1, 5.7, 5.8, 6.1, 6.2, 6.3, 6.4, 6.5_
 
-  - [ ] 10.2 Integrate BossAnimationController into BattleManager enemy phase
+  - [x] 10.2 Integrate BossAnimationController into BattleManager enemy phase
     - When spawning a boss enemy, attach and initialize `BossAnimationController` from `bossAnimationData`
     - During idle, play boss idle animation (Req 8.6)
     - On boss taking damage, play damaged animation then return to idle (Req 8.7)
@@ -147,8 +147,8 @@ Implement the boss encounter system in incremental steps: data models first, the
     - On boss death, play death animation before victory sequence (Req 8.9)
     - _Requirements: 8.6, 8.7, 8.8, 8.9_
 
-- [ ] 11. Implement boss phase 2 transition system
-  - [ ] 11.1 Add phase transition logic to BattleManager
+- [x] 11. Implement boss phase 2 transition system
+  - [x] 11.1 Add phase transition logic to BattleManager
     - After each damage application to a boss, check if `currentHP <= floor(maxHP * hpThresholdPercent)` and `currentHP > 0`
     - If phase2Data is not null and transition hasn't occurred yet, trigger phase transition (Req 9.3, 9.9)
     - Pause gameplay briefly, play visual effect (flash/screen shake) (Req 9.4)
@@ -170,15 +170,15 @@ Implement the boss encounter system in incremental steps: data models first, the
     - Use 200 iterations each with randomized HP values and thresholds
     - **Validates: Requirements 9.3, 9.6, 9.8, 9.9**
 
-- [ ] 12. Update LevelGenerator to spawn boss entities on boss floors
-  - [ ] 12.1 Wire boss spawning into LevelGenerator.PopulateFloor
+- [x] 12. Update LevelGenerator to spawn boss entities on boss floors
+  - [x] 12.1 Wire boss spawning into LevelGenerator.PopulateFloor
     - On boss floors, spawn `BossExplorationEntity` + `BossCutsceneController` in the boss room instead of roaming `EnemyFollow` enemies
     - Set `bossPose` to Standing for floor 1, Sitting for all other boss floors (Req 7.5, 7.6)
     - Select boss from `bossEnemies` pool and wire data into the boss entity
     - Use `bossFloorPrefabs` pool for boss floor prefab selection (Req 1.4)
     - _Requirements: 1.4, 3.1, 3.2, 7.5, 7.6_
 
-- [ ] 13. Final checkpoint - Ensure all tests pass
+- [x] 13. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

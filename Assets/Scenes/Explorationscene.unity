@@ -2182,7 +2182,8 @@ MonoBehaviour:
   seed: -1
   testFloor: 1
   floorPrefabs: []
-  bossFloorPrefabs: []
+  bossFloorPrefabs:
+  - {fileID: 1538143801608504155, guid: cfbba9763f9360c40890e8e1097a2720, type: 3}
   firstFloorPrefab: {fileID: 1538143801608504155, guid: cfbba9763f9360c40890e8e1097a2720, type: 3}
   floorPool:
   - prefab: {fileID: 1538143801608504155, guid: cfbba9763f9360c40890e8e1097a2720, type: 3}
@@ -2203,12 +2204,13 @@ MonoBehaviour:
   workBoxCountMax: 3
   enemyPrefab: {fileID: 0}
   suicidalWorkerPrefab: {fileID: 0}
+  bossExplorationPrefab: {fileID: 7168007786943467820, guid: 2a45487a2fa6e544aa230c507c87a8be, type: 3}
   coworkerEnemies:
   - {fileID: 11400000, guid: e7cb1bf4ad61800448a7c1366ab94c1a, type: 2}
   creatureEnemies:
   - {fileID: 11400000, guid: e7cb1bf4ad61800448a7c1366ab94c1a, type: 2}
   bossEnemies:
-  - {fileID: 11400000, guid: e7cb1bf4ad61800448a7c1366ab94c1a, type: 2}
+  - {fileID: 11400000, guid: ed0774c3224b3914a92020da9b0972dd, type: 2}
   navMeshSurface: {fileID: 545667416}
 --- !u!4 &545667415
 Transform:

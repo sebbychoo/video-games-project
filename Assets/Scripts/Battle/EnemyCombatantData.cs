@@ -26,6 +26,7 @@ namespace CardBattle
         public string bossTitle;
         public BossPose bossPose;
         public BossAnimationData bossAnimationData;
+        public BossIntroData bossIntroData;
 
         [Header("Boss Phase 2")]
         public BossPhase2Data phase2Data;

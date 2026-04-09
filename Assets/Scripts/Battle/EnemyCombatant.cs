@@ -51,6 +51,17 @@ namespace CardBattle
         /// <summary>Chance (0–1) that this enemy parries a player's Attack card.</summary>
         public float EnemyParryChance => _data != null ? _data.enemyParryChance : 0f;
 
+        /// <summary>
+        /// Swap the active attack pattern at runtime (used for boss phase 2 transitions).
+        /// Resets the pattern index to 0.
+        /// </summary>
+        public void SwapAttackPattern(List<EnemyAction> newPattern)
+        {
+            if (_data == null || newPattern == null) return;
+            _data.attackPattern = newPattern;
+            _patternIndex = 0;
+        }
+
         /// <summary>Hours currency awarded when this enemy is defeated.</summary>
         public int HoursReward => _data != null ? _data.hoursReward : 0;
 

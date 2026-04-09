@@ -20,11 +20,13 @@ namespace CardBattle
         public EnemyCombatantData BossData { get; set; }
 
         private Camera _mainCamera;
+        private SpriteFrameAnimator _animator;
 
         private void Start()
         {
             _mainCamera = Camera.main;
             ApplyPose();
+            StartIdleAnimation();
         }
 
         private void Update()
@@ -61,6 +63,25 @@ namespace CardBattle
             {
                 chairSprite.gameObject.SetActive(sitting); // Req 7.2, 7.3
             }
+        }
+
+        /// <summary>
+        /// Plays the boss idle animation during exploration if animation data is available.
+        /// </summary>
+        private void StartIdleAnimation()
+        {
+            if (BossData == null || BossData.bossAnimationData == null) return;
+            if (BossData.bossAnimationData.idleAnimation == null) return;
+            if (BossData.bossAnimationData.idleAnimation.frames == null || BossData.bossAnimationData.idleAnimation.frames.Length == 0) return;
+            if (bossSprite == null) return;
+
+            // Add animator to the same GameObject that has the SpriteRenderer
+            GameObject spriteGO = bossSprite.gameObject;
+            _animator = spriteGO.GetComponent<SpriteFrameAnimator>();
+            if (_animator == null)
+                _animator = spriteGO.AddComponent<SpriteFrameAnimator>();
+
+            _animator.Play(BossData.bossAnimationData.idleAnimation, true);
         }
     }
 }

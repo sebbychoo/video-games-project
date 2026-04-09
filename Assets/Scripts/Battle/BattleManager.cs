@@ -36,6 +36,9 @@ namespace CardBattle
         [SerializeField] CardAnimator          cardAnimator;
         [SerializeField] BattleAnimations      battleAnimations;
 
+        [Header("Boss")]
+        [SerializeField] BossIntroScreen       bossIntroScreen;
+
         [Header("UI")]
         [SerializeField] PlayerHPStack         playerHPStack;
         [SerializeField] EnemyHPBar            playerHPBar;
@@ -73,6 +76,9 @@ namespace CardBattle
 
         // Stores the enemy action before ExecuteAction advances the pattern index
         private EnemyAction _lastExecutedEnemyAction;
+
+        // Tracks which bosses have already undergone phase 2 transition (Req 9.9)
+        private Dictionary<EnemyCombatant, bool> _bossPhaseTransitioned = new Dictionary<EnemyCombatant, bool>();
 
         /// <summary>Current turn phase — used by CardInteractionHandler and CardTargetingManager.</summary>
         public TurnPhase CurrentTurn => turnPhaseController != null
@@ -149,12 +155,12 @@ namespace CardBattle
             // Otherwise try fallback encounter for scene testing.
             if (_pendingEncounter != null)
             {
-                StartEncounter(_pendingEncounter);
+                BeginEncounterFlow(_pendingEncounter);
                 _pendingEncounter = null;
             }
             else if (fallbackEncounter != null)
             {
-                StartEncounter(fallbackEncounter);
+                BeginEncounterFlow(fallbackEncounter);
             }
         }
 
@@ -170,6 +176,33 @@ namespace CardBattle
         // ── Public API ────────────────────────────────────────────────────────
 
         /// <summary>
+        /// Routes the encounter through the boss intro screen if applicable,
+        /// otherwise starts the encounter immediately. (Req 5.1, 5.8, 6.1, 6.3, 6.5)
+        /// </summary>
+        private void BeginEncounterFlow(EncounterData encounter)
+        {
+            if (encounter != null && encounter.isBossEncounter && bossIntroScreen != null)
+            {
+                // Boss encounter with intro screen available — play intro first (Req 5.1, 6.3)
+                string bossName = string.Empty;
+                string bossTitle = string.Empty;
+                BossIntroData introData = null;
+                if (encounter.enemies != null && encounter.enemies.Count > 0 && encounter.enemies[0] != null)
+                {
+                    bossName = encounter.enemies[0].enemyName;
+                    bossTitle = encounter.enemies[0].bossTitle;
+                    introData = encounter.enemies[0].bossIntroData;
+                }
+                bossIntroScreen.Play(bossName, bossTitle, introData, () => StartEncounter(encounter));
+            }
+            else
+            {
+                // Non-boss encounter (Req 5.8, 6.1) or null intro screen fallback (Req 6.5)
+                StartEncounter(encounter);
+            }
+        }
+
+        /// <summary>
         /// Initialize all subsystems and start a new encounter.
         /// Called from Start() via pending encounter or externally.
         /// </summary>
@@ -183,6 +216,7 @@ namespace CardBattle
 
             _encounterActive = true;
             _currentEncounter = encounter;
+            _bossPhaseTransitioned.Clear();
             _handSize = gameConfig != null ? gameConfig.baseHandSize : 5;
             int otMax = gameConfig != null ? gameConfig.overtimeMaxCapacity : 10;
             int otRegen = gameConfig != null ? gameConfig.overtimeRegenPerTurn : 2;
@@ -349,6 +383,10 @@ namespace CardBattle
                         if (enemy != null && enemy.IsAlive)
                         {
                             battleAnimations.PlayHitShake(enemy.transform);
+                            // Play boss damaged animation then return to idle (Req 8.7)
+                            BossAnimationController bossAnim = enemy.GetComponent<BossAnimationController>();
+                            if (bossAnim != null)
+                                bossAnim.PlayDamaged(() => bossAnim.PlayIdle());
                             UpdateEnemyHPBar(enemy);
                         }
                     }
@@ -361,6 +399,10 @@ namespace CardBattle
                     {
                         if (target != null)
                             battleAnimations.PlayHitShake(target.transform);
+                        // Play boss damaged animation then return to idle (Req 8.7)
+                        BossAnimationController bossAnim = target != null ? target.GetComponent<BossAnimationController>() : null;
+                        if (bossAnim != null)
+                            bossAnim.PlayDamaged(() => bossAnim.PlayIdle());
                     });
                     EnemyCombatant ec = target.GetComponent<EnemyCombatant>();
                     if (ec != null) UpdateEnemyHPBar(ec);
@@ -381,6 +423,13 @@ namespace CardBattle
                 playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
             if (playerBadge != null && playerHealth != null)
                 playerBadge.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+
+            // Check for boss phase transitions after damage (Req 9.3, 9.9, 9.10)
+            foreach (var enemy in GetLivingEnemies())
+            {
+                if (ShouldTriggerPhaseTransition(enemy))
+                    StartCoroutine(PhaseTransitionRoutine(enemy));
+            }
 
             // Check for enemy deaths after card resolution
             CheckEnemyDeaths();
@@ -437,6 +486,16 @@ namespace CardBattle
                     // Update enemy HP bar
                     UpdateEnemyHPBar(enemy);
 
+                    // Play boss damaged animation on burn tick (Req 8.7)
+                    BossAnimationController burnBossAnim = enemy.GetComponent<BossAnimationController>();
+                    if (burnBossAnim != null)
+                    {
+                        bool burnAnimDone = false;
+                        burnBossAnim.PlayDamaged(() => { burnAnimDone = true; burnBossAnim.PlayIdle(); });
+                        while (!burnAnimDone)
+                            yield return null;
+                    }
+
                     if (!enemy.IsAlive)
                     {
                         CheckEnemyDeaths();
@@ -447,6 +506,10 @@ namespace CardBattle
                         }
                         continue;
                     }
+
+                    // Check boss phase transition after burn damage (Req 9.3, 9.9, 9.10)
+                    if (ShouldTriggerPhaseTransition(enemy))
+                        yield return StartCoroutine(PhaseTransitionRoutine(enemy));
                 }
 
                 // Check stun — skip action if stunned
@@ -487,11 +550,23 @@ namespace CardBattle
         {
             GameObject playerGO = playerObject ?? gameObject;
 
+            // Get boss animation controller reference for boss-specific animations (Req 8.6, 8.7, 8.8)
+            BossAnimationController bossAnim = enemy.GetComponent<BossAnimationController>();
+
             switch (result.ActionType)
             {
                 case EnemyActionType.DealDamage:
                     // Save enemy start position for dash-back
                     Vector3 enemyStartPos = enemy.transform.localPosition;
+
+                    // Play boss attack animation before dash if applicable (Req 8.8)
+                    if (bossAnim != null)
+                    {
+                        bool attackAnimDone = false;
+                        bossAnim.PlayAttack(result.ActionType, () => attackAnimDone = true);
+                        while (!attackAnimDone)
+                            yield return null;
+                    }
 
                     // Calculate parry window duration before starting the dash
                     float windowDuration = parrySystem.CalculateWindowDuration(_lastExecutedEnemyAction, enemy);
@@ -594,6 +669,9 @@ namespace CardBattle
                             battleAnimations.PlayDashBack(enemy.transform, enemyStartPos, () => backDone = true);
                             while (!backDone) yield return null;
                         }
+                        // Return boss to idle after parry (Req 8.6)
+                        if (bossAnim != null)
+                            bossAnim.PlayIdle();
                         break;
                     }
 
@@ -611,6 +689,9 @@ namespace CardBattle
                         battleAnimations.PlayDashBack(enemy.transform, enemyStartPos, () => backDone2 = true);
                         while (!backDone2) yield return null;
                     }
+                    // Return boss to idle after attack (Req 8.6)
+                    if (bossAnim != null)
+                        bossAnim.PlayIdle();
 
                     // Deal damage
                     int bleedBonus = statusEffectSystem.GetBleedBonus(playerGO);
@@ -1041,6 +1122,30 @@ namespace CardBattle
             // Initialize screen-space enemy status effect icons for first enemy
             if (enemyStatusEffectIcons != null && _enemies.Count == 1)
                 enemyStatusEffectIcons.Initialize(combatant.gameObject);
+
+            // Attach and initialize BossAnimationController for boss enemies (Req 8.6)
+            if (enemyData.isBoss && enemyData.bossAnimationData != null)
+            {
+                SpriteFrameAnimator animator = enemyGO.GetComponent<SpriteFrameAnimator>();
+                if (animator == null)
+                    animator = enemyGO.AddComponent<SpriteFrameAnimator>();
+
+                BossAnimationController bossAnim = enemyGO.GetComponent<BossAnimationController>();
+                if (bossAnim == null)
+                    bossAnim = enemyGO.AddComponent<BossAnimationController>();
+
+                bossAnim.Phase1Animations = enemyData.bossAnimationData;
+                if (enemyData.phase2Data != null)
+                    bossAnim.Phase2Animations = enemyData.phase2Data.phase2Animations;
+
+                // Ensure SpriteRenderer exists for the animator
+                SpriteRenderer sr = enemyGO.GetComponent<SpriteRenderer>();
+                if (sr == null)
+                    sr = enemyGO.AddComponent<SpriteRenderer>();
+
+                // Play idle animation immediately (Req 8.6)
+                bossAnim.PlayIdle();
+            }
         }
 
         private void InitializeDeck()
@@ -1129,12 +1234,26 @@ namespace CardBattle
                     // Play death animation
                     if (battleAnimations != null)
                     {
-                        Transform t = enemy.transform;
-                        battleAnimations.PlayDeath(t, () =>
+                        // For boss enemies with BossAnimationController, play boss death animation (Req 8.9)
+                        BossAnimationController bossAnim = enemy.GetComponent<BossAnimationController>();
+                        if (bossAnim != null)
                         {
-                            if (t != null)
-                                Destroy(t.gameObject);
-                        });
+                            Transform t = enemy.transform;
+                            bossAnim.PlayDeath(() =>
+                            {
+                                if (t != null)
+                                    Destroy(t.gameObject);
+                            });
+                        }
+                        else
+                        {
+                            Transform t = enemy.transform;
+                            battleAnimations.PlayDeath(t, () =>
+                            {
+                                if (t != null)
+                                    Destroy(t.gameObject);
+                            });
+                        }
                     }
                     else
                     {
@@ -1212,6 +1331,73 @@ namespace CardBattle
             // Hide the pile folder UI so it doesn't bleed through loading screen
             PileFolderUI folder = FindObjectOfType<PileFolderUI>();
             if (folder != null) folder.Hide();
+        }
+
+        // ── Boss Phase Transition ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Check if a boss should transition to phase 2 after taking damage.
+        /// Returns true if a transition was triggered (caller should yield the coroutine).
+        /// (Req 9.3, 9.9, 9.10)
+        /// </summary>
+        private bool ShouldTriggerPhaseTransition(EnemyCombatant enemy)
+        {
+            if (enemy == null || !enemy.IsAlive) return false; // Dead — skip transition (Req 9.10)
+            if (enemy.Data == null || !enemy.Data.isBoss) return false;
+            if (enemy.Data.phase2Data == null) return false;
+
+            // Already transitioned — at most once per encounter (Req 9.9)
+            if (_bossPhaseTransitioned.ContainsKey(enemy) && _bossPhaseTransitioned[enemy]) return false;
+
+            float threshold = Mathf.Floor(enemy.MaxHP * enemy.Data.phase2Data.hpThresholdPercent);
+            return enemy.CurrentHP <= threshold && enemy.CurrentHP > 0;
+        }
+
+        /// <summary>
+        /// Execute the phase 2 transition: pause, visual effect, swap data. (Req 9.4, 9.5, 9.6, 9.7)
+        /// </summary>
+        private IEnumerator PhaseTransitionRoutine(EnemyCombatant enemy)
+        {
+            // Mark as transitioned immediately to prevent re-entry (Req 9.9)
+            _bossPhaseTransitioned[enemy] = true;
+
+            BossPhase2Data p2 = enemy.Data.phase2Data;
+
+            // Pause gameplay briefly (Req 9.4)
+            float pauseDuration = gameConfig != null ? gameConfig.phaseTransitionPauseDuration : 1.0f;
+            yield return new WaitForSeconds(pauseDuration * 0.5f);
+
+            // Play visual effect — screen shake + flash (Req 9.4)
+            if (battleAnimations != null)
+            {
+                battleAnimations.PlayScreenShake(enemy.MaxHP, enemy.MaxHP); // max-intensity shake
+                battleAnimations.PlayParryFlash(); // reuse flash effect for transition
+            }
+
+            // Swap boss sprite set (Req 9.5)
+            if (p2.phase2SpriteSet != null && p2.phase2SpriteSet.Length > 0)
+            {
+                SpriteRenderer sr = enemy.GetComponent<SpriteRenderer>();
+                if (sr != null)
+                    sr.sprite = p2.phase2SpriteSet[0];
+            }
+
+            // Swap attack pattern (Req 9.6)
+            if (p2.phase2AttackPattern != null && p2.phase2AttackPattern.Count > 0)
+                enemy.SwapAttackPattern(p2.phase2AttackPattern);
+
+            // Switch animations to phase 2 (Req 9.7)
+            BossAnimationController bossAnim = enemy.GetComponent<BossAnimationController>();
+            if (bossAnim != null)
+            {
+                bossAnim.SwitchToPhase2();
+                bossAnim.PlayIdle();
+            }
+
+            yield return new WaitForSeconds(pauseDuration * 0.5f);
+
+            // Update HP bar after transition
+            UpdateEnemyHPBar(enemy);
         }
 
         // ── Victory / Defeat ──────────────────────────────────────────────────

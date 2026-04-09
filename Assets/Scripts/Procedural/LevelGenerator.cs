@@ -40,6 +40,7 @@ namespace Procedural
         [SerializeField] int workBoxCountMax = 3;
         [SerializeField] GameObject enemyPrefab;               // fallback if data has no prefab
         [SerializeField] GameObject suicidalWorkerPrefab;
+        [SerializeField] GameObject bossExplorationPrefab;     // prefab with BossExplorationEntity + BossCutsceneController
 
         [Header("Enemy Data")]
         [SerializeField] List<EnemyCombatantData> coworkerEnemies;
@@ -171,7 +172,14 @@ namespace Procedural
             if (_spawnedFloor == null) return;
 
             PlaceElevator();
+
+            // On boss floors, spawn the boss AND regular enemies (boss at BossSpawnPoint, enemies at EnemySpawn)
+            bool isBoss = IsBossFloor(_currentFloor);
+            Debug.Log($"[LevelGenerator] PopulateFloor: floor={_currentFloor}, IsBossFloor={isBoss}, bossEnemies={(bossEnemies != null ? bossEnemies.Count : 0)}");
+            if (isBoss)
+                SpawnBoss();
             SpawnEnemies();
+
             SpawnWorkBoxes();
 
             // Floor 5 suicidal worker
@@ -315,6 +323,108 @@ namespace Procedural
                         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                     field?.SetValue(trigger, data);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Spawns a BossExplorationEntity + BossCutsceneController in the boss room
+        /// instead of roaming EnemyFollow enemies. Sets bossPose based on floor number.
+        /// Requirements: 1.4, 3.1, 3.2, 7.5, 7.6
+        /// </summary>
+        private void SpawnBoss()
+        {
+            Debug.Log($"[LevelGenerator] SpawnBoss called for floor {_currentFloor}");
+
+            if (bossEnemies == null || bossEnemies.Count == 0)
+            {
+                Debug.LogWarning("LevelGenerator: No bossEnemies configured — skipping boss spawn.");
+                return;
+            }
+
+            // Select a random boss from the pool
+            EnemyCombatantData bossData = bossEnemies[Random.Range(0, bossEnemies.Count)];
+
+            // Set bossPose: Standing for floor 1, Sitting for all other boss floors (Req 7.5, 7.6)
+            bossData.bossPose = _currentFloor == 1 ? BossPose.Standing : BossPose.Sitting;
+
+            // Find the BossRoomTracker in the spawned floor to locate the boss room
+            BossRoomTracker tracker = _spawnedFloor.GetComponentInChildren<BossRoomTracker>();
+            Vector3 spawnPos;
+            Transform spawnParent;
+
+            if (tracker != null)
+            {
+                spawnPos = tracker.transform.position;
+                spawnParent = tracker.transform;
+            }
+            else
+            {
+                // Fallback: use first EnemySpawn point if no BossRoomTracker found
+                Transform fallback = GetRandomTaggedPoint("EnemySpawn");
+                if (fallback == null)
+                {
+                    Debug.LogWarning("LevelGenerator: No BossRoomTracker or EnemySpawn found for boss placement.");
+                    return;
+                }
+                spawnPos = fallback.position;
+                spawnParent = _spawnedFloor.transform;
+            }
+
+            // Spawn the boss exploration entity
+            GameObject bossGO;
+            if (bossExplorationPrefab != null)
+            {
+                bossGO = Instantiate(bossExplorationPrefab, spawnPos, Quaternion.identity, spawnParent);
+            }
+            else
+            {
+                // Create a minimal boss entity if no prefab is assigned
+                bossGO = new GameObject($"Boss_{bossData.enemyName}");
+                bossGO.transform.SetParent(spawnParent);
+                bossGO.transform.position = spawnPos;
+            }
+            bossGO.name = $"Boss_{bossData.enemyName}";
+            Debug.Log($"[LevelGenerator] Boss spawned: {bossGO.name} at {spawnPos}, parent={spawnParent.name}");
+
+            // Ensure BossExplorationEntity component exists and wire data
+            var bossEntity = bossGO.GetComponent<BossExplorationEntity>();
+            if (bossEntity == null)
+                bossEntity = bossGO.AddComponent<BossExplorationEntity>();
+            bossEntity.BossData = bossData;
+
+            // Ensure BossCutsceneController component exists and wire data
+            var cutscene = bossGO.GetComponent<BossCutsceneController>();
+            if (cutscene == null)
+                cutscene = bossGO.AddComponent<BossCutsceneController>();
+            cutscene.SetBossData(bossData);
+
+            // Ensure a Battlescene_Trigger exists for the battle transition
+            var battleTrigger = bossGO.GetComponent<Battlescene_Trigger>();
+            if (battleTrigger == null)
+                battleTrigger = bossGO.AddComponent<Battlescene_Trigger>();
+
+            // Wire singleEnemyData into the battle trigger via reflection (matching existing pattern)
+            var triggerField = battleTrigger.GetType().GetField("singleEnemyData",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            triggerField?.SetValue(battleTrigger, bossData);
+
+            cutscene.SetBattleTrigger(battleTrigger);
+
+            // Wire the battle trigger into the BossRoomTracker for force-engage support
+            if (tracker != null)
+            {
+                var trackerTriggerField = tracker.GetType().GetField("bossEncounterTrigger",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                trackerTriggerField?.SetValue(tracker, battleTrigger);
+            }
+
+            // Ensure the boss GO has a trigger collider for the cutscene controller
+            var collider = bossGO.GetComponent<Collider>();
+            if (collider == null)
+            {
+                var box = bossGO.AddComponent<BoxCollider>();
+                box.isTrigger = true;
+                box.size = new Vector3(3f, 3f, 3f);
             }
         }
 

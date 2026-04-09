@@ -33,6 +33,8 @@ namespace CardBattle
         private bool _triggered;
         private bool _dialogueActive;
         private GameObject _playerRoot;
+        private CursorLockMode _previousLockState;
+        private bool _previousCursorVisible;
 
         /// <summary>
         /// Allows LevelGenerator to assign boss data at runtime.
@@ -77,8 +79,9 @@ namespace CardBattle
         {
             if (!_dialogueActive) return;
 
-            // Req 4.3: dismiss on interact key press
-            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Return))
+            // Req 4.3: dismiss on interact key press or mouse click
+            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Return)
+                || Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
             {
                 DismissDialogue();
             }
@@ -105,6 +108,12 @@ namespace CardBattle
             _dialogueActive = true;
             SetPlayerControllers(false);
 
+            // Unlock cursor so the player can click to dismiss
+            _previousLockState = Cursor.lockState;
+            _previousCursorVisible = Cursor.visible;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+
             // Show dialogue text (Req 4.1)
             EnsureDialogueLabel();
             if (dialogueLabel != null)
@@ -129,6 +138,10 @@ namespace CardBattle
                 dialogueLabel.gameObject.SetActive(false);
             if (dialoguePanel != null)
                 dialoguePanel.SetActive(false);
+
+            // Restore cursor state
+            Cursor.lockState = _previousLockState;
+            Cursor.visible = _previousCursorVisible;
 
             IsInteracting = false;
             SetPlayerControllers(true);
