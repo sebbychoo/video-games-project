@@ -18,7 +18,7 @@ namespace CardBattle
         /// Static flag checked by other interaction triggers to prevent
         /// overlapping interactions while boss dialogue is displayed (Req 4.5).
         /// </summary>
-        public static bool IsInteracting { get; private set; }
+        public static bool IsInteracting { get; set; }
 
         [SerializeField] private EnemyCombatantData bossData;
         [SerializeField] private Battlescene_Trigger battleTrigger;

@@ -61,7 +61,7 @@ namespace Procedural
 
         // ── Public API ─────────────────────────────────────────────────────────
 
-        public static void ResetRunFlags() { _suicidalWorkerPlacedThisRun = false; _usedUniqueFloors.Clear(); }
+        public static void ResetRunFlags() { _suicidalWorkerPlacedThisRun = false; _usedUniqueFloors.Clear(); BossCutsceneController.IsInteracting = false; }
 
         private void Start()
         {
