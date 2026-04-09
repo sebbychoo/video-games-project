@@ -256,6 +256,9 @@ namespace CardBattle
             {
                 _dialogueActive = false;
                 IsInteracting = false;
+                SetPlayerControllers(true);
+                Cursor.lockState = _previousLockState;
+                Cursor.visible = _previousCursorVisible;
             }
             if (_autoCreatedCanvas != null)
             {
