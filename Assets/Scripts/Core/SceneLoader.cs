@@ -271,15 +271,13 @@ public class SceneLoader : MonoBehaviour
         // Wipe run state (death resets the run)
         if (SaveManager.Instance != null)
             SaveManager.Instance.WipeRun();
-
+            LoadDeath();
         // Spawn at default position on a fresh run
         useDefaultSpawn = true;
 
         // Clear defeated enemies for the new run
         _defeatedEnemyIds.Clear();
         _defeatedEnemyId = null;
-
-        LoadExploration();
     }
 
     public void LoadExploration()
@@ -294,12 +292,27 @@ public class SceneLoader : MonoBehaviour
         else
             SceneManager.LoadScene("Explorationscene");
     }
+    public void LoadDeath()
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        SceneManager.LoadScene("Death");
+    }
 
     public void LoadSceneUI(string sceneName)
     {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
+        if (LoadingScreen.Instance != null)
+            LoadingScreen.Instance.LoadSceneWithFade(sceneName);
+        else
+            SceneManager.LoadScene(sceneName);
+    }
+    public void LoadSceneMenu(string sceneName)
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
         if (LoadingScreen.Instance != null)
             LoadingScreen.Instance.LoadSceneWithFade(sceneName);
         else

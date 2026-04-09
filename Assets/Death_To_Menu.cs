@@ -1,9 +1,9 @@
 using CardBattle;
 using UnityEngine;
 
-public class Start_Button : MonoBehaviour
+public class Death_To_Menu : MonoBehaviour
 {
-    void Start()
+ void Start()
     {
         if (SaveManager.Instance == null)
         {
@@ -17,6 +17,6 @@ public class Start_Button : MonoBehaviour
     }
     public void LoadScene(string sceneName)
     {
-        SceneLoader.Instance.LoadSceneUI(sceneName);
+        SceneLoader.Instance.LoadSceneMenu(sceneName);
     }
 }
