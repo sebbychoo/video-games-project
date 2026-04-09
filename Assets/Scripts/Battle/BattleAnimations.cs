@@ -258,10 +258,13 @@ namespace CardBattle
         private IEnumerator DashForwardRoutine(Transform attacker, Transform target, System.Action onArrived)
         {
             Vector3 startPos = attacker.localPosition;
-            Vector3 worldDir = (target.position - attacker.position).normalized;
+            Vector3 worldDir = (target.position - attacker.position);
+            worldDir.y = 0f; // keep dash horizontal — don't sink into ground
+            worldDir = worldDir.normalized;
             Vector3 localDashOffset = attacker.parent != null
                 ? attacker.parent.InverseTransformDirection(worldDir * dashDistance)
                 : worldDir * dashDistance;
+            localDashOffset.y = 0f; // extra safety — no vertical movement
             Vector3 dashPos = startPos + localDashOffset;
 
             // Fast dash forward (ease out)
@@ -284,10 +287,13 @@ namespace CardBattle
             System.Action onSlowPhaseStart, System.Action onComplete)
         {
             Vector3 startPos = attacker.localPosition;
-            Vector3 worldDir = (target.position - attacker.position).normalized;
+            Vector3 worldDir = (target.position - attacker.position);
+            worldDir.y = 0f;
+            worldDir = worldDir.normalized;
             Vector3 localDashOffset = attacker.parent != null
                 ? attacker.parent.InverseTransformDirection(worldDir * dashDistance)
                 : worldDir * dashDistance;
+            localDashOffset.y = 0f;
             Vector3 dashPos = startPos + localDashOffset;
 
             // Phase 1: Fast dash to 70% of the way (ease out)

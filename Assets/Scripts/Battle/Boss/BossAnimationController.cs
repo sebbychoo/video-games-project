@@ -30,9 +30,22 @@ namespace CardBattle
         /// </summary>
         public void PlayIdle()
         {
+            EnsureInitialized();
             var anim = _activeAnimations?.idleAnimation;
             if (anim != null)
                 _animator.Play(anim, loop: true);
+        }
+
+        private void EnsureInitialized()
+        {
+            if (_activeAnimations == null)
+                _activeAnimations = Phase1Animations;
+            if (_animator == null)
+            {
+                _animator = GetComponent<SpriteFrameAnimator>();
+                if (_animator == null)
+                    _animator = gameObject.AddComponent<SpriteFrameAnimator>();
+            }
         }
 
         /// <summary>
@@ -40,6 +53,7 @@ namespace CardBattle
         /// </summary>
         public void PlayDamaged(Action onComplete)
         {
+            EnsureInitialized();
             var anim = _activeAnimations?.damagedAnimation;
             if (anim != null)
                 _animator.Play(anim, loop: false, onComplete: onComplete);
@@ -53,6 +67,7 @@ namespace CardBattle
         /// </summary>
         public void PlayAttack(EnemyActionType actionType, Action onComplete)
         {
+            EnsureInitialized();
             var anim = GetAttackAnimation(actionType);
             if (anim != null)
                 _animator.Play(anim, loop: false, onComplete: onComplete);
@@ -65,6 +80,7 @@ namespace CardBattle
         /// </summary>
         public void PlayDeath(Action onComplete)
         {
+            EnsureInitialized();
             var anim = _activeAnimations?.deathAnimation;
             if (anim != null)
                 _animator.Play(anim, loop: false, onComplete: onComplete);

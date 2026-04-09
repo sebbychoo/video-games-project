@@ -13,6 +13,10 @@ namespace CardBattle
         public int hoursReward;
         public EnemyVariant variant;
         public Sprite sprite;
+        [Tooltip("Y-axis offset applied in battle to adjust enemy height. Positive = higher, negative = lower.")]
+        public float battleYOffset = 0f;
+        [Tooltip("Scale multiplier applied in battle. 1 = default prefab scale.")]
+        public float battleScale = 1f;
         public GameObject explorationPrefab; // prefab spawned during exploration
         public List<EnemyAction> attackPattern;
         public bool isBoss;

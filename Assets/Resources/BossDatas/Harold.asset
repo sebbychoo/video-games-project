@@ -13,10 +13,12 @@ MonoBehaviour:
   m_Name: Harold
   m_EditorClassIdentifier: CardBattle::CardBattle.EnemyCombatantData
   enemyName: Harold
-  maxHP: 120
+  maxHP: 10
   hoursReward: 1
   variant: 2
   sprite: {fileID: 771948491, guid: 06c23b4a95ce742429d5a041ce1f53b6, type: 3}
+  battleYOffset: 0
+  battleScale: 1.5
   explorationPrefab: {fileID: 7168007786943467820, guid: 2a45487a2fa6e544aa230c507c87a8be, type: 3}
   attackPattern:
   - actionType: 0
@@ -51,7 +53,7 @@ MonoBehaviour:
   baseParryWindowDuration: 0
   preFightDialogue: Hello....why are you here.
   postFightDialogue: Urhhh.. ow...
-  bossTitle: The Immagrant
+  bossTitle: The Immigrant
   bossPose: 0
   bossAnimationData:
     idleAnimation:
@@ -83,15 +85,17 @@ MonoBehaviour:
   bossIntroData:
     introLine: Introducing...
     introLineDelay: 0
-    introLineSlideDuration: 0.6
-    nameDelay: 0.3
-    nameSlideDuration: 0.6
-    titleDelay: 0.2
-    titleFadeDuration: 0.3
+    introLineSlideDuration: 0.5
+    nameDelay: 0.6
+    nameSlideDuration: 0.3
+    titleDelay: 0.3
+    titleFadeDuration: 0.11
     holdDuration: 1.5
     backgroundAnimation:
-      frames: []
-      frameRate: 8
+      frames:
+      - {fileID: 21300000, guid: cb3ab79bcbb51474da4e5b109f3c7133, type: 3}
+      - {fileID: 21300000, guid: d7687401beac317448fd430ce4f73403, type: 3}
+      frameRate: 6
       loop: 1
   phase2Data:
     hpThresholdPercent: 0.5

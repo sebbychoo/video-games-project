@@ -252,8 +252,8 @@ namespace CardBattle
             // Spawn enemies
             SpawnEnemies(encounter);
 
-            // Show battle UI (badges) — delayed so loading screen finishes first
-            Invoke(nameof(ShowBattleUI), 0.5f);
+            // Show battle UI (badges) immediately
+            ShowBattleUI();
 
             // Initialize deck from RunState or fallback
             InitializeDeck();
@@ -1046,6 +1046,20 @@ namespace CardBattle
 
             combatant.Initialize(enemyData, blockSystem, statusEffectSystem);
 
+            // Apply per-enemy battle Y offset
+            if (enemyData.battleYOffset != 0f)
+            {
+                Vector3 pos = enemyGO.transform.position;
+                pos.y += enemyData.battleYOffset;
+                enemyGO.transform.position = pos;
+            }
+
+            // Apply per-enemy battle scale
+            if (enemyData.battleScale != 0f && enemyData.battleScale != 1f)
+            {
+                enemyGO.transform.localScale = Vector3.one * enemyData.battleScale;
+            }
+
             // Lock physics and disable exploration AI during battle
             Rigidbody rb = enemyGO.GetComponent<Rigidbody>();
             if (rb != null)
@@ -1077,12 +1091,19 @@ namespace CardBattle
                 _enemyHPBars.Add(hpBar);
             }
 
-            // Set up intent display if available on the prefab
+            // Disable world-space intent — use screenEnemyIntent UI instead
             EnemyIntentDisplay intentDisplay = enemyGO.GetComponentInChildren<EnemyIntentDisplay>();
             if (intentDisplay != null)
             {
-                intentDisplay.Initialize(combatant);
-                _enemyIntents.Add(intentDisplay);
+                intentDisplay.Hide();
+                intentDisplay.enabled = false;
+            }
+
+            WorldIntentBubble worldBubble = enemyGO.GetComponentInChildren<WorldIntentBubble>();
+            if (worldBubble != null)
+            {
+                worldBubble.Hide();
+                worldBubble.enabled = false;
             }
 
             // Set up enemy badge
@@ -1124,27 +1145,32 @@ namespace CardBattle
                 enemyStatusEffectIcons.Initialize(combatant.gameObject);
 
             // Attach and initialize BossAnimationController for boss enemies (Req 8.6)
-            if (enemyData.isBoss && enemyData.bossAnimationData != null)
+            if (enemyData.isBoss)
             {
-                SpriteFrameAnimator animator = enemyGO.GetComponent<SpriteFrameAnimator>();
-                if (animator == null)
-                    animator = enemyGO.AddComponent<SpriteFrameAnimator>();
-
-                BossAnimationController bossAnim = enemyGO.GetComponent<BossAnimationController>();
-                if (bossAnim == null)
-                    bossAnim = enemyGO.AddComponent<BossAnimationController>();
-
-                bossAnim.Phase1Animations = enemyData.bossAnimationData;
-                if (enemyData.phase2Data != null)
-                    bossAnim.Phase2Animations = enemyData.phase2Data.phase2Animations;
-
-                // Ensure SpriteRenderer exists for the animator
+                // Set boss sprite on the SpriteRenderer regardless of animation data
                 SpriteRenderer sr = enemyGO.GetComponent<SpriteRenderer>();
                 if (sr == null)
                     sr = enemyGO.AddComponent<SpriteRenderer>();
+                if (enemyData.sprite != null)
+                    sr.sprite = enemyData.sprite;
 
-                // Play idle animation immediately (Req 8.6)
-                bossAnim.PlayIdle();
+                if (enemyData.bossAnimationData != null)
+                {
+                    SpriteFrameAnimator animator = enemyGO.GetComponent<SpriteFrameAnimator>();
+                    if (animator == null)
+                        animator = enemyGO.AddComponent<SpriteFrameAnimator>();
+
+                    BossAnimationController bossAnim = enemyGO.GetComponent<BossAnimationController>();
+                    if (bossAnim == null)
+                        bossAnim = enemyGO.AddComponent<BossAnimationController>();
+
+                    bossAnim.Phase1Animations = enemyData.bossAnimationData;
+                    if (enemyData.phase2Data != null)
+                        bossAnim.Phase2Animations = enemyData.phase2Data.phase2Animations;
+
+                    // Play idle animation immediately (Req 8.6)
+                    bossAnim.PlayIdle();
+                }
             }
         }
 

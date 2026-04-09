@@ -130,44 +130,66 @@ namespace CardBattle
             float nameDelay, float nameSlideDur,
             float titleDelay, float titleFadeDur, float holdDur)
         {
+            // Hide everything and position off-screen
             SetLabelAlpha(introducingLabel, 0f);
             SetLabelAlpha(nameLabel, 0f);
             SetLabelAlpha(titleLabel, 0f);
 
-            RectTransform introRT = introducingLabel != null ? introducingLabel.GetComponent<RectTransform>() : null;
-            RectTransform nameRT = nameLabel != null ? nameLabel.GetComponent<RectTransform>() : null;
+            RectTransform introRT = GetSlideTarget(introducingLabel);
+            RectTransform nameRT = GetSlideTarget(nameLabel);
+            RectTransform titleRT = GetSlideTarget(titleLabel);
 
-            float centerX = 0f;
-            float offScreenX = -Screen.width;
+            float offScreenLeft = -Screen.width;
+            float offScreenRight = Screen.width;
 
+            // Save each strip's resting position (where you placed them in the editor)
+            float introRestX = introRT != null ? introRT.anchoredPosition.x : 0f;
+            float nameRestX = nameRT != null ? nameRT.anchoredPosition.x : 0f;
+            float titleRestX = titleRT != null ? titleRT.anchoredPosition.x : 0f;
+
+            // Position all off-screen initially
+            if (introRT != null) SetRTX(introRT, offScreenLeft);   // intro starts off-screen left
+            if (nameRT != null) SetRTX(nameRT, offScreenRight);    // name starts off-screen right
+            if (titleRT != null) SetRTX(titleRT, offScreenRight);  // title starts off-screen right
+
+            // 1. Slide "Introducing..." from left to its resting position
             if (introLineDelay > 0f)
                 yield return new WaitForSeconds(introLineDelay);
 
             if (introRT != null && !string.IsNullOrEmpty(introText))
             {
                 SetLabelAlpha(introducingLabel, 1f);
-                yield return StartCoroutine(SlideLabel(introRT, offScreenX, centerX, introSlideDur));
+                yield return StartCoroutine(SlideLabel(introRT, offScreenLeft, introRestX, introSlideDur));
             }
 
+            // 2. Slide name from right to its resting position
             if (nameDelay > 0f)
                 yield return new WaitForSeconds(nameDelay);
 
             if (nameRT != null)
             {
                 SetLabelAlpha(nameLabel, 1f);
-                yield return StartCoroutine(SlideLabel(nameRT, offScreenX, centerX, nameSlideDur));
+                yield return StartCoroutine(SlideLabel(nameRT, offScreenRight, nameRestX, nameSlideDur));
             }
 
-            if (showTitle && titleLabel != null)
+            // 3. Slide title from right to its resting position (quick)
+            if (showTitle && titleRT != null)
             {
                 if (titleDelay > 0f)
                     yield return new WaitForSeconds(titleDelay);
                 SetLabelAlpha(titleLabel, 1f);
-                yield return StartCoroutine(FadeInLabel(titleLabel, titleFadeDur));
+                yield return StartCoroutine(SlideLabel(titleRT, offScreenRight, titleRestX, titleFadeDur));
             }
 
             yield return new WaitForSeconds(holdDur);
             Dismiss();
+        }
+
+        private void SetRTX(RectTransform rt, float x)
+        {
+            Vector2 pos = rt.anchoredPosition;
+            pos.x = x;
+            rt.anchoredPosition = pos;
         }
 
         private IEnumerator SlideLabel(RectTransform rt, float fromX, float toX, float duration)
@@ -207,6 +229,23 @@ namespace CardBattle
         private void SetLabelAlpha(TextMeshProUGUI label, float alpha)
         {
             if (label != null) label.alpha = alpha;
+        }
+
+        /// <summary>
+        /// Returns the parent RectTransform if the label has a backing panel parent,
+        /// otherwise returns the label's own RectTransform.
+        /// </summary>
+        private RectTransform GetSlideTarget(TextMeshProUGUI label)
+        {
+            if (label == null) return null;
+            // If the label's parent has an Image component, it's a backing panel — slide that
+            Transform parent = label.transform.parent;
+            if (parent != null && parent.GetComponent<Image>() != null
+                && parent.GetComponent<CanvasGroup>() == null) // don't use the root panel
+            {
+                return parent.GetComponent<RectTransform>();
+            }
+            return label.GetComponent<RectTransform>();
         }
 
         private void Dismiss()
