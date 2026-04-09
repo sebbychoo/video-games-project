@@ -43,6 +43,7 @@ public class Battlescene_Trigger : MonoBehaviour
             if (WorkBoxTrigger.IsInteracting) return;
             if (BathroomShopTrigger.IsInteracting) return;
             if (BreakRoomTradeTrigger.IsInteracting) return;
+            if (BossCutsceneController.IsInteracting) return;
             if (CardBattle.Elevator.IsDescending) return;
 
             EncounterData encounter = encounterData;

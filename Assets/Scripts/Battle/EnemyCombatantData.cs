@@ -22,6 +22,14 @@ namespace CardBattle
         [TextArea] public string preFightDialogue;
         [TextArea] public string postFightDialogue;
 
+        [Header("Boss Data")]
+        public string bossTitle;
+        public BossPose bossPose;
+        public BossAnimationData bossAnimationData;
+
+        [Header("Boss Phase 2")]
+        public BossPhase2Data phase2Data;
+
         [Header("Badge Sprites (for battle UI — 5 states)")]
         public Sprite badgeHealthy;    // 75-100%
         public Sprite badgeConcerned;  // 50-74%

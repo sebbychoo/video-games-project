@@ -48,7 +48,8 @@ public class InteractionTooltip : MonoBehaviour
     {
         if (WorkBoxTrigger.IsInteracting
             || BathroomShopTrigger.IsInteracting
-            || BreakRoomTradeTrigger.IsInteracting)
+            || BreakRoomTradeTrigger.IsInteracting
+            || BossCutsceneController.IsInteracting)
         {
             _currentTarget = null;
             _hoverTimer = 0f;

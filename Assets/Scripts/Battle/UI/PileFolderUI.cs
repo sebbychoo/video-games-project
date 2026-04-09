@@ -86,5 +86,12 @@ namespace CardBattle
         }
 
         public bool IsOpen => _isOpen;
+
+        /// <summary>Hides the folder and its buttons. Used when battle ends.</summary>
+        public void Hide()
+        {
+            CloseFolder();
+            gameObject.SetActive(false);
+        }
     }
 }

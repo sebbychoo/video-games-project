@@ -49,7 +49,6 @@ namespace CardBattle
         [SerializeField] BlockDisplay          blockDisplay;
         [SerializeField] TurnCounterUI         turnCounterUI;
         [SerializeField] VictoryScreen         victoryScreen;
-        [SerializeField] Canvas                battleCanvas;
 
         [Header("Spawning")]
         [SerializeField] GameObject            enemyPrefab;
@@ -1201,10 +1200,6 @@ namespace CardBattle
 
         private void HideBattleUI()
         {
-            // Hide the entire battle canvas so nothing bleeds through the loading screen
-            if (battleCanvas != null)
-                battleCanvas.enabled = false;
-
             // Hide player badge
             if (playerBadge != null)
                 playerBadge.gameObject.SetActive(false);
@@ -1213,6 +1208,10 @@ namespace CardBattle
             foreach (var badge in _enemyBadges)
                 if (badge != null) Destroy(badge.gameObject);
             _enemyBadges.Clear();
+
+            // Hide the pile folder UI so it doesn't bleed through loading screen
+            PileFolderUI folder = FindObjectOfType<PileFolderUI>();
+            if (folder != null) folder.Hide();
         }
 
         // ── Victory / Defeat ──────────────────────────────────────────────────
@@ -1315,9 +1314,10 @@ namespace CardBattle
                         SceneLoader.Instance.OnBattleDefeat();
                 });
             }
-            else if (SceneLoader.Instance != null)
+            else
             {
-                SceneLoader.Instance.OnBattleDefeat();
+                if (SceneLoader.Instance != null)
+                    SceneLoader.Instance.OnBattleDefeat();
             }
         }
     }

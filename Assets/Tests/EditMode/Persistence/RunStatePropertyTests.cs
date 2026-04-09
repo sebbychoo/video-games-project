@@ -218,8 +218,8 @@ namespace CardBattle.Tests
 
                 // Verify run state is wiped to defaults
                 var wiped = _saveManager.CurrentRun;
-                Assert.AreEqual(0, wiped.currentFloor,
-                    $"[Iter {i}] currentFloor should be 0 after wipe");
+                Assert.AreEqual(1, wiped.currentFloor,
+                    $"[Iter {i}] currentFloor should be 1 (default) after wipe");
                 Assert.AreEqual(0, wiped.playerHP,
                     $"[Iter {i}] playerHP should be 0 after wipe");
                 Assert.AreEqual(0, wiped.hours,

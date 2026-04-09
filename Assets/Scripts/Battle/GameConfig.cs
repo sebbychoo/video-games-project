@@ -36,5 +36,12 @@ namespace CardBattle
         public float enemyDashDistance = 1.5f;
         [Tooltip("Base dash duration in seconds (fast phase uses half of this).")]
         public float enemyDashDuration = 0.25f;
+
+        [Header("Boss Intro Screen")]
+        public float bossIntroSlideDuration = 0.6f;
+        public float bossIntroHoldDuration = 1.5f;
+
+        [Header("Boss Phase Transition")]
+        public float phaseTransitionPauseDuration = 1.0f;
     }
 }

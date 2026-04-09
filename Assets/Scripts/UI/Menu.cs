@@ -24,7 +24,8 @@ public class Menu : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape)
             && !CardBattle.WorkBoxTrigger.IsInteracting
             && !CardBattle.BathroomShopTrigger.IsInteracting
-            && !CardBattle.BreakRoomTradeTrigger.IsInteracting)
+            && !CardBattle.BreakRoomTradeTrigger.IsInteracting
+            && !CardBattle.BossCutsceneController.IsInteracting)
             SetPause();
     }
 

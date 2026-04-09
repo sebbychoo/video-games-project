@@ -381,7 +381,7 @@ namespace Procedural
         public bool IsBossFloor(int floor)
         {
             int interval = gameConfig != null ? gameConfig.bossFloorInterval : 3;
-            return floor > 0 && floor % interval == 0;
+            return floor == 1 || (floor > 1 && (floor - 1) % interval == 0);
         }
 
         public EnemyCombatantData PickEnemyForFloor(int floor)
