@@ -191,6 +191,16 @@ namespace CardBattle
             sm.CurrentRun.currentFloor++;
             int nextFloor = sm.CurrentRun.currentFloor;
 
+            int maxFloor = 3; // number of floors we have
+            if (nextFloor > maxFloor)
+            {
+                if (SceneLoader.Instance != null)
+                    SceneLoader.Instance.LoadSceneUI("Menu");
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                yield break; // stops coroutine
+            }
+
             if (SceneLoader.Instance != null)
                 SceneLoader.Instance.useDefaultSpawn = true;
 
