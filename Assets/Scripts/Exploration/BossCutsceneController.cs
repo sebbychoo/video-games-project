@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using TMPro;
 
 namespace CardBattle
@@ -20,6 +21,12 @@ namespace CardBattle
         /// </summary>
         public static bool IsInteracting { get; set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            IsInteracting = false;
+        }
+
         [SerializeField] private EnemyCombatantData bossData;
         [SerializeField] private Battlescene_Trigger battleTrigger;
 
@@ -35,6 +42,7 @@ namespace CardBattle
         private GameObject _playerRoot;
         private CursorLockMode _previousLockState;
         private bool _previousCursorVisible;
+        private GameObject _autoCreatedCanvas;
 
         /// <summary>
         /// Allows LevelGenerator to assign boss data at runtime.
@@ -133,11 +141,22 @@ namespace CardBattle
             if (!_dialogueActive) return;
             _dialogueActive = false;
 
-            // Hide dialogue UI
-            if (dialogueLabel != null)
-                dialogueLabel.gameObject.SetActive(false);
-            if (dialoguePanel != null)
-                dialoguePanel.SetActive(false);
+            // Destroy auto-created dialogue canvas
+            if (_autoCreatedCanvas != null)
+            {
+                Destroy(_autoCreatedCanvas);
+                _autoCreatedCanvas = null;
+                dialogueLabel = null;
+                dialoguePanel = null;
+            }
+            else
+            {
+                // Hide serialized dialogue UI
+                if (dialogueLabel != null)
+                    dialogueLabel.gameObject.SetActive(false);
+                if (dialoguePanel != null)
+                    dialoguePanel.SetActive(false);
+            }
 
             // Restore cursor state
             Cursor.lockState = _previousLockState;
@@ -192,6 +211,7 @@ namespace CardBattle
             if (dialogueLabel != null) return;
 
             var canvasGO = new GameObject("BossDialogueCanvas");
+            _autoCreatedCanvas = canvasGO;
             var canvas = canvasGO.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 100;
@@ -232,11 +252,15 @@ namespace CardBattle
 
         private void OnDestroy()
         {
-            // Clean up static flag if destroyed while dialogue is active
             if (_dialogueActive)
             {
                 _dialogueActive = false;
                 IsInteracting = false;
+            }
+            if (_autoCreatedCanvas != null)
+            {
+                Destroy(_autoCreatedCanvas);
+                _autoCreatedCanvas = null;
             }
         }
     }
