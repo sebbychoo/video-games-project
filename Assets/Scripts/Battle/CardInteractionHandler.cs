@@ -21,8 +21,27 @@ namespace CardBattle
         private float _hoverTimer;
         private bool _waitingToSwitch;
 
+        /// <summary>Delayed exit to prevent flickering between overlapping cards.</summary>
+        private const float ExitDelay = 0.05f;
+        private float _exitTimer;
+        private bool _pendingExit;
+
+        /// <summary>Tracks whether this card is actively hovered to prevent re-trigger flicker at screen edges.</summary>
+        private bool _isActivelyHovered;
+
         private void Update()
         {
+            // Handle delayed exit to prevent flicker between overlapping cards
+            if (_pendingExit)
+            {
+                _exitTimer += Time.deltaTime;
+                if (_exitTimer >= ExitDelay)
+                {
+                    _pendingExit = false;
+                    ProcessHoverExit();
+                }
+            }
+
             if (!_waitingToSwitch) return;
 
             _hoverTimer += Time.deltaTime;
@@ -52,6 +71,17 @@ namespace CardBattle
 
         public void OnPointerEnter(PointerEventData eventData)
         {
+            // Cancel any pending delayed exit — pointer came back before the exit fired
+            if (_pendingExit)
+            {
+                _pendingExit = false;
+                // Card is still actively hovered, no need to re-trigger hover animations
+                return;
+            }
+
+            // If already actively hovered (rapid re-entry at screen edges), skip
+            if (_isActivelyHovered) return;
+
             if (BattleManager.Instance == null) return;
 
             bool isPlayPhase = BattleManager.Instance.CurrentTurn == TurnPhase.Play;
@@ -78,6 +108,7 @@ namespace CardBattle
                 return;
 
             Card.IsHovered = true;
+            _isActivelyHovered = true;
             CardTargetingManager.Instance?.SetHoveredCard(Card);
 
             // Show description on hover
@@ -126,7 +157,18 @@ namespace CardBattle
                 return;
 
             if (Card == null) return;
+
+            // Delay the actual exit to prevent flickering between overlapping cards
+            _pendingExit = true;
+            _exitTimer = 0f;
+        }
+
+        /// <summary>Actually process the hover exit after the delay.</summary>
+        private void ProcessHoverExit()
+        {
+            if (Card == null) return;
             Card.IsHovered = false;
+            _isActivelyHovered = false;
             CardTargetingManager.Instance?.ClearHoveredCard(Card);
 
             // Hide effect preview tooltip
