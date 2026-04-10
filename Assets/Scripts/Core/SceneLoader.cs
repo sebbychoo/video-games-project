@@ -119,8 +119,9 @@ public class SceneLoader : MonoBehaviour
         SaveManager sm = FindObjectOfType<SaveManager>();
         bool freshRun = sm == null || sm.CurrentRun == null || sm.CurrentRun.currentFloor <= 1;
 
-        // Force default spawn on fresh runs regardless of useDefaultSpawn flag
-        if (freshRun)
+        // Only force default spawn on truly fresh runs, not when returning from battle
+        // useDefaultSpawn == false means we're returning from a won fight with a saved position
+        if (freshRun && useDefaultSpawn)
             useDefaultSpawn = true;
 
         if (useDefaultSpawn)
