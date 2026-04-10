@@ -1109,7 +1109,11 @@ namespace CardBattle
             // Set up enemy badge
             if (enemyBadgePrefab != null)
             {
-                Canvas canvas = FindObjectOfType<Canvas>();
+                // Parent under the same Canvas as the player badge to ensure
+                // consistent CanvasScaler behavior across resolutions.
+                Canvas canvas = playerBadge != null
+                    ? playerBadge.GetComponentInParent<Canvas>()
+                    : FindObjectOfType<Canvas>();
                 if (canvas != null)
                 {
                     GameObject badgeGO = Instantiate(enemyBadgePrefab, canvas.transform);

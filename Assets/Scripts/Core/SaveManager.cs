@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace CardBattle
@@ -15,6 +16,23 @@ namespace CardBattle
         private const string RunSaveFile = "run_save.json";
         private const string MetaSaveFile = "meta_save.json";
         private const string PreEncounterSaveFile = "pre_encounter_save.json";
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern void JS_FileSystem_Sync();
+#endif
+
+        /// <summary>
+        /// Flushes the in-memory filesystem to IndexedDB on WebGL.
+        /// No-op on other platforms.
+        /// </summary>
+        private void SyncFileSystem()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            try { JS_FileSystem_Sync(); }
+            catch (Exception e) { Debug.LogWarning($"SaveManager: IndexedDB sync failed: {e.Message}"); }
+#endif
+        }
 
         /// <summary>Current in-progress run state.</summary>
         public RunState CurrentRun { get; private set; }
@@ -62,6 +80,7 @@ namespace CardBattle
             {
                 string json = JsonUtility.ToJson(CurrentRun, true);
                 File.WriteAllText(GetPath(RunSaveFile), json);
+                SyncFileSystem();
             }
             catch (Exception e)
             {
@@ -104,6 +123,7 @@ namespace CardBattle
             {
                 string json = JsonUtility.ToJson(CurrentMeta, true);
                 File.WriteAllText(GetPath(MetaSaveFile), json);
+                SyncFileSystem();
             }
             catch (Exception e)
             {
@@ -154,6 +174,7 @@ namespace CardBattle
             {
                 if (File.Exists(path))
                     File.Delete(path);
+                SyncFileSystem();
             }
             catch (Exception e)
             {
@@ -166,6 +187,7 @@ namespace CardBattle
             {
                 if (File.Exists(snapshotPath))
                     File.Delete(snapshotPath);
+                SyncFileSystem();
             }
             catch (Exception e)
             {
@@ -186,6 +208,7 @@ namespace CardBattle
             {
                 string json = JsonUtility.ToJson(CurrentRun, true);
                 File.WriteAllText(GetPath(PreEncounterSaveFile), json);
+                SyncFileSystem();
             }
             catch (Exception e)
             {
@@ -230,6 +253,7 @@ namespace CardBattle
             {
                 if (File.Exists(path))
                     File.Delete(path);
+                SyncFileSystem();
             }
             catch (Exception e)
             {

@@ -84,6 +84,14 @@ namespace CardBattle
             if (_grayscaleVolObj != null) _grayscaleVolObj.SetActive(false);
             if (_invertVolObj != null) _invertVolObj.SetActive(false);
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Post-processing volumes cause drawBuffers errors in WebGL.
+            // Null them out so we fall back to overlay-only effects.
+            _grayscaleVolObj = null;
+            _invertVolObj = null;
+            Debug.Log("[ParryEffect] WebGL detected — post-processing volumes disabled, using overlay fallback.");
+#endif
+
             // Also reparent the warning overlay to the overlay canvas if it's separate
             if (warningOverlay != null && warningOverlay != flashOverlay)
                 ReparentToOverlayCanvas(warningOverlay);
