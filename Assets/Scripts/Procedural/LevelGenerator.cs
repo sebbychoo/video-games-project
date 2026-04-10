@@ -323,6 +323,24 @@ namespace Procedural
                         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                     field?.SetValue(trigger, data);
                 }
+
+                // Set the correct sprite from EnemyCombatantData
+                if (data.sprite != null)
+                {
+                    // Prefer child SpriteRenderer (e.g. "Visual") over root
+                    SpriteRenderer sr = null;
+                    foreach (var renderer in go.GetComponentsInChildren<SpriteRenderer>())
+                    {
+                        if (renderer.gameObject != go)
+                        {
+                            sr = renderer;
+                            break;
+                        }
+                    }
+                    if (sr == null) sr = go.GetComponentInChildren<SpriteRenderer>();
+                    if (sr != null)
+                        sr.sprite = data.sprite;
+                }
             }
         }
 

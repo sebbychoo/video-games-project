@@ -17,7 +17,8 @@ public class EnemyBillboard : MonoBehaviour
     public SpriteRenderer spriteRenderer;
 
     private Transform _cam;
-    private Transform _root; // the enemy root (parent of this sprite child)
+    private Transform _root;
+    private CardBattle.SpriteFrameAnimator _animator;
 
     private void Start()
     {
@@ -37,9 +38,14 @@ public class EnemyBillboard : MonoBehaviour
         if (dirToCamera.sqrMagnitude > 0.001f)
         {
             Quaternion targetRot = Quaternion.LookRotation(-dirToCamera, Vector3.up);
-            // Force no X or Z tilt — only Y rotation
             transform.rotation = Quaternion.Euler(0, targetRot.eulerAngles.y, 0);
         }
+
+        // If a SpriteFrameAnimator is playing, don't override the sprite
+        if (_animator == null)
+            _animator = GetComponent<CardBattle.SpriteFrameAnimator>();
+        if (_animator != null && _animator.IsPlaying)
+            return;
 
         // Use the ROOT's forward (NavMeshAgent controls this) for sprite selection
         Vector3 rootForward = new Vector3(_root.forward.x, 0, _root.forward.z).normalized;

@@ -36,6 +36,9 @@ public class EnemyFollow : MonoBehaviour
     private float _doorWaitTimer;
     private SafeRoom[] _safeRooms;
     private NavMeshAgent _agent;
+    private CardBattle.SpriteFrameAnimator _walkAnimator;
+    private CardBattle.SpriteFrameAnimation _walkAnim;
+    private bool _wasMoving;
 
     private void Start()
     {
@@ -57,6 +60,10 @@ public class EnemyFollow : MonoBehaviour
         var cfg = Resources.Load<CardBattle.GameConfig>("GameConfig");
         if (cfg != null) safeRoomGiveUpTime = cfg.safeRoomChaseTimeout;
 
+        // Set up walk animation from EnemyCombatantData if available
+        // Deferred — data may not be wired yet at Start time
+        Invoke(nameof(InitWalkAnimation), 0.1f);
+
         SetNewWanderTarget();
     }
 
@@ -76,18 +83,42 @@ public class EnemyFollow : MonoBehaviour
             case State.Chase:      UpdateChase();      break;
             case State.WaitAtDoor: UpdateWaitAtDoor(); break;
         }
+
+        // Play/stop walk animation based on movement
+        if (_walkAnimator != null && _walkAnim != null)
+        {
+            bool isMoving = _agent.velocity.sqrMagnitude > 0.01f;
+            if (isMoving && !_wasMoving)
+            {
+                _walkAnimator.Play(_walkAnim, loop: true);
+                Debug.Log($"[EnemyFollow] {name}: Walk anim START (vel={_agent.velocity.sqrMagnitude:F3})");
+            }
+            else if (!isMoving && _wasMoving)
+            {
+                _walkAnimator.Stop();
+            }
+            _wasMoving = isMoving;
+        }
     }
 
     private void UpdatePatrol()
     {
         if (isAggressive && Vector3.Distance(transform.position, player.position) <= chaseRange)
         {
-            // Only chase if player is within the enemy's field of view
+            float dist = Vector3.Distance(transform.position, player.position);
+
+            // Always chase if very close (within 5 units), regardless of FOV
+            if (dist <= 5f)
+            {
+                _state = State.Chase;
+                return;
+            }
+
+            // Otherwise check field of view
             Vector3 toPlayer = (player.position - transform.position).normalized;
             float angle = Vector3.Angle(transform.forward, toPlayer);
             if (angle <= fieldOfView * 0.5f)
             {
-                // Line of sight check — don't chase through walls/cubicles
                 Vector3 eyePos = transform.position + Vector3.up * 1f;
                 Vector3 playerEyePos = player.position + Vector3.up * 1f;
                 if (!Physics.Linecast(eyePos, playerEyePos, obstacleLayers))
@@ -174,6 +205,50 @@ public class EnemyFollow : MonoBehaviour
         _state = State.Patrol;
         _agent.ResetPath();
         SetNewWanderTarget();
+    }
+
+    private void InitWalkAnimation()
+    {
+        if (_walkAnim != null) return; // already initialized
+
+        var trigger = GetComponent<Battlescene_Trigger>();
+        if (trigger == null)
+        {
+            Debug.Log($"[EnemyFollow] {name}: No Battlescene_Trigger found");
+            return;
+        }
+
+        var enemyDataField = trigger.GetType().GetField("singleEnemyData",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var enemyData = enemyDataField?.GetValue(trigger) as CardBattle.EnemyCombatantData;
+
+        if (enemyData == null)
+        {
+            Debug.Log($"[EnemyFollow] {name}: singleEnemyData is null on trigger");
+            return;
+        }
+
+        if (enemyData.walkAnimation == null
+            || enemyData.walkAnimation.frames == null || enemyData.walkAnimation.frames.Length == 0)
+        {
+            Debug.Log($"[EnemyFollow] {name}: walkAnimation is null or has no frames on {enemyData.enemyName}");
+            return;
+        }
+
+        _walkAnim = enemyData.walkAnimation;
+        // Put animator on the child that has the SpriteRenderer (same as boss fix)
+        SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+        if (sr != null)
+        {
+            _walkAnimator = sr.gameObject.GetComponent<CardBattle.SpriteFrameAnimator>();
+            if (_walkAnimator == null)
+                _walkAnimator = sr.gameObject.AddComponent<CardBattle.SpriteFrameAnimator>();
+            Debug.Log($"[EnemyFollow] {name}: Walk animation ready with {_walkAnim.frames.Length} frames on {sr.gameObject.name}");
+        }
+        else
+        {
+            Debug.Log($"[EnemyFollow] {name}: No SpriteRenderer found in children");
+        }
     }
 
     public void ResumePatrol()

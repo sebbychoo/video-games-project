@@ -12,11 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b54996ae4d16f2943aec208adba8a409, type: 3}
   m_Name: TestEnemy 1
   m_EditorClassIdentifier: CardBattle::CardBattle.EnemyCombatantData
-  enemyName: Joe Biden
+  enemyName: Intern
   maxHP: 10
   hoursReward: 67
   variant: 0
   sprite: {fileID: 0}
+  walkAnimation:
+    frames:
+    - {fileID: -583919739, guid: 8283f5b4b527ab44eb3813e4eb3aaa5b, type: 3}
+    - {fileID: 1092782672, guid: 8283f5b4b527ab44eb3813e4eb3aaa5b, type: 3}
+    - {fileID: -583919739, guid: 8283f5b4b527ab44eb3813e4eb3aaa5b, type: 3}
+    - {fileID: -1304957503, guid: 8283f5b4b527ab44eb3813e4eb3aaa5b, type: 3}
+    - {fileID: -583919739, guid: 8283f5b4b527ab44eb3813e4eb3aaa5b, type: 3}
+    frameRate: 12
+    loop: 1
+  battleYOffset: 0
+  battleScale: 1
   explorationPrefab: {fileID: 319367816001114415, guid: b646587af54ea274894f622811699d72, type: 3}
   attackPattern:
   - actionType: 0
@@ -42,6 +53,53 @@ MonoBehaviour:
   baseParryWindowDuration: 0
   preFightDialogue: hey jew
   postFightDialogue: bye jew
+  bossTitle: 
+  bossPose: 0
+  bossAnimationData:
+    idleAnimation:
+      frames: []
+      frameRate: 8
+      loop: 1
+    damagedAnimation:
+      frames: []
+      frameRate: 8
+      loop: 1
+    deathAnimation:
+      frames: []
+      frameRate: 8
+      loop: 1
+    attackAnimations: []
+  bossIntroData:
+    introLine: Introducing...
+    introLineDelay: 0
+    introLineSlideDuration: 0.6
+    nameDelay: 0.3
+    nameSlideDuration: 0.6
+    titleDelay: 0.2
+    titleFadeDuration: 0.3
+    holdDuration: 1.5
+    backgroundAnimation:
+      frames: []
+      frameRate: 8
+      loop: 1
+  phase2Data:
+    hpThresholdPercent: 0.5
+    phase2AttackPattern: []
+    phase2SpriteSet: []
+    phase2Animations:
+      idleAnimation:
+        frames: []
+        frameRate: 8
+        loop: 1
+      damagedAnimation:
+        frames: []
+        frameRate: 8
+        loop: 1
+      deathAnimation:
+        frames: []
+        frameRate: 8
+        loop: 1
+      attackAnimations: []
   badgeHealthy: {fileID: 21300000, guid: 9243917fba7d87a4fa3b83c137974d1f, type: 3}
   badgeConcerned: {fileID: 21300000, guid: 9d418ca56f56a8b4fa2326518013d735, type: 3}
   badgeStressed: {fileID: 21300000, guid: 2284e069259b62f4ca8bba53de79de8d, type: 3}

@@ -280,7 +280,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01baae3de432ab04cb77a3dfb3a01e49, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CardBattle::EnemyBillboard
-  frontSprite: {fileID: 21300000, guid: 30904de041e83f440bc5c2fe5dfb7bde, type: 3}
+  frontSprite: {fileID: 21300000, guid: 5bb4138a8818f0e4d8d05f7bd3eb11d4, type: 3}
   backSprite: {fileID: 21300000, guid: 024e7a5601dcb3f42b21e8d15e0ab441, type: 3}
   sideSprite: {fileID: 21300000, guid: e07e9ad4faf8c79408b1a8219ad84b16, type: 3}
   spriteRenderer: {fileID: 0}

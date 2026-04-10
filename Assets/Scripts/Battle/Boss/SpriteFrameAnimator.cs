@@ -5,11 +5,13 @@ namespace CardBattle
 {
     /// <summary>
     /// Lightweight sprite-frame animation player. Cycles through a SpriteFrameAnimation's
-    /// frames at the configured frame rate on a SpriteRenderer.
+    /// frames at the configured frame rate. Supports both SpriteRenderer and MeshRenderer
+    /// (swaps material texture for mesh-based enemies).
     /// </summary>
     public class SpriteFrameAnimator : MonoBehaviour
     {
-        private SpriteRenderer _renderer;
+        private SpriteRenderer _spriteRenderer;
+        private MeshRenderer _meshRenderer;
         private SpriteFrameAnimation _currentAnim;
         private Action _onComplete;
         private bool _loop;
@@ -20,15 +22,17 @@ namespace CardBattle
 
         private void Awake()
         {
-            _renderer = GetComponent<SpriteRenderer>();
+            FindRenderers();
         }
 
-        /// <summary>
-        /// Play a sprite-frame animation on this object's SpriteRenderer.
-        /// </summary>
-        /// <param name="anim">The animation data to play.</param>
-        /// <param name="loop">Whether to loop the animation.</param>
-        /// <param name="onComplete">Called when a non-looping animation finishes its last frame.</param>
+        private void FindRenderers()
+        {
+            if (_spriteRenderer == null)
+                _spriteRenderer = GetComponent<SpriteRenderer>();
+            if (_meshRenderer == null)
+                _meshRenderer = GetComponent<MeshRenderer>();
+        }
+
         public void Play(SpriteFrameAnimation anim, bool loop = true, Action onComplete = null)
         {
             if (anim == null || anim.frames == null || anim.frames.Length == 0)
@@ -38,8 +42,7 @@ namespace CardBattle
                 return;
             }
 
-            if (_renderer == null)
-                _renderer = GetComponent<SpriteRenderer>();
+            FindRenderers();
 
             _currentAnim = anim;
             _loop = loop;
@@ -48,12 +51,9 @@ namespace CardBattle
             _timer = 0f;
             IsPlaying = true;
 
-            _renderer.sprite = _currentAnim.frames[0];
+            ApplyFrame(0);
         }
 
-        /// <summary>
-        /// Stop the current animation immediately.
-        /// </summary>
         public void Stop()
         {
             IsPlaying = false;
@@ -91,8 +91,26 @@ namespace CardBattle
                 }
             }
 
-            if (_renderer != null)
-                _renderer.sprite = _currentAnim.frames[_frameIndex];
+            ApplyFrame(_frameIndex);
+        }
+
+        private void ApplyFrame(int index)
+        {
+            Sprite frame = _currentAnim.frames[index];
+            if (frame == null) return;
+
+            // Prefer SpriteRenderer if available
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.sprite = frame;
+                return;
+            }
+
+            // Fall back to MeshRenderer — swap the main texture
+            if (_meshRenderer != null && _meshRenderer.material != null)
+            {
+                _meshRenderer.material.mainTexture = frame.texture;
+            }
         }
     }
 }

@@ -76,6 +76,10 @@ public class SceneLoader : MonoBehaviour
     {
         if (scene.name == "Explorationscene")
         {
+            // If run was wiped (death), force default spawn
+            SaveManager smCheck = FindObjectOfType<SaveManager>();
+            if (smCheck != null && smCheck.CurrentRun != null && smCheck.CurrentRun.currentFloor == 1 && !smCheck.CurrentRun.hasCustomSpawn)
+                useDefaultSpawn = true;
             // Regenerate the floor for the current run floor number
             LevelGenerator gen = FindObjectOfType<LevelGenerator>();
             if (gen != null)
@@ -112,10 +116,15 @@ public class SceneLoader : MonoBehaviour
         CharacterController cc = player.GetComponent<CharacterController>();
         if (cc != null) cc.enabled = false;
 
+        SaveManager sm = FindObjectOfType<SaveManager>();
+        bool freshRun = sm == null || sm.CurrentRun == null || sm.CurrentRun.currentFloor <= 1;
+
+        // Force default spawn on fresh runs regardless of useDefaultSpawn flag
+        if (freshRun)
+            useDefaultSpawn = true;
+
         if (useDefaultSpawn)
         {
-            // Check if we have a custom floor transition spawn position
-            SaveManager sm = FindObjectOfType<SaveManager>();
             if (sm != null && sm.CurrentRun != null && sm.CurrentRun.hasCustomSpawn)
             {
                 Vector3 floorSpawn = new Vector3(sm.CurrentRun.spawnX, player.transform.position.y, sm.CurrentRun.spawnZ);
@@ -125,14 +134,12 @@ public class SceneLoader : MonoBehaviour
             }
             else
             {
-                // Try to find a PlayerSpawn marker in the spawned floor prefab
                 GameObject playerSpawnMarker = GameObject.FindWithTag("PlayerSpawn");
                 if (playerSpawnMarker != null)
                 {
-                    Debug.Log($"[Spawn] PlayerSpawn marker at {playerSpawnMarker.transform.position}, player before: {player.transform.position}");
                     player.transform.position = playerSpawnMarker.transform.position;
                     player.transform.rotation = playerSpawnMarker.transform.rotation;
-                    Debug.Log($"[Spawn] Player after: {player.transform.position}");
+                    Debug.Log($"[Spawn] At PlayerSpawn marker: {player.transform.position}");
                 }
                 else if (defaultSpawnPoint != null)
                 {
@@ -143,14 +150,11 @@ public class SceneLoader : MonoBehaviour
         }
         else
         {
-            // Post-battle return: spawn where player was before the fight
             player.transform.position = playerPosition;
             Debug.Log("Spawned at SAVED position (won fight): " + playerPosition);
         }
 
-        // reset for next time
         useDefaultSpawn = false;
-
         if (cc != null) cc.enabled = true;
     }
 
@@ -271,7 +275,6 @@ public class SceneLoader : MonoBehaviour
         // Wipe run state (death resets the run)
         if (SaveManager.Instance != null)
             SaveManager.Instance.WipeRun();
-            LoadDeath();
 
         // Spawn at default position on a fresh run
         useDefaultSpawn = true;
@@ -279,6 +282,8 @@ public class SceneLoader : MonoBehaviour
         // Clear defeated enemies for the new run
         _defeatedEnemyIds.Clear();
         _defeatedEnemyId = null;
+
+        LoadDeath();
     }
 
     public void LoadExploration()
@@ -302,13 +307,23 @@ public class SceneLoader : MonoBehaviour
     }
     public void LoadSceneUI(string sceneName)
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
         if(LoadingScreen.Instance != null)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
             LoadingScreen.Instance.LoadSceneWithFade(sceneName);
+        }
+        else if (FindObjectOfType<LoadingScreen>() is LoadingScreen ls)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            ls.LoadSceneWithFade(sceneName);
+        }
         else
+        {
+            // Direct load — cursor will be handled by the target scene
             SceneManager.LoadScene(sceneName);
+        }
     }
     public void LoadSceneMenu(string sceneName)
     {
