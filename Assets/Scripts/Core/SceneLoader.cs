@@ -271,6 +271,7 @@ public class SceneLoader : MonoBehaviour
         // Wipe run state (death resets the run)
         if (SaveManager.Instance != null)
             SaveManager.Instance.WipeRun();
+            LoadDeath();
 
         // Spawn at default position on a fresh run
         useDefaultSpawn = true;
@@ -278,8 +279,6 @@ public class SceneLoader : MonoBehaviour
         // Clear defeated enemies for the new run
         _defeatedEnemyIds.Clear();
         _defeatedEnemyId = null;
-
-        LoadDeath();
     }
 
     public void LoadExploration()

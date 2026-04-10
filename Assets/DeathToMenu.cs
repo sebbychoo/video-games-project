@@ -21,6 +21,8 @@ public class DeathToMenu : MonoBehaviour
     }
     public void OnPlayButtonPressed()
     {
+        if (SceneLoader.Instance != null)
+            SceneLoader.Instance.LoadSceneMenu("Menu");
         // reset the run so we always start at the beginning
         if (SaveManager.Instance != null)
         {
@@ -29,9 +31,5 @@ public class DeathToMenu : MonoBehaviour
             SaveManager.Instance.CurrentRun.currentFloor = 1;
             SaveManager.Instance.CurrentRun.hasCustomSpawn = false;
         }
-
-        // load first floor
-        if (SceneLoader.Instance != null)
-            SceneLoader.Instance.LoadSceneMenu("Menu");
     }
 }
