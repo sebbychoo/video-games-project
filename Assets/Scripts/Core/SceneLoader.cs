@@ -279,7 +279,7 @@ public class SceneLoader : MonoBehaviour
         _defeatedEnemyIds.Clear();
         _defeatedEnemyId = null;
 
-        LoadExploration();
+        LoadDeath();
     }
 
     public void LoadExploration()
@@ -294,12 +294,28 @@ public class SceneLoader : MonoBehaviour
         else
             SceneManager.LoadScene("Explorationscene");
     }
+
+    public void LoadDeath()
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        SceneManager.LoadScene("Death");
+    }
     public void LoadSceneUI(string sceneName)
     {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
         if(LoadingScreen.Instance != null)
+            LoadingScreen.Instance.LoadSceneWithFade(sceneName);
+        else
+            SceneManager.LoadScene(sceneName);
+    }
+    public void LoadSceneMenu(string sceneName)
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        if (LoadingScreen.Instance != null)
             LoadingScreen.Instance.LoadSceneWithFade(sceneName);
         else
             SceneManager.LoadScene(sceneName);

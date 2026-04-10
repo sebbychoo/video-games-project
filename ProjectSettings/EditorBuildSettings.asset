@@ -17,6 +17,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Battlescene.unity
     guid: b84bbb2ea6962af46b43421e4332cd07
+  - enabled: 1
+    path: Assets/Scenes/Death.unity
+    guid: f5c6eb6edc3d1a34e919e64b52b44177
   - enabled: 0
     path: Assets/AIH Player.unity
     guid: 2d8808a5fcdc8964e802ee1b2fd3d5b2
