@@ -76,9 +76,11 @@ public class SceneLoader : MonoBehaviour
     {
         if (scene.name == "Explorationscene")
         {
-            // If run was wiped (death), force default spawn
+            // If run was wiped (death) and we're on floor 1 with no custom spawn,
+            // force default spawn — but NOT if we're returning from a won battle
+            // (useDefaultSpawn == false means OnBattleVictory set it)
             SaveManager smCheck = FindObjectOfType<SaveManager>();
-            if (smCheck != null && smCheck.CurrentRun != null && smCheck.CurrentRun.currentFloor == 1 && !smCheck.CurrentRun.hasCustomSpawn)
+            if (useDefaultSpawn && smCheck != null && smCheck.CurrentRun != null && smCheck.CurrentRun.currentFloor == 1 && !smCheck.CurrentRun.hasCustomSpawn)
                 useDefaultSpawn = true;
             // Regenerate the floor for the current run floor number
             LevelGenerator gen = FindObjectOfType<LevelGenerator>();
