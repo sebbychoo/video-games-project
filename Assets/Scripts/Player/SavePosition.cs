@@ -8,7 +8,12 @@ public class SavePosition : MonoBehaviour
 {
     void Start()
     {
-        if (SceneLoader.Instance != null && SceneLoader.Instance.playerPosition != Vector3.zero)
+        // Only restore saved position if we're returning from battle (not a fresh start)
+        if (SceneLoader.Instance != null
+            && !SceneLoader.Instance.useDefaultSpawn
+            && SceneLoader.Instance.playerPosition != Vector3.zero)
+        {
             transform.position = SceneLoader.Instance.playerPosition;
+        }
     }
 }

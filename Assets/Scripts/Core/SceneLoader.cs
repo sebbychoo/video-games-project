@@ -63,6 +63,7 @@ public class SceneLoader : MonoBehaviour
             DontDestroyOnLoad(gameObject);
             SceneManager.sceneLoaded += OnSceneLoaded;
             useDefaultSpawn = true; // First load always uses PlayerSpawn marker
+            playerPosition = Vector3.zero; // Clear any stale position
             if (defaultSpawnPoint != null)
                 playerPosition = defaultSpawnPoint.position;
         }
