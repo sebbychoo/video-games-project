@@ -42,6 +42,25 @@ namespace CardBattle
                 }
             }
 
+            // Keyboard shortcuts for parry (Alpha1–Alpha9) during active parry window
+            if (BattleManager.Instance != null
+                && BattleManager.Instance.ParrySystem != null
+                && BattleManager.Instance.ParrySystem.IsParryWindowActive
+                && BattleManager.Instance.HandManager != null)
+            {
+                for (int k = 0; k < 9; k++)
+                {
+                    if (Input.GetKeyDown(KeyCode.Alpha1 + k))
+                    {
+                        List<CardInstance> matching = BattleManager.Instance.ParrySystem
+                            .GetMatchingCards(BattleManager.Instance.HandManager.Cards);
+                        if (k < matching.Count)
+                            BattleManager.Instance.TryParryWithCard(matching[k]);
+                        break;
+                    }
+                }
+            }
+
             if (!_waitingToSwitch) return;
 
             _hoverTimer += Time.deltaTime;
@@ -86,9 +105,13 @@ namespace CardBattle
 
             bool isPlayPhase = BattleManager.Instance.CurrentTurn == TurnPhase.Play;
             bool isParryWindow = BattleManager.Instance.ParrySystem != null
-                && BattleManager.Instance.ParrySystem.IsParryWindowActive
-                && Card != null && Card.Data != null
-                && Card.Data.cardType == CardType.Defense;
+                && BattleManager.Instance.ParrySystem.IsParryWindowActive;
+
+            // During parry window, block hover on non-matching cards
+            if (isParryWindow)
+            {
+                if (!IsMatchingCard()) return;
+            }
 
             if (!isPlayPhase && !isParryWindow) return;
 
@@ -145,9 +168,7 @@ namespace CardBattle
 
             bool isPlayPhase = BattleManager.Instance.CurrentTurn == TurnPhase.Play;
             bool isParryWindow = BattleManager.Instance.ParrySystem != null
-                && BattleManager.Instance.ParrySystem.IsParryWindowActive
-                && Card != null && Card.Data != null
-                && Card.Data.cardType == CardType.Defense;
+                && BattleManager.Instance.ParrySystem.IsParryWindowActive;
 
             if (!isPlayPhase && !isParryWindow) return;
 
@@ -179,17 +200,31 @@ namespace CardBattle
                 HandManager.OnCardHoverExit(Card);
         }
 
+        /// <summary>
+        /// Check whether this card is in the current parry window's matching cards list.
+        /// Returns false if no parry window is active or the card is null.
+        /// </summary>
+        private bool IsMatchingCard()
+        {
+            if (Card == null || BattleManager.Instance == null) return false;
+            ParrySystem ps = BattleManager.Instance.ParrySystem;
+            if (ps == null || !ps.IsParryWindowActive) return false;
+            HandManager hm = BattleManager.Instance.HandManager;
+            if (hm == null) return false;
+            List<CardInstance> matching = ps.GetMatchingCards(hm.Cards);
+            return matching.Contains(Card);
+        }
+
         public void OnPointerClick(PointerEventData eventData)
         {
             if (BattleManager.Instance == null) return;
 
-            // During parry window, clicking a Defense card triggers parry
+            // During parry window, only left-click on matching cards triggers parry
             if (BattleManager.Instance.ParrySystem != null
-                && BattleManager.Instance.ParrySystem.IsParryWindowActive
-                && Card != null && Card.Data != null
-                && Card.Data.cardType == CardType.Defense
-                && eventData.button == PointerEventData.InputButton.Left)
+                && BattleManager.Instance.ParrySystem.IsParryWindowActive)
             {
+                if (eventData.button != PointerEventData.InputButton.Left) return;
+                if (!IsMatchingCard()) return;
                 BattleManager.Instance.TryParryWithCard(Card);
                 return;
             }

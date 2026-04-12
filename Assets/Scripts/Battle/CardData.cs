@@ -7,6 +7,7 @@ namespace CardBattle
     public enum CardRarity { Common, Rare, Legendary, Unknown }
     public enum TargetMode { SingleEnemy, AllEnemies, Self, NoTarget }
     public enum UtilityEffectType { None, Draw, Restore, Retrieve, Reorder, Heal }
+    public enum ParryEffectType { None, CounterDamage, RestoreOT, DrawCard }
 
     [CreateAssetMenu(menuName = "CardBattle/CardData")]
     public class CardData : ScriptableObject
@@ -31,5 +32,9 @@ namespace CardBattle
 
         // Utility card fields
         public UtilityEffectType utilityEffectType;
+
+        // On-parry bonus effect (Defense cards only)
+        public ParryEffectType onParryEffect = ParryEffectType.None;
+        public int onParryEffectValue = 0;
     }
 }

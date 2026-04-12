@@ -39,6 +39,15 @@ namespace CardBattle
         [SerializeField] float selectedIdleShakeMag = 6f;
         [SerializeField] float selectedIdleSpeed    = 8f;
 
+        [Header("Stamp Animation")]
+        [SerializeField] float stampScaleUp = 1.5f;
+        [SerializeField] float stampDuration = 0.3f;
+
+        [Header("Slide Forward (Parry Highlight)")]
+        [SerializeField] float slideForwardLift = 60f;
+        [SerializeField] float slideForwardScale = 1.15f;
+        [SerializeField] float slideForwardDuration = 0.15f;
+
         private readonly Dictionary<CardInstance, Coroutine> _active = new Dictionary<CardInstance, Coroutine>();
         private readonly Dictionary<CardInstance, Coroutine> _idleShakes = new Dictionary<CardInstance, Coroutine>();
 
@@ -132,6 +141,31 @@ namespace CardBattle
         public void PlaySelectLift(CardInstance card, CardTransformTarget arcTarget)
         {
             Run(card, SelectLiftRoutine(card, arcTarget));
+        }
+
+        /// <summary>
+        /// Play a stamp/slap animation: rapid scale-up then scale-down.
+        /// Calls onComplete when finished.
+        /// </summary>
+        public void PlayStampAnimation(CardInstance card, System.Action onComplete)
+        {
+            Run(card, StampRoutine(card, onComplete));
+        }
+
+        /// <summary>
+        /// Slide a card forward (upward + slight scale increase) to indicate it's parry-eligible.
+        /// </summary>
+        public void PlaySlideForward(CardInstance card, CardTransformTarget arcTarget)
+        {
+            Run(card, SlideForwardRoutine(card, arcTarget));
+        }
+
+        /// <summary>
+        /// Return a slide-forward card to its original arc position.
+        /// </summary>
+        public void PlaySlideBack(CardInstance card, CardTransformTarget arcTarget)
+        {
+            Run(card, HoverExitRoutine(card, arcTarget));
         }
 
         // ── coroutines ───────────────────────────────────────────────────────
@@ -230,6 +264,39 @@ namespace CardBattle
                 if (card == null || rt == null) yield break;
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / hoverDuration);
+
+                rt.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+                rt.localEulerAngles = Vector3.Lerp(startRot, endRot, t);
+                rt.localScale       = Vector3.Lerp(startScale, endScale, t);
+                yield return null;
+            }
+
+            if (card == null || rt == null) yield break;
+            rt.anchoredPosition = endPos;
+            rt.localEulerAngles = endRot;
+            rt.localScale       = endScale;
+            _active.Remove(card);
+        }
+
+        private IEnumerator SlideForwardRoutine(CardInstance card, CardTransformTarget arcTarget)
+        {
+            RectTransform rt = card != null ? card.RectTransform : null;
+            if (rt == null) yield break;
+
+            Vector2 startPos   = rt.anchoredPosition;
+            Vector2 endPos     = new Vector2(arcTarget.anchoredPosition.x,
+                                             arcTarget.anchoredPosition.y + slideForwardLift);
+            Vector3 startRot   = NormalizeEuler(rt.localEulerAngles);
+            Vector3 endRot     = new Vector3(0f, 0f, 0f);
+            Vector3 startScale = rt.localScale;
+            Vector3 endScale   = Vector3.one * slideForwardScale;
+
+            float elapsed = 0f;
+            while (elapsed < slideForwardDuration)
+            {
+                if (card == null || rt == null) yield break;
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / slideForwardDuration);
 
                 rt.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
                 rt.localEulerAngles = Vector3.Lerp(startRot, endRot, t);
@@ -380,6 +447,42 @@ namespace CardBattle
 
             // Start continuous idle shake
             StartSelectedIdle(card);
+        }
+
+        private IEnumerator StampRoutine(CardInstance card, System.Action onComplete)
+        {
+            RectTransform rt = card != null ? card.RectTransform : null;
+            if (rt == null) { onComplete?.Invoke(); yield break; }
+
+            Vector3 startScale = rt.localScale;
+            Vector3 peakScale = startScale * stampScaleUp;
+
+            // Scale up (first half)
+            float half = stampDuration * 0.5f;
+            float elapsed = 0f;
+            while (elapsed < half)
+            {
+                if (card == null || rt == null) { onComplete?.Invoke(); yield break; }
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / half);
+                rt.localScale = Vector3.Lerp(startScale, peakScale, t);
+                yield return null;
+            }
+
+            // Scale down (second half)
+            elapsed = 0f;
+            while (elapsed < half)
+            {
+                if (card == null || rt == null) { onComplete?.Invoke(); yield break; }
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / half);
+                rt.localScale = Vector3.Lerp(peakScale, startScale, t);
+                yield return null;
+            }
+
+            if (rt != null) rt.localScale = startScale;
+            _active.Remove(card);
+            onComplete?.Invoke();
         }
 
         // ── Selected idle shake ──────────────────────────────────────────────

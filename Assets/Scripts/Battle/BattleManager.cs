@@ -52,6 +52,7 @@ namespace CardBattle
         [SerializeField] BlockDisplay          blockDisplay;
         [SerializeField] TurnCounterUI         turnCounterUI;
         [SerializeField] VictoryScreen         victoryScreen;
+        [SerializeField] ParryWindowUI         parryWindowUI;
 
         [Header("Spawning")]
         [SerializeField] GameObject            enemyPrefab;
@@ -80,6 +81,10 @@ namespace CardBattle
         // Tracks which bosses have already undergone phase 2 transition (Req 9.9)
         private Dictionary<EnemyCombatant, bool> _bossPhaseTransitioned = new Dictionary<EnemyCombatant, bool>();
 
+        // Attack queue tracking for multi-enemy parry window indicator
+        private int _attackQueueTotal;
+        private int _attackQueueCurrent;
+
         /// <summary>Current turn phase — used by CardInteractionHandler and CardTargetingManager.</summary>
         public TurnPhase CurrentTurn => turnPhaseController != null
             ? turnPhaseController.CurrentPhase
@@ -92,6 +97,12 @@ namespace CardBattle
 
         /// <summary>Read-only list of living enemies in the current encounter.</summary>
         public IReadOnlyList<EnemyCombatant> Enemies => _enemies;
+
+        /// <summary>Total parryable attacks in the current Enemy_Phase.</summary>
+        public int AttackQueueTotal => _attackQueueTotal;
+
+        /// <summary>1-based index of the current attack in the queue.</summary>
+        public int AttackQueueCurrent => _attackQueueCurrent;
 
         /// <summary>The HandManager subsystem for this battle.</summary>
         public HandManager HandManager => handManager;
@@ -340,8 +351,8 @@ namespace CardBattle
 
         /// <summary>
         /// Attempt to parry the current enemy attack with a Defense card.
-        /// Called by the UI when the player drags a Defense card during a Parry_Window.
-        /// Returns true if the parry succeeded.
+        /// On success: grant OT reward (perfect vs normal), resolve on-parry effect,
+        /// play stamp animation, then discard card at zero OT cost.
         /// </summary>
         public bool TryParryWithCard(CardInstance card)
         {
@@ -351,11 +362,94 @@ namespace CardBattle
             bool success = parrySystem.TryParry(card);
             if (success)
             {
-                // Move card to discard at no OT cost
-                deckManager.Discard(card.Data);
-                handManager.RemoveCard(card);
+                // OT reward: +2 for perfect, +1 for normal
+                int otReward = parrySystem.WasPerfectParry ? 2 : 1;
+                if (overtimeMeter != null)
+                    overtimeMeter.GainFlat(otReward);
+
+                // Perfect parry flash
+                if (parrySystem.WasPerfectParry && parryWindowUI != null)
+                    parryWindowUI.ShowPerfectParryFlash();
+
+                // Resolve on-parry effect
+                ResolveOnParryEffect(card, parrySystem.CurrentAttacker);
+
+                // Stamp animation → then discard and remove card
+                if (cardAnimator != null)
+                {
+                    cardAnimator.PlayStampAnimation(card, () =>
+                    {
+                        deckManager.Discard(card.Data);
+                        handManager.RemoveCard(card);
+                    });
+                }
+                else
+                {
+                    // No animator — discard immediately
+                    deckManager.Discard(card.Data);
+                    handManager.RemoveCard(card);
+                }
             }
             return success;
+        }
+
+        /// <summary>
+        /// Resolve on-parry bonus effect from the card's CardData.
+        /// </summary>
+        private void ResolveOnParryEffect(CardInstance card, EnemyCombatant attacker)
+        {
+            if (card == null || card.Data == null) return;
+            ParryEffectType effect = card.Data.onParryEffect;
+            int value = card.Data.onParryEffectValue;
+
+            switch (effect)
+            {
+                case ParryEffectType.CounterDamage:
+                    if (attacker != null && value > 0)
+                    {
+                        attacker.TakeDamage(value, gameObject);
+                        CheckEnemyDeaths();
+                    }
+                    break;
+                case ParryEffectType.RestoreOT:
+                    if (overtimeMeter != null && value > 0)
+                        overtimeMeter.GainFlat(value);
+                    break;
+                case ParryEffectType.DrawCard:
+                    for (int i = 0; i < value; i++)
+                    {
+                        CardData drawn = deckManager.Draw();
+                        if (drawn != null)
+                            handManager.AddCard(drawn);
+                    }
+                    break;
+                case ParryEffectType.None:
+                default:
+                    break;
+            }
+        }
+
+        /// <summary>Count parryable DealDamage actions across all living enemies.</summary>
+        private int CountParryableAttacks(List<EnemyCombatant> enemies)
+        {
+            int count = 0;
+            if (enemies == null) return count;
+
+            foreach (EnemyCombatant enemy in enemies)
+            {
+                if (enemy == null || enemy.Data == null || enemy.Data.attackPattern == null)
+                    continue;
+
+                foreach (EnemyAction action in enemy.Data.attackPattern)
+                {
+                    if (action.actionType == EnemyActionType.DealDamage
+                        && action.intentColor != IntentColor.Unparryable)
+                    {
+                        count++;
+                    }
+                }
+            }
+            return count;
         }
 
         // ── Card resolution callback ──────────────────────────────────────────
@@ -448,6 +542,10 @@ namespace CardBattle
             yield return new WaitForSeconds(0.5f);
 
             List<EnemyCombatant> living = GetLivingEnemies();
+
+            // Track attack queue for multi-enemy parry window indicator
+            _attackQueueTotal = CountParryableAttacks(living);
+            _attackQueueCurrent = 0;
 
             for (int i = 0; i < living.Count; i++)
             {
@@ -600,6 +698,7 @@ namespace CardBattle
 
                         // Transition from warning to B&W parry window
                         if (parryScreenEffect != null) parryScreenEffect.HideWarning();
+                        _attackQueueCurrent++;
                         parrySystem.StartParryWindow(_lastExecutedEnemyAction, enemy);
                         if (parryScreenEffect != null) parryScreenEffect.StartParryWindow();
 
@@ -648,8 +747,9 @@ namespace CardBattle
                         if (battleAnimations != null)
                             battleAnimations.StopActiveDash();
 
-                        // Parry succeeded — green flash, small shake, gain 1 OT, dash back
-                        Debug.Log("[BattleManager] Parry SUCCESS — no damage dealt, +1 OT.");
+                        // Parry succeeded — green flash, small shake, dash back
+                        // OT reward is now handled inside TryParryWithCard
+                        Debug.Log("[BattleManager] Parry SUCCESS — no damage dealt.");
                         if (parryScreenEffect != null) parryScreenEffect.FlashParrySuccess();
                         if (battleAnimations != null)
                         {
@@ -657,9 +757,6 @@ namespace CardBattle
                             battleAnimations.PlayScreenShake(1, 10);
                         }
 
-                        // Gain 1 Overtime on successful parry
-                        if (overtimeMeter != null)
-                            overtimeMeter.GainFlat(1);
                         if (overtimeMeterUI != null)
                             overtimeMeterUI.Refresh();
 

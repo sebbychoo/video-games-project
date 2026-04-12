@@ -37,7 +37,8 @@ MonoBehaviour:
     buffType: 1
     buffDuration: 0
     intentColor: 0
-    parryMatchTags: []
+    parryMatchTags:
+    - melee
     condition: 0
   - actionType: 0
     value: 50
@@ -46,7 +47,8 @@ MonoBehaviour:
     buffType: 0
     buffDuration: 0
     intentColor: 1
-    parryMatchTags: []
+    parryMatchTags:
+    - melee
     condition: 0
   isBoss: 0
   enemyParryChance: 0

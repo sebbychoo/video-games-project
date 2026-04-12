@@ -21,6 +21,12 @@ namespace CardBattle
         private int _currentFloor;
         private float _parryWindowModifier;
 
+        /// <summary>Whether the last successful parry was in the perfect timing zone.</summary>
+        public bool WasPerfectParry { get; private set; }
+
+        /// <summary>The configurable perfect parry threshold (fraction of window from end).</summary>
+        private float PerfectParryThreshold => _gameConfig != null ? _gameConfig.perfectParryThreshold : 0.20f;
+
         /// <summary>Whether a parry window is currently open and accepting input.</summary>
         public bool IsParryWindowActive => _parryWindowActive && _parryWindowTimer > 0f;
 
@@ -65,6 +71,7 @@ namespace CardBattle
         public bool StartParryWindow(EnemyAction attack, EnemyCombatant attacker)
         {
             _parrySucceeded = false;
+            WasPerfectParry = false;
 
             // Unparryable attacks skip the parry window entirely
             if (attack.intentColor == IntentColor.Unparryable)
@@ -123,7 +130,9 @@ namespace CardBattle
                 return false;
             }
 
-            // Parry succeeds — close window
+            // Parry succeeds — check perfect timing, then close window
+            float fractionRemaining = _parryWindowDuration > 0f ? _parryWindowTimer / _parryWindowDuration : 1f;
+            WasPerfectParry = fractionRemaining <= PerfectParryThreshold;
             _parrySucceeded = true;
             _parryWindowActive = false;
             _parryWindowTimer = 0f;

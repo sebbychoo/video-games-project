@@ -17,6 +17,10 @@ MonoBehaviour:
   hoursReward: 1
   variant: 2
   sprite: {fileID: 771948491, guid: 06c23b4a95ce742429d5a041ce1f53b6, type: 3}
+  walkAnimation:
+    frames: []
+    frameRate: 8
+    loop: 1
   battleYOffset: 0
   battleScale: 1.5
   explorationPrefab: {fileID: 7168007786943467820, guid: 2a45487a2fa6e544aa230c507c87a8be, type: 3}
@@ -37,7 +41,8 @@ MonoBehaviour:
     buffType: 0
     buffDuration: 0
     intentColor: 1
-    parryMatchTags: []
+    parryMatchTags:
+    - melee
     condition: 0
   - actionType: 0
     value: 10
@@ -46,7 +51,8 @@ MonoBehaviour:
     buffType: 0
     buffDuration: 0
     intentColor: 0
-    parryMatchTags: []
+    parryMatchTags:
+    - melee
     condition: 0
   isBoss: 1
   enemyParryChance: 0

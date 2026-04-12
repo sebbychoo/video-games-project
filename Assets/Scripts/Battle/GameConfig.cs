@@ -31,6 +31,10 @@ namespace CardBattle
         public float parryWindowFloorScaling = 0.02f;
         public float parryWindowMinDuration = 0.3f;
 
+        [Header("Perfect Parry")]
+        [Tooltip("Fraction of parry window (from end) that counts as perfect timing.")]
+        public float perfectParryThreshold = 0.20f;
+
         [Header("Enemy Attack Animation")]
         [Tooltip("How far the enemy dashes toward the player (world units).")]
         public float enemyDashDistance = 1.5f;
