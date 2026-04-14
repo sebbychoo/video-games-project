@@ -437,16 +437,16 @@ namespace CardBattle
 
             foreach (EnemyCombatant enemy in enemies)
             {
-                if (enemy == null || enemy.Data == null || enemy.Data.attackPattern == null)
+                if (enemy == null || !enemy.IsAlive) continue;
+                if (enemy.Data == null || enemy.Data.attackPattern == null || enemy.Data.attackPattern.Count == 0)
                     continue;
 
-                foreach (EnemyAction action in enemy.Data.attackPattern)
+                // Only count the action this enemy will actually execute this turn
+                EnemyAction intent = enemy.CurrentIntent;
+                if (intent.actionType == EnemyActionType.DealDamage
+                    && intent.intentColor != IntentColor.Unparryable)
                 {
-                    if (action.actionType == EnemyActionType.DealDamage
-                        && action.intentColor != IntentColor.Unparryable)
-                    {
-                        count++;
-                    }
+                    count++;
                 }
             }
             return count;

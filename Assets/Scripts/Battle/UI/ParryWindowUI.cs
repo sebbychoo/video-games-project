@@ -69,9 +69,14 @@ namespace CardBattle
 
         private void Awake()
         {
-            // Only hide the panel child — keep this MonoBehaviour active so Update() runs
+            // Hide panel contents on start — keep this MonoBehaviour active so Update() runs
             if (panelRoot != null && panelRoot != gameObject)
                 panelRoot.SetActive(false);
+            else if (panelRoot == gameObject)
+            {
+                for (int i = 0; i < transform.childCount; i++)
+                    transform.GetChild(i).gameObject.SetActive(false);
+            }
 
             if (perfectParryFlashRoot != null)
                 perfectParryFlashRoot.SetActive(false);
@@ -148,8 +153,11 @@ namespace CardBattle
         private void OnWindowOpened()
         {
             Debug.Log($"[ParryWindowUI] Window OPENED — panelRoot: {(panelRoot != null ? panelRoot.name : "NULL")}");
-            if (panelRoot != null)
-                panelRoot.SetActive(true);
+            SetPanelVisible(true);
+
+            // Re-hide perfect parry flash — it should only appear on actual perfect parries
+            if (perfectParryFlashRoot != null)
+                perfectParryFlashRoot.SetActive(false);
 
             RefreshIntentColor();
             RefreshTimer();
@@ -164,8 +172,6 @@ namespace CardBattle
         private void OnWindowClosed()
         {
             Debug.Log("[ParryWindowUI] Window CLOSED");
-            if (panelRoot != null)
-                panelRoot.SetActive(false);
 
             ClearCardHighlights();
             ClearDimming();
@@ -173,6 +179,28 @@ namespace CardBattle
             HideAttackQueueIndicator();
             ClearNumberKeyLabels();
             ClearEffectLabels();
+
+            SetPanelVisible(false);
+        }
+
+        /// <summary>
+        /// Show or hide the panel contents. If panelRoot is a separate child, toggle it directly.
+        /// If panelRoot is the same as this GameObject, toggle each child instead to keep Update() alive.
+        /// </summary>
+        private void SetPanelVisible(bool visible)
+        {
+            if (panelRoot == null) return;
+
+            if (panelRoot != gameObject)
+            {
+                panelRoot.SetActive(visible);
+            }
+            else
+            {
+                // panelRoot IS this GameObject — toggle children so the script stays alive
+                for (int i = 0; i < transform.childCount; i++)
+                    transform.GetChild(i).gameObject.SetActive(visible);
+            }
         }
 
         // ── Timer display ────────────────────────────────────────────────────
@@ -485,6 +513,7 @@ namespace CardBattle
         public void ShowPerfectParryFlash()
         {
             if (perfectParryFlashRoot == null) return;
+            if (!gameObject.activeInHierarchy) return;
 
             if (_perfectFlashCoroutine != null)
                 StopCoroutine(_perfectFlashCoroutine);
