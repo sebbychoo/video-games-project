@@ -7261,7 +7261,12 @@ MonoBehaviour:
   idleFrames: []
   walkFrames: []
   sprintFrames: []
-  interactFrames: []
+  interactFrames:
+  - {fileID: -334818331, guid: 062e52779a7dd4648bed23bbb924e65c, type: 3}
+  - {fileID: 1986856876, guid: 062e52779a7dd4648bed23bbb924e65c, type: 3}
+  - {fileID: -1517121685, guid: 062e52779a7dd4648bed23bbb924e65c, type: 3}
+  - {fileID: 1986856876, guid: 062e52779a7dd4648bed23bbb924e65c, type: 3}
+  - {fileID: -334818331, guid: 062e52779a7dd4648bed23bbb924e65c, type: 3}
   animFrameRate: 8
   idleTimeout: 3
   walkSpeedThreshold: 0.1
