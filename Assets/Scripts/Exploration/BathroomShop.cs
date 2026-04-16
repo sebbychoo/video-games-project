@@ -318,6 +318,66 @@ namespace CardBattle
         }
 
         // ----------------------------------------------------------------
+        // Blood Washing
+        // ----------------------------------------------------------------
+
+        /// <summary>
+        /// Washes blood off the player's gloves, resetting Blood_Level to 0.
+        /// Free (no currency cost), but each bathroom can only be used once for washing.
+        /// </summary>
+        /// <param name="bathroomId">Unique ID for this bathroom instance</param>
+        /// <returns>True if blood was washed, false if already washed or invalid</returns>
+        public bool WashBlood(string bathroomId)
+        {
+            if (string.IsNullOrEmpty(bathroomId))
+            {
+                Debug.LogWarning("BathroomShop: WashBlood called with null or empty bathroomId.");
+                return false;
+            }
+
+            RunState run = GetRunState();
+            if (run == null) return false;
+
+            if (run.washedBathroomIds != null && run.washedBathroomIds.Contains(bathroomId))
+            {
+                Debug.Log("BathroomShop: This bathroom has already been used for washing.");
+                return false;
+            }
+
+            // Reset blood level (free — no currency cost)
+            run.persistentBloodLevel = 0f;
+
+            // Mark this bathroom as washed
+            if (run.washedBathroomIds == null)
+                run.washedBathroomIds = new List<string>();
+            run.washedBathroomIds.Add(bathroomId);
+
+            if (SaveManager.Instance != null)
+                SaveManager.Instance.SaveRun();
+
+            // Immediately update exploration gloves visual
+            ExplorationGlovesController glovesController = FindObjectOfType<ExplorationGlovesController>();
+            if (glovesController != null)
+                glovesController.ApplyBloodTint(0f);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Returns true if this bathroom can still be used for blood washing.
+        /// </summary>
+        public bool CanWashBlood(string bathroomId)
+        {
+            RunState run = GetRunState();
+            if (run == null) return false;
+            if (run.persistentBloodLevel <= 0f) return false;
+            if (string.IsNullOrEmpty(bathroomId)) return false;
+            if (run.washedBathroomIds != null && run.washedBathroomIds.Contains(bathroomId))
+                return false;
+            return true;
+        }
+
+        // ----------------------------------------------------------------
         // Tool Rarity Rolling (excludes Unknown)
         // ----------------------------------------------------------------
 

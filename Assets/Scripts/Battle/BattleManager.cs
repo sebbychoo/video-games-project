@@ -53,6 +53,8 @@ namespace CardBattle
         [SerializeField] TurnCounterUI         turnCounterUI;
         [SerializeField] VictoryScreen         victoryScreen;
         [SerializeField] ParryWindowUI         parryWindowUI;
+        [SerializeField] BattleGlovesUI        battleGlovesUI;
+        [SerializeField] BattleVeinsUI         battleVeinsUI;
 
         [Header("Spawning")]
         [SerializeField] GameObject            enemyPrefab;
@@ -84,6 +86,11 @@ namespace CardBattle
         // Attack queue tracking for multi-enemy parry window indicator
         private int _attackQueueTotal;
         private int _attackQueueCurrent;
+
+        // Blood tracking for glove tint system
+        private int _punchCount;
+        private float _pendingBloodLevel;
+        private float _bloodMultiplier;
 
         /// <summary>Current turn phase — used by CardInteractionHandler and CardTargetingManager.</summary>
         public TurnPhase CurrentTurn => turnPhaseController != null
@@ -279,6 +286,19 @@ namespace CardBattle
             if (turnCounterUI != null)
                 turnCounterUI.Initialize();
 
+            // Initialize blood tracking for this encounter
+            _punchCount = 0;
+            _pendingBloodLevel = runState != null ? runState.persistentBloodLevel : 0f;
+            _bloodMultiplier = (_currentEncounter != null && _currentEncounter.isBossEncounter && gameConfig != null)
+                ? gameConfig.bossBloodMultiplier
+                : (gameConfig != null ? gameConfig.regularBloodMultiplier : 1f);
+
+            // Initialize glove and vein UI
+            if (battleGlovesUI != null)
+                battleGlovesUI.Initialize(_pendingBloodLevel);
+            if (battleVeinsUI != null)
+                battleVeinsUI.Initialize(overtimeMeter, overflowBuffer);
+
             // Initialize turn phase controller
             if (playerObject == null)
                 playerObject = gameObject;
@@ -306,6 +326,19 @@ namespace CardBattle
             // Refresh OT UI immediately after spend
             if (overtimeMeterUI != null)
                 overtimeMeterUI.Refresh();
+
+            // Blood accumulation for attack cards
+            if (card.Data.cardType == CardType.Attack)
+            {
+                _punchCount++;
+                float increment = BloodAccumulationCalculator.ComputeIncrement(
+                    _punchCount, _bloodMultiplier,
+                    gameConfig != null ? gameConfig.bloodBaseIncrement : 0.005f,
+                    gameConfig != null ? gameConfig.bloodGrowthRate : 0.15f);
+                _pendingBloodLevel = BloodAccumulationCalculator.ApplyIncrement(_pendingBloodLevel, increment);
+                if (battleGlovesUI != null)
+                    battleGlovesUI.Refresh(_pendingBloodLevel);
+            }
 
             _pendingTarget = target;
 
@@ -1577,6 +1610,18 @@ namespace CardBattle
             _victoryBadReviews = _currentEncounter != null ? _currentEncounter.badReviewsReward : 0;
 
             // No card rewards from encounters (cards from Work_Boxes, shops, trades only)
+
+            // Persist blood level and OT on victory
+            RunState victoryRunState = FindRunState();
+            if (victoryRunState != null)
+            {
+                victoryRunState.persistentBloodLevel = Mathf.Max(victoryRunState.persistentBloodLevel, _pendingBloodLevel);
+                int currentOT = overtimeMeter != null ? overtimeMeter.Current : 0;
+                int currentOverflow = overflowBuffer != null ? overflowBuffer.Current : 0;
+                victoryRunState.persistentOTLevel = currentOT + currentOverflow;
+                if (SaveManager.Instance != null)
+                    SaveManager.Instance.SaveRun();
+            }
 
             // Show victory screen if available, otherwise transition immediately
             if (victoryScreen != null)

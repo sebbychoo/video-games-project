@@ -25,5 +25,23 @@ namespace CardBattle
         public bool hasCustomSpawn;
         /// <summary>Stable seed for this run, set once at run start.</summary>
         public int runSeed;
+
+        /// <summary>
+        /// Accumulated blood level on gloves (0.0–1.0). Purely cosmetic fight history.
+        /// Increases when the player plays attack cards. Reset to 0 on defeat or new run.
+        /// </summary>
+        public float persistentBloodLevel;
+
+        /// <summary>
+        /// Last known OT value from the most recent battle. Drives vein glow in exploration.
+        /// Reset to 10 on new run.
+        /// </summary>
+        public int persistentOTLevel = 10;
+
+        /// <summary>
+        /// List of bathroom instance IDs where the player has already washed blood.
+        /// Each bathroom can only be used for washing once per run.
+        /// </summary>
+        public List<string> washedBathroomIds;
     }
 }
