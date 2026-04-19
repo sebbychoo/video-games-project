@@ -49,9 +49,9 @@ namespace CardBattle
         public float phaseTransitionPauseDuration = 1.0f;
 
         [Header("Blood Accumulation")]
-        public float bloodBaseIncrement = 0.005f;
-        public float bloodGrowthRate = 0.15f;
+        public float bloodBaseIncrement = 0.04f;
+        public float bloodGrowthRate = 0.25f;
         public float regularBloodMultiplier = 1.0f;
-        public float bossBloodMultiplier = 2.0f;
+        public float bossBloodMultiplier = 2.5f;
     }
 }

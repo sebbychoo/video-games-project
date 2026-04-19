@@ -22,6 +22,7 @@ namespace CardBattle
             if (SaveManager.Instance != null && SaveManager.Instance.CurrentRun != null)
             {
                 bloodLevel = SaveManager.Instance.CurrentRun.persistentBloodLevel;
+                Debug.Log($"[BloodDebug] ExplorationGlovesController.Start: persistentBloodLevel = {bloodLevel}");
             }
             else
             {
@@ -49,6 +50,7 @@ namespace CardBattle
             }
 
             Color tint = BloodTintCalculator.ComputeTint(bloodLevel, baseGloveColor, fullBloodColor);
+            Debug.Log($"[BloodDebug] ApplyBloodTint: bloodLevel={bloodLevel}, baseColor={baseGloveColor}, fullBloodColor={fullBloodColor}, result={tint}");
 
             if (leftGloveRenderer != null)
             {

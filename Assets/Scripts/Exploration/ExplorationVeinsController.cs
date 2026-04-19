@@ -4,9 +4,8 @@ namespace CardBattle
 {
     /// <summary>
     /// Renders vein glow on the player's wrist sprites during exploration.
-    /// Reads persistentOTLevel from RunState and overtimeMaxCapacity from GameConfig
-    /// on Start, applies glow via VeinGlowCalculator. Always static during exploration —
-    /// OT is strictly a battle resource, no updates after Start.
+    /// Veins are invisible at rest and pulse in/out like a heartbeat,
+    /// with intensity driven by the stored OT level.
     /// Requirements: 4.5, 5.2, 8.2, 8.3, 11.3, 12.1
     /// </summary>
     public class ExplorationVeinsController : MonoBehaviour
@@ -15,6 +14,17 @@ namespace CardBattle
         [SerializeField] SpriteRenderer rightVeinRenderer;
         [SerializeField] Color dimGlowColor = new Color(0.1f, 0.2f, 0.4f, 0.3f);
         [SerializeField] Color brightGlowColor = new Color(0.3f, 0.7f, 1f, 1f);
+
+        [Header("Pulse Settings")]
+        [Tooltip("Pulses per second. Higher = faster heartbeat.")]
+        [SerializeField] float pulseFrequency = 1.2f;
+        [Tooltip("Minimum alpha during pulse (0 = fully invisible at rest).")]
+        [SerializeField] float pulseMinAlpha = 0f;
+        [Tooltip("Maximum alpha at peak pulse (scaled by OT intensity).")]
+        [SerializeField] float pulseMaxAlpha = 1f;
+
+        private Color _baseGlow;
+        private float _intensity; // 0-1+ based on OT ratio
 
         private void Start()
         {
@@ -43,6 +53,22 @@ namespace CardBattle
             ApplyVeinGlow(storedOT, maxOT);
         }
 
+        private void Update()
+        {
+            // Heartbeat pulse: sine wave that goes from 0 to 1 and back
+            // Using abs(sin) gives a smooth pulse that peaks twice per cycle
+            float pulse = Mathf.Abs(Mathf.Sin(Time.time * pulseFrequency * Mathf.PI));
+            float alpha = Mathf.Lerp(pulseMinAlpha, pulseMaxAlpha * _intensity, pulse);
+
+            Color c = _baseGlow;
+            c.a = alpha;
+
+            if (leftVeinRenderer != null)
+                leftVeinRenderer.color = c;
+            if (rightVeinRenderer != null)
+                rightVeinRenderer.color = c;
+        }
+
         /// <summary>
         /// Apply vein glow to both wrist sprite renderers.
         /// Clamps negative OT to 0 and logs warnings.
@@ -55,11 +81,16 @@ namespace CardBattle
                 storedOT = 0;
             }
 
-            Color glow = VeinGlowCalculator.ComputeGlowFromStored(storedOT, maxOT, dimGlowColor, brightGlowColor);
+            _baseGlow = VeinGlowCalculator.ComputeGlowFromStored(storedOT, maxOT, dimGlowColor, brightGlowColor);
+            _intensity = maxOT > 0 ? (float)storedOT / maxOT : 0f;
+
+            // Set initial state to invisible — Update() handles the pulse
+            Color c = _baseGlow;
+            c.a = 0f;
 
             if (leftVeinRenderer != null)
             {
-                leftVeinRenderer.color = glow;
+                leftVeinRenderer.color = c;
             }
             else
             {
@@ -68,7 +99,7 @@ namespace CardBattle
 
             if (rightVeinRenderer != null)
             {
-                rightVeinRenderer.color = glow;
+                rightVeinRenderer.color = c;
             }
             else
             {

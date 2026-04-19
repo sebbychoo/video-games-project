@@ -331,11 +331,13 @@ namespace CardBattle
             if (card.Data.cardType == CardType.Attack)
             {
                 _punchCount++;
+                // Force aggressive values to bypass GameConfig asset caching issue
+                float baseInc = 0.15f;
+                float growthR = 0.3f;
                 float increment = BloodAccumulationCalculator.ComputeIncrement(
-                    _punchCount, _bloodMultiplier,
-                    gameConfig != null ? gameConfig.bloodBaseIncrement : 0.005f,
-                    gameConfig != null ? gameConfig.bloodGrowthRate : 0.15f);
+                    _punchCount, _bloodMultiplier, baseInc, growthR);
                 _pendingBloodLevel = BloodAccumulationCalculator.ApplyIncrement(_pendingBloodLevel, increment);
+                Debug.Log($"[BloodDebug] Punch #{_punchCount}: baseInc={baseInc}, growthRate={growthR}, multiplier={_bloodMultiplier}, increment={increment}, pendingBlood={_pendingBloodLevel}");
                 if (battleGlovesUI != null)
                     battleGlovesUI.Refresh(_pendingBloodLevel);
             }

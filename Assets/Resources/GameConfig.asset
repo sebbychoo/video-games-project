@@ -37,5 +37,13 @@ MonoBehaviour:
   baseParryWindowDuration: 1
   parryWindowFloorScaling: 0.05
   parryWindowMinDuration: 0.25
+  perfectParryThreshold: 0.2
   enemyDashDistance: 7
   enemyDashDuration: 0.3
+  bossIntroSlideDuration: 0.6
+  bossIntroHoldDuration: 1.5
+  phaseTransitionPauseDuration: 1
+  bloodBaseIncrement: 1
+  bloodGrowthRate: 1
+  regularBloodMultiplier: 1
+  bossBloodMultiplier: 2
