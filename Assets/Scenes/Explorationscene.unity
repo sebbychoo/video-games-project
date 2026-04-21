@@ -7498,8 +7498,8 @@ MonoBehaviour:
   rightHand: {fileID: 320595186}
   playerRoot: {fileID: 2072262325}
   handsCamera: {fileID: 583041054}
-  leftHandBasePos: {x: -0.7, y: -0.28, z: 1.4}
-  rightHandBasePos: {x: 0.7, y: -0.28, z: 1.4}
+  leftHandBasePos: {x: -0.9, y: -0.18, z: 1.4}
+  rightHandBasePos: {x: 0.9, y: -0.18, z: 1.4}
   breathAmplitude: 0.008
   breathFrequency: 0.8
   walkBobAmplitude: 0.025

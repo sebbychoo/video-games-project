@@ -1093,8 +1093,21 @@ namespace CardBattle
             if (playerHealth != null)
             {
                 int maxHP = gameConfig != null ? gameConfig.playerBaseHP : 80;
-                playerHealth.maxHealth = maxHP;
-                playerHealth.currentHealth = maxHP;
+
+                // Load persisted HP from RunState if available (carry over between encounters)
+                RunState runState = FindRunState();
+                if (runState != null && runState.playerHP > 0)
+                {
+                    playerHealth.maxHealth = runState.playerMaxHP > 0 ? runState.playerMaxHP : maxHP;
+                    playerHealth.currentHealth = Mathf.Clamp(runState.playerHP, 1, playerHealth.maxHealth);
+                }
+                else
+                {
+                    // First battle of the run — start at full HP
+                    playerHealth.maxHealth = maxHP;
+                    playerHealth.currentHealth = maxHP;
+                }
+
                 playerHealth.suppressSceneLoad = true;
 
                 Rigidbody rb = playerHealth.GetComponent<Rigidbody>();
@@ -1613,10 +1626,17 @@ namespace CardBattle
 
             // No card rewards from encounters (cards from Work_Boxes, shops, trades only)
 
-            // Persist blood level and OT on victory
+            // Persist player HP, blood level, and OT on victory
             RunState victoryRunState = FindRunState();
             if (victoryRunState != null)
             {
+                // Save current HP so it carries over to the next encounter
+                if (playerHealth != null)
+                {
+                    victoryRunState.playerHP = playerHealth.currentHealth;
+                    victoryRunState.playerMaxHP = playerHealth.maxHealth;
+                }
+
                 victoryRunState.persistentBloodLevel = Mathf.Max(victoryRunState.persistentBloodLevel, _pendingBloodLevel);
                 int currentOT = overtimeMeter != null ? overtimeMeter.Current : 0;
                 int currentOverflow = overflowBuffer != null ? overflowBuffer.Current : 0;
