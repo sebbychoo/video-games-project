@@ -20,6 +20,9 @@ namespace CardBattle
         /// <summary>Additive damage bonus from Tool modifiers, applied to Attack cards.</summary>
         private int _damageBonus;
 
+        /// <summary>Additive damage bonus for Technology-themed cards from Computer hub upgrade.</summary>
+        private int _techCardDamageBonus;
+
         /// <summary>Auto-wire from sibling components if serialized fields are empty.</summary>
         private void Awake()
         {
@@ -42,10 +45,20 @@ namespace CardBattle
         public void ResetModifiers()
         {
             _damageBonus = 0;
+            _techCardDamageBonus = 0;
         }
 
         /// <summary>Current total damage bonus from tools.</summary>
         public int DamageBonus => _damageBonus;
+
+        /// <summary>Apply a tech card damage bonus from the Computer hub upgrade.</summary>
+        public void ApplyTechCardDamageBonus(int bonus)
+        {
+            _techCardDamageBonus += bonus;
+        }
+
+        /// <summary>Current tech card damage bonus.</summary>
+        public int TechCardDamageBonus => _techCardDamageBonus;
 
         /// <summary>
         /// Resolve a played card's effect, move it from hand to discard, and raise events.
@@ -98,6 +111,10 @@ namespace CardBattle
         private void ResolveAttack(CardData data, GameObject source, GameObject target, List<EnemyCombatant> allEnemies)
         {
             int baseDamage = data.effectValue + _damageBonus;
+
+            // Computer hub upgrade: +damage to Technology-themed cards
+            if (data.isTechnologyThemed && _techCardDamageBonus > 0)
+                baseDamage += _techCardDamageBonus;
 
             // Apply Rage Burst bonus (Attack cards only)
             int rageBurstBonus = RageBurstCalculator.TryConsume(overflowBuffer, data.cardType, baseDamage);

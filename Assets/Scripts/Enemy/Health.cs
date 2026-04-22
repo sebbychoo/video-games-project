@@ -32,6 +32,14 @@ public class Health : MonoBehaviour
     {
         Debug.Log($"{gameObject.name} defeated.");
 
+        // If BattleManager is active, let it handle defeat flow
+        // (death screen → game over screen) instead of loading exploration directly
+        if (BattleManager.Instance != null && !BattleManager.Instance.IsBattleOver)
+        {
+            // BattleManager will detect HP <= 0 and call OnDefeat()
+            return;
+        }
+
         if (!suppressSceneLoad && SceneLoader.Instance != null)
             SceneLoader.Instance.LoadExploration();
     }

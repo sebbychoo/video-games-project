@@ -88,6 +88,12 @@ namespace CardBattle
             }
         }
 
+        /// <summary>Clear all tracked Block values (use between encounters).</summary>
+        public void ClearAll()
+        {
+            _blockValues.Clear();
+        }
+
         /// <summary>Get the current Block value for a target.</summary>
         public int GetBlock(GameObject target)
         {

@@ -36,5 +36,8 @@ namespace CardBattle
         // On-parry bonus effect (Defense cards only)
         public ParryEffectType onParryEffect = ParryEffectType.None;
         public int onParryEffectValue = 0;
+
+        // Theme tag for hub upgrade bonuses (Computer upgrade boosts Technology-themed cards)
+        public bool isTechnologyThemed;
     }
 }

@@ -18,6 +18,9 @@ public class Battlescene_Trigger : MonoBehaviour
     [Tooltip("Single roaming enemy data for 1v1 encounters. Used when encounterData is not assigned.")]
     [SerializeField] EnemyCombatantData singleEnemyData;
 
+    /// <summary>Public accessor for singleEnemyData (avoids reflection).</summary>
+    public EnemyCombatantData SingleEnemyData => singleEnemyData;
+
     [Tooltip("Unique identifier for this enemy trigger. Auto-generated from name + position if left empty.")]
     [SerializeField] string enemyId;
 

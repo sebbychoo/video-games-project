@@ -127,6 +127,10 @@ namespace CardBattle
                 return;
             }
             Instance = this;
+
+            // Always suppress Health.Die() scene loading — BattleManager handles defeat
+            if (playerHealth != null)
+                playerHealth.suppressSceneLoad = true;
         }
 
         private void OnDestroy()
@@ -253,6 +257,7 @@ namespace CardBattle
             overflowBuffer.Initialize();
             overtimeMeter.Initialize(otMax, otRegen, overflowBuffer);
             blockSystem.Initialize();
+            blockSystem.ClearAll();
             statusEffectSystem.Initialize();
 
             // Initialize ParrySystem with config and current floor
@@ -263,6 +268,11 @@ namespace CardBattle
 
             // Apply Tool modifiers from RunState
             ApplyToolModifiers();
+
+            // Apply Hub Office upgrade modifiers (effects apply from next run onward)
+            HubUpgradeApplier.ApplyToBattle(
+                overtimeMeter, parrySystem, cardEffectResolver,
+                ref _handSize);
 
             // Initialize player HP
             InitializePlayerHP();
@@ -1093,6 +1103,9 @@ namespace CardBattle
             if (playerHealth != null)
             {
                 int maxHP = gameConfig != null ? gameConfig.playerBaseHP : 80;
+
+                // Apply Plant hub upgrade bonus to base HP
+                maxHP += HubUpgradeApplier.GetModifierValue(ToolModifierType.MaxHP);
 
                 // Load persisted HP from RunState if available (carry over between encounters)
                 RunState runState = FindRunState();

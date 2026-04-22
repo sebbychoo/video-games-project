@@ -276,6 +276,10 @@ public class SceneLoader : MonoBehaviour
     /// </summary>
     public void OnBattleDefeat()
     {
+        // Cache run stats for the GameOverScreen before wiping
+        if (SaveManager.Instance != null)
+            DeathScreen.CacheRunStats(SaveManager.Instance.CurrentRun);
+
         // Wipe run state (death resets the run)
         if (SaveManager.Instance != null)
             SaveManager.Instance.WipeRun();

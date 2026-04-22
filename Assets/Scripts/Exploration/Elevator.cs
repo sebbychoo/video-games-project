@@ -185,6 +185,14 @@ namespace CardBattle
             SaveManager sm = FindObjectOfType<SaveManager>();
             if (sm == null || sm.CurrentRun == null) yield break;
 
+            // Plant hub upgrade: passive heal on floor exit (Req 28.10)
+            int healPerFloor = HubUpgradeApplier.GetHealPerFloor();
+            if (healPerFloor > 0 && sm.CurrentRun.playerHP > 0)
+            {
+                int maxHP = sm.CurrentRun.playerMaxHP > 0 ? sm.CurrentRun.playerMaxHP : 80;
+                sm.CurrentRun.playerHP = Mathf.Min(sm.CurrentRun.playerHP + healPerFloor, maxHP);
+            }
+
             sm.CurrentRun.spawnX = transform.position.x;
             sm.CurrentRun.spawnZ = transform.position.z;
             sm.CurrentRun.hasCustomSpawn = true;

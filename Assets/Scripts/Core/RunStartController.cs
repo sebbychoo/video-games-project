@@ -61,4 +61,11 @@ public class RunStartController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
+
+    private void OnDestroy()
+    {
+        // Safety: ensure timeScale is restored if this object is destroyed mid-selection
+        if (Time.timeScale == 0f)
+            Time.timeScale = 1f;
+    }
 }

@@ -530,8 +530,8 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Modify `Assets/Scripts/Procedural/LevelGenerator.cs` to:
     - Spawn Work_Boxes only under work desks
     - Place bathrooms on every floor (subset with shops)
-    - Place break rooms every 2 floors (subset with trade NPCs)
     - Place boss encounter room every 3 floors as fixed anchor
+    - Place break rooms every 2 floors (subset with trade NPCs)
     - Place Suicidal_Worker_Encounter on floor 5 exactly once per run
     - Weight enemy types by floor depth (coworker early, creature deep)
     - Assign more complex attack patterns on deeper floors
@@ -562,19 +562,20 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Level 3: reveal full floor layout including unvisited rooms
     - _Requirements: 41.1, 41.2, 41.3, 41.4, 41.5_
 
-- [ ] 21. Hub Office and meta-progression
-  - [ ] 21.1 Implement HubOffice scene
+- [x] 21. Hub Office and meta-progression
+  - [x] 21.1 Implement HubOffice scene
     - Create `Assets/Scripts/UI/HubOffice.cs`
     - 2D diorama-style scene with 3D depth, cursor-based interaction only (no WASD)
     - Hover furniture → show upgrade options and Bad_Reviews costs
     - Click furniture → purchase upgrade, deduct Bad_Reviews, apply to MetaState
+    - Reject purchase if insufficient Bad_Reviews with feedback
     - Reject purchase if insufficient Bad_Reviews with feedback
     - Accessible from main menu and during run (upgrades apply next run)
     - Visually update furniture appearance per upgrade level
     - Support multiple upgrade levels per item with escalating costs
     - _Requirements: 28.1, 28.2, 28.3, 28.4, 28.5, 28.11, 28.12_
 
-  - [ ] 21.2 Implement hub upgrade effects
+  - [x] 21.2 Implement hub upgrade effects
     - Computer: +1 damage to Technology-themed cards per level
     - Coffee Machine: +OT regen per turn
     - Desk Chair: +parry window duration per level
@@ -584,8 +585,8 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - All effects apply from next run onward
     - _Requirements: 28.6, 28.7, 28.8, 28.9, 28.10, 28.13_
 
-- [ ] 22. Narrative events and special encounters
-  - [ ] 22.1 Implement OpeningDialogue
+- [x] 22. Narrative events and special encounters
+  - [x] 22.1 Implement OpeningDialogue
     - Create `Assets/Scripts/Narrative/OpeningDialogue.cs`
     - Boss leans over cubicle, asks about overtime
     - YES: fade to black, "YOU WORKED OVERTIME", roll credits, Back to Menu button
@@ -593,21 +594,21 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Skip on saved mid-run load
     - _Requirements: 29.1, 29.2, 29.3, 29.4, 29.5_
 
-  - [ ] 22.2 Implement DeathScreen
+  - [x] 22.2 Implement DeathScreen
     - Create `Assets/Scripts/Narrative/DeathScreen.cs`
     - "Dragged back to desk" sequence with office horror tone
     - Wipe run state, preserve Bad_Reviews and upgrades
     - Proceed to GameOverScreen
     - _Requirements: 30.1, 30.2, 30.3, 30.4, 30.5_
 
-  - [ ] 22.3 Implement GameOverScreen
+  - [x] 22.3 Implement GameOverScreen
     - Create `Assets/Scripts/UI/GameOverScreen.cs`
     - Display floor reached, enemies defeated, Hours earned, Bad_Reviews earned
     - New Run button → opening dialogue
     - Main Menu button → main menu
     - _Requirements: 36.1, 36.2, 36.3, 36.4, 36.5_
 
-  - [ ] 22.4 Implement WinCinematic
+  - [x] 22.4 Implement WinCinematic
     - Create `Assets/Scripts/Narrative/WinCinematic.cs`
     - Spawn door in boss room after final boss defeat (floor configurable, default 75, multiple of 3)
     - Interact with door → quiet cinematic (Jean-Guy walks out, arrives home, sees family)
@@ -615,7 +616,7 @@ This plan extends the existing `CardBattle` namespace in the Unity project to im
     - Return to Main Menu after cinematic
     - _Requirements: 31.1, 31.2, 31.3, 31.4, 31.5_
 
-  - [ ] 22.5 Implement SuicidalWorkerEncounter
+  - [x] 22.5 Implement SuicidalWorkerEncounter
     - Create `Assets/Scripts/Narrative/SuicidalWorkerEncounter.cs`
     - Floor 5 only, exactly once per run
     - Non-hostile NPC, special turn-based encounter using player's normal deck/hand/OT

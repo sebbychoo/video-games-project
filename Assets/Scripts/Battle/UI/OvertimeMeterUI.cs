@@ -81,14 +81,18 @@ namespace CardBattle
             BattleEventBus.Instance.OnDamageReceived -= OnDamage;
         }
 
+        private bool _findAttempted;
+
         private void Update()
         {
             if (overtimeMeter == null)
             {
+                if (_findAttempted) return;
+                _findAttempted = true;
                 overtimeMeter = FindObjectOfType<OvertimeMeter>();
                 if (overtimeMeter == null) return;
             }
-            if (overflowBuffer == null)
+            if (overflowBuffer == null && !_findAttempted)
                 overflowBuffer = FindObjectOfType<OverflowBuffer>();
             UpdateDotColors();
             UpdateManaText();

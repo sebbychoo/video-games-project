@@ -218,9 +218,7 @@ public class EnemyFollow : MonoBehaviour
             return;
         }
 
-        var enemyDataField = trigger.GetType().GetField("singleEnemyData",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var enemyData = enemyDataField?.GetValue(trigger) as CardBattle.EnemyCombatantData;
+        var enemyData = trigger.SingleEnemyData;
 
         if (enemyData == null)
         {
