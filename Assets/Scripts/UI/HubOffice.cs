@@ -44,7 +44,17 @@ namespace CardBattle
             Cursor.visible = true;
 
             if (tooltipPanel != null)
+            {
                 tooltipPanel.SetActive(false);
+
+                // Prevent the tooltip from intercepting raycasts, which causes
+                // hover flickering (tooltip appears → steals hover → hides → repeat).
+                CanvasGroup cg = tooltipPanel.GetComponent<CanvasGroup>();
+                if (cg == null)
+                    cg = tooltipPanel.AddComponent<CanvasGroup>();
+                cg.blocksRaycasts = false;
+                cg.interactable = false;
+            }
 
             if (feedbackText != null)
                 feedbackText.gameObject.SetActive(false);
@@ -262,11 +272,32 @@ namespace CardBattle
 
         private void OnBackClicked()
         {
-            // Return to wherever the player came from (main menu or exploration)
-            if (SceneLoader.Instance != null)
-                SceneLoader.Instance.LoadSceneMenu("Menu");
+            // If there's an active run starting, go to exploration.
+            // Otherwise (accessed from main menu), return to menu.
+            bool hasActiveRun = SaveManager.Instance != null
+                && SaveManager.Instance.CurrentRun != null
+                && SaveManager.Instance.CurrentRun.currentFloor >= 1;
+
+            if (hasActiveRun)
+            {
+                if (SceneLoader.Instance != null)
+                {
+                    SceneLoader.Instance.useDefaultSpawn = true;
+                    SceneLoader.Instance.enemyDefeated = false;
+                    SceneLoader.Instance.LoadSceneUI("Explorationscene");
+                }
+                else
+                {
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("Explorationscene");
+                }
+            }
             else
-                UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+            {
+                if (SceneLoader.Instance != null)
+                    SceneLoader.Instance.LoadSceneMenu("Menu");
+                else
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+            }
         }
     }
 }

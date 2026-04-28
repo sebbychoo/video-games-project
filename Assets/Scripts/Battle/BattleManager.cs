@@ -55,6 +55,7 @@ namespace CardBattle
         [SerializeField] ParryWindowUI         parryWindowUI;
         [SerializeField] BattleGlovesUI        battleGlovesUI;
         [SerializeField] BattleVeinsUI         battleVeinsUI;
+        [SerializeField] BossDialogueDisplay   bossDialogueDisplay;
 
         [Header("Spawning")]
         [SerializeField] GameObject            enemyPrefab;
@@ -1658,7 +1659,28 @@ namespace CardBattle
                     SaveManager.Instance.SaveRun();
             }
 
-            // Show victory screen if available, otherwise transition immediately
+            // For boss encounters, show post-fight dialogue before victory screen (Req 25.3)
+            if (_victoryIsBoss && bossDialogueDisplay != null && _currentEncounter != null
+                && _currentEncounter.enemies != null && _currentEncounter.enemies.Count > 0)
+            {
+                string postDialogue = _currentEncounter.enemies[0]?.postFightDialogue;
+                int floor = 1;
+                RunState dialogueRunState = FindRunState();
+                if (dialogueRunState != null) floor = dialogueRunState.currentFloor;
+
+                bossDialogueDisplay.ShowPostFightDialogue(postDialogue, floor, () =>
+                {
+                    ShowVictoryScreen(enemyNames);
+                });
+            }
+            else
+            {
+                ShowVictoryScreen(enemyNames);
+            }
+        }
+
+        private void ShowVictoryScreen(List<string> enemyNames)
+        {
             if (victoryScreen != null)
             {
                 victoryScreen.OnDismissed = () => ReturnToExploration();

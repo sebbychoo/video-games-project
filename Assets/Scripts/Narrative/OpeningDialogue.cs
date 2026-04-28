@@ -204,8 +204,10 @@ namespace CardBattle
             // Small delay for the "standing up" moment
             yield return new WaitForSeconds(0.5f);
 
-            // Load Explorationscene — RunStartController will handle deck selection
-            LoadExplorationScene();
+            // Load Hub Office — player upgrades before starting the run
+            // Hub Office "Back" button leads to Explorationscene where
+            // RunStartController handles deck selection.
+            LoadHubOffice();
         }
 
         private void OnBackToMenu()
@@ -228,6 +230,14 @@ namespace CardBattle
             {
                 SceneManager.LoadScene("Explorationscene");
             }
+        }
+
+        private void LoadHubOffice()
+        {
+            if (SceneLoader.Instance != null)
+                SceneLoader.Instance.LoadSceneMenu("HubOffice");
+            else
+                SceneManager.LoadScene("HubOffice");
         }
 
         private IEnumerator ScrollCredits()
