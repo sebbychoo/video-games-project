@@ -90,6 +90,18 @@ namespace CardBattle
 
             SaveManager.Instance?.SaveRun();
 
+            // Also sync the live Health component so in-scene values stay consistent
+            GameObject player = GameObject.FindWithTag("Player");
+            if (player != null)
+            {
+                Health h = player.GetComponent<Health>();
+                if (h != null)
+                    h.currentHealth = run.playerHP;
+            }
+
+            // Notify HP bar to refresh
+            ExplorationHPBar.NotifyHPChanged();
+
             if (confirmationPanel != null)
                 confirmationPanel.SetActive(false);
 

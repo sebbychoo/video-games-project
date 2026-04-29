@@ -182,7 +182,7 @@ namespace CardBattle
                 yield return StartCoroutine(PlayFrames(doorCloseFrames));
 
             // 2. Floor transition
-            SaveManager sm = FindObjectOfType<SaveManager>();
+            SaveManager sm = FindFirstObjectByType<SaveManager>();
             if (sm == null || sm.CurrentRun == null) yield break;
 
             // Plant hub upgrade: passive heal on floor exit (Req 28.10)

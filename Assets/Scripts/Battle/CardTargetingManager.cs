@@ -132,7 +132,7 @@ namespace CardBattle
         private void HighlightAllTargets()
         {
             // Highlight enemies
-            EnemyTargetable[] enemies = FindObjectsOfType<EnemyTargetable>();
+            EnemyTargetable[] enemies = FindObjectsByType<EnemyTargetable>(FindObjectsSortMode.None);
             foreach (EnemyTargetable et in enemies)
             {
                 OutlineEffect outline = et.GetComponent<OutlineEffect>();
@@ -144,7 +144,7 @@ namespace CardBattle
             }
 
             // Highlight player
-            PlayerTargetable pt = FindObjectOfType<PlayerTargetable>();
+            PlayerTargetable pt = FindFirstObjectByType<PlayerTargetable>();
             if (pt != null)
             {
                 OutlineEffect outline = pt.GetComponent<OutlineEffect>();
@@ -156,7 +156,7 @@ namespace CardBattle
             }
 
             // Highlight allied NPCs (any AllyTargetable in the scene)
-            AllyTargetable[] allies = FindObjectsOfType<AllyTargetable>();
+            AllyTargetable[] allies = FindObjectsByType<AllyTargetable>(FindObjectsSortMode.None);
             foreach (AllyTargetable at in allies)
             {
                 OutlineEffect outline = at.GetComponent<OutlineEffect>();
@@ -171,7 +171,7 @@ namespace CardBattle
         /// <summary>Highlight all enemies for AoE confirmation.</summary>
         private void HighlightAllEnemies()
         {
-            EnemyTargetable[] enemies = FindObjectsOfType<EnemyTargetable>();
+            EnemyTargetable[] enemies = FindObjectsByType<EnemyTargetable>(FindObjectsSortMode.None);
             foreach (EnemyTargetable et in enemies)
             {
                 OutlineEffect outline = et.GetComponent<OutlineEffect>();
@@ -203,7 +203,7 @@ namespace CardBattle
                 : null;
 
             // Find the actual player object
-            PlayerTargetable pt = FindObjectOfType<PlayerTargetable>();
+            PlayerTargetable pt = FindFirstObjectByType<PlayerTargetable>();
             if (pt != null)
                 playerGO = pt.gameObject;
 

@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    OVERTIME — Main Menu  (two-panel layout)
+    Companion stylesheet : MainMenu.uss
+    Runtime controller   : MainMenuDocument.cs
+-->
+<ui:UXML
+    xmlns:ui="UnityEngine.UIElements"
+    xsi:noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd"
+    editor-extension-mode="False">
+
+    <ui:Style src="project://database/Assets/UI/MainMenu.uss" />
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ROOT — full-screen void, horizontal flex
+         ══════════════════════════════════════════════════════════════════════ -->
+    <ui:VisualElement name="root" class="root">
+
+        <!-- Vignette crush — absolute overlay, never blocks input -->
+        <ui:VisualElement name="vignette" class="vignette" picking-mode="Ignore" />
+
+        <!-- ┌─────────────────────────────────────────────────────────────────
+             │  LEFT PANEL — manila document nav sidebar
+             └───────────────────────────────────────────────────────────────── -->
+        <ui:VisualElement name="left-panel" class="left-panel">
+
+            <!-- Fluorescent strip — 3 px sickly yellow-green at panel top -->
+            <ui:VisualElement name="flicker-bar" class="flicker-bar" picking-mode="Ignore" />
+
+            <!-- ── HEADER ───────────────────────────────────────────────── -->
+            <ui:VisualElement name="doc-header" class="doc-header">
+
+                <ui:Label name="form-number" class="form-number" picking-mode="Ignore"
+                    text="FORM OT-∞  ·  INCIDENT REPORT  ·  UNRESOLVED" />
+
+                <!-- Ghost stamp — decorative, behind everything -->
+                <ui:Label name="stamp-mark" class="stamp-mark" picking-mode="Ignore"
+                    text="ONGOING" />
+
+                <ui:VisualElement name="title-block" class="title-block">
+                    <ui:Label name="title-label" class="title-label" picking-mode="Ignore"
+                        text="OVERTIME" />
+                </ui:VisualElement>
+
+                <ui:Label name="dept-label" class="dept-label" picking-mode="Ignore"
+                    text="DEPT. OF INEVITABLE CONSEQUENCES  ·  FLOOR ██" />
+
+            </ui:VisualElement>
+
+            <!-- 3 px ink rule -->
+            <ui:VisualElement name="header-rule" class="header-rule" picking-mode="Ignore" />
+
+            <!-- ── BODY ─────────────────────────────────────────────────── -->
+            <ui:VisualElement name="doc-body" class="doc-body">
+
+                <ui:Label name="section-label" class="section-label" picking-mode="Ignore"
+                    text="EMPLOYEE ACTION REQUEST  ————————————" />
+
+                <!-- BUTTON LIST -->
+                <ui:VisualElement name="button-list" class="button-list">
+
+                    <!-- 01  NEW RUN — crimson CTA -->
+                    <ui:VisualElement name="item-new-run" class="menu-item menu-item--primary">
+                        <ui:Label class="item-index" picking-mode="Ignore" text="01" />
+                        <ui:Button name="btn-new-run" class="menu-button menu-button--primary"
+                            text="NEW RUN" />
+                        <ui:Label class="item-tag" picking-mode="Ignore" text="[INITIATE]" />
+                    </ui:VisualElement>
+
+                    <!-- 02  CONTINUE RUN — hidden until save detected at runtime -->
+                    <ui:VisualElement name="item-continue" class="menu-item hidden">
+                        <ui:Label class="item-index" picking-mode="Ignore" text="02" />
+                        <ui:Button name="btn-continue" class="menu-button"
+                            text="CONTINUE RUN" />
+                        <ui:Label class="item-tag" picking-mode="Ignore" text="[RESUME]" />
+                    </ui:VisualElement>
+
+                    <!-- 03  HUB — focuses the desk (hub lives in the right panel) -->
+                    <ui:VisualElement name="item-hub" class="menu-item">
+                        <ui:Label class="item-index" picking-mode="Ignore" text="03" />
+                        <ui:Button name="btn-hub" class="menu-button"
+                            text="HUB" />
+                        <ui:Label class="item-tag" picking-mode="Ignore" text="[UPGRADES]" />
+                    </ui:VisualElement>
+
+                    <!-- 04  ACHIEVEMENTS -->
+                    <ui:VisualElement name="item-achievements" class="menu-item">
+                        <ui:Label class="item-index" picking-mode="Ignore" text="04" />
+                        <ui:Button name="btn-achievements" class="menu-button"
+                            text="ACHIEVEMENTS" />
+                        <ui:Label class="item-tag" picking-mode="Ignore" text="[REVIEW]" />
+                    </ui:VisualElement>
+
+                    <!-- separator before Quit -->
+                    <ui:VisualElement name="quit-sep" class="quit-sep" picking-mode="Ignore" />
+
+                    <!-- —   QUIT -->
+                    <ui:VisualElement name="item-quit" class="menu-item menu-item--quit">
+                        <ui:Label class="item-index item-index--quit" picking-mode="Ignore" text="—" />
+                        <ui:Button name="btn-quit" class="menu-button menu-button--quit"
+                            text="QUIT" />
+                        <ui:Label class="item-tag item-tag--quit" picking-mode="Ignore"
+                            text="[UNAUTHORISED]" />
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
+                <!-- /button-list -->
+
+                <!-- Warning footnote -->
+                <ui:VisualElement name="warning-block" class="warning-block" picking-mode="Ignore">
+                    <ui:Label class="warning-text" picking-mode="Ignore"
+                        text="⚠  UNAUTHORISED EXIT ATTEMPTS WILL BE LOGGED AND ADDED TO YOUR PERMANENT RECORD  ⚠" />
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+            <!-- /doc-body -->
+
+            <!-- ── FOOTER ───────────────────────────────────────────────── -->
+            <ui:VisualElement name="doc-footer" class="doc-footer" picking-mode="Ignore">
+                <ui:Label picking-mode="Ignore" class="footer-text" text="REV. ∞  ·  DO NOT DESTROY" />
+                <ui:VisualElement class="footer-spacer" />
+                <ui:Label picking-mode="Ignore" class="footer-text" text="PAGE 1 OF ∞" />
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+        <!-- /left-panel -->
+
+        <!-- Thin ink edge — rides along with the left panel slide -->
+        <ui:VisualElement name="panel-divider" class="panel-divider left-panel"
+            picking-mode="Ignore" />
+
+        <!-- ┌─────────────────────────────────────────────────────────────────
+             │  RIGHT PANEL — Jean-Guy's desk / HUB
+             └───────────────────────────────────────────────────────────────── -->
+        <ui:VisualElement name="right-panel" class="right-panel">
+
+            <!-- Ambient click-to-focus hint (visible when panel is showing) -->
+            <ui:VisualElement name="hub-hint-block" class="hub-hint-block">
+                <ui:Label name="hub-hint" class="hub-hint" picking-mode="Ignore"
+                    text="▶  CLICK DESK TO FOCUS" />
+            </ui:VisualElement>
+
+            <!-- Clickable desk surface -->
+            <ui:VisualElement name="desk-surface" class="desk-surface">
+
+                <!-- Return prompt — only shown when left panel is slid out -->
+                <ui:Label name="return-hint" class="return-hint hidden" picking-mode="Ignore"
+                    text="◀  MOVE CURSOR TO LEFT EDGE TO RETURN" />
+
+                <!-- Desk item grid — office objects as UI cards -->
+                <ui:VisualElement name="desk-grid" class="desk-grid">
+
+                    <ui:VisualElement name="desk-item-computer" class="desk-item desk-item--active">
+                        <ui:Label class="desk-item-icon" picking-mode="Ignore" text="▣" />
+                        <ui:Label class="desk-item-label" picking-mode="Ignore" text="TERMINAL" />
+                        <ui:Label class="desk-item-status" picking-mode="Ignore" text="ONLINE" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="desk-item-coffee" class="desk-item">
+                        <ui:Label class="desk-item-icon" picking-mode="Ignore" text="☕" />
+                        <ui:Label class="desk-item-label" picking-mode="Ignore" text="COFFEE MAKER" />
+                        <ui:Label class="desk-item-status desk-item-status--locked"
+                            picking-mode="Ignore" text="LOCKED" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="desk-item-plant" class="desk-item">
+                        <ui:Label class="desk-item-icon" picking-mode="Ignore" text="✿" />
+                        <ui:Label class="desk-item-label" picking-mode="Ignore" text="PLANT" />
+                        <ui:Label class="desk-item-status desk-item-status--locked"
+                            picking-mode="Ignore" text="LOCKED" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="desk-item-files" class="desk-item">
+                        <ui:Label class="desk-item-icon" picking-mode="Ignore" text="▤" />
+                        <ui:Label class="desk-item-label" picking-mode="Ignore" text="CASE FILES" />
+                        <ui:Label class="desk-item-status desk-item-status--locked"
+                            picking-mode="Ignore" text="LOCKED" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="desk-item-stapler" class="desk-item">
+                        <ui:Label class="desk-item-icon" picking-mode="Ignore" text="⊡" />
+                        <ui:Label class="desk-item-label" picking-mode="Ignore" text="STAPLER" />
+                        <ui:Label class="desk-item-status desk-item-status--locked"
+                            picking-mode="Ignore" text="LOCKED" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="desk-item-phone" class="desk-item">
+                        <ui:Label class="desk-item-icon" picking-mode="Ignore" text="☏" />
+                        <ui:Label class="desk-item-label" picking-mode="Ignore" text="PHONE" />
+                        <ui:Label class="desk-item-status desk-item-status--locked"
+                            picking-mode="Ignore" text="LOCKED" />
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
+                <!-- /desk-grid -->
+
+                <!-- Desk nameplate -->
+                <ui:VisualElement name="nameplate" class="nameplate" picking-mode="Ignore">
+                    <ui:Label class="nameplate-name" picking-mode="Ignore"
+                        text="JEAN-GUY TREMBLAY" />
+                    <ui:Label class="nameplate-title" picking-mode="Ignore"
+                        text="EMPLOYEE  ·  FLOOR ██  ·  CUBICLE 4B" />
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+            <!-- /desk-surface -->
+
+        </ui:VisualElement>
+        <!-- /right-panel -->
+
+        <!-- Build watermark — bottom right -->
+        <ui:Label name="build-info" class="build-info" picking-mode="Ignore"
+            text="BUILD 0.0.1  //  NOT FOR DISTRIBUTION" />
+
+    </ui:VisualElement>
+    <!-- /root -->
+
+</ui:UXML>

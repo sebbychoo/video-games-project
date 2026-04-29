@@ -77,23 +77,17 @@ public class SceneLoader : MonoBehaviour
     {
         if (scene.name == "Explorationscene")
         {
-            // If run was wiped (death) and we're on floor 1 with no custom spawn,
-            // force default spawn — but NOT if we're returning from a won battle
-            // (useDefaultSpawn == false means OnBattleVictory set it)
-            SaveManager smCheck = FindObjectOfType<SaveManager>();
+            SaveManager smCheck = SaveManager.Instance ?? FindFirstObjectByType<SaveManager>();
             if (useDefaultSpawn && smCheck != null && smCheck.CurrentRun != null && smCheck.CurrentRun.currentFloor == 1 && !smCheck.CurrentRun.hasCustomSpawn)
                 useDefaultSpawn = true;
-            // Regenerate the floor for the current run floor number
-            LevelGenerator gen = FindObjectOfType<LevelGenerator>();
+            LevelGenerator gen = FindFirstObjectByType<LevelGenerator>();
             if (gen != null)
             {
-                SaveManager sm = FindObjectOfType<SaveManager>();
+                SaveManager sm = SaveManager.Instance ?? FindFirstObjectByType<SaveManager>();
                 int floor = sm != null && sm.CurrentRun != null ? sm.CurrentRun.currentFloor : 1;
                 Debug.Log($"[SceneLoader] OnSceneLoaded: generating floor {floor}");
                 gen.Generate(floor);
 
-                // Only set elevator spawn if we don't already have a custom spawn
-                // (the elevator sets hasCustomSpawn before loading the scene)
                 if (sm != null && sm.CurrentRun != null && floor > 1 && !sm.CurrentRun.hasCustomSpawn)
                 {
                     sm.CurrentRun.spawnX = gen.ElevatorSpawnPosition.x;
@@ -119,11 +113,9 @@ public class SceneLoader : MonoBehaviour
         CharacterController cc = player.GetComponent<CharacterController>();
         if (cc != null) cc.enabled = false;
 
-        SaveManager sm = FindObjectOfType<SaveManager>();
+        SaveManager sm = SaveManager.Instance ?? FindFirstObjectByType<SaveManager>();
         bool freshRun = sm == null || sm.CurrentRun == null || sm.CurrentRun.currentFloor <= 1;
 
-        // Only force default spawn on truly fresh runs, not when returning from battle
-        // useDefaultSpawn == false means we're returning from a won fight with a saved position
         if (freshRun && useDefaultSpawn)
             useDefaultSpawn = true;
 
@@ -206,7 +198,7 @@ public class SceneLoader : MonoBehaviour
 
         if (LoadingScreen.Instance != null)
             LoadingScreen.Instance.LoadBattle("Battlescene");
-        else if (FindObjectOfType<LoadingScreen>() is LoadingScreen ls1)
+        else if (FindFirstObjectByType<LoadingScreen>() is LoadingScreen ls1)
             ls1.LoadBattle("Battlescene");
         else
             SceneManager.LoadScene("Battlescene");
@@ -227,7 +219,7 @@ public class SceneLoader : MonoBehaviour
 
         if (LoadingScreen.Instance != null)
             LoadingScreen.Instance.LoadBattle("Battlescene");
-        else if (FindObjectOfType<LoadingScreen>() is LoadingScreen ls2)
+        else if (FindFirstObjectByType<LoadingScreen>() is LoadingScreen ls2)
             ls2.LoadBattle("Battlescene");
         else
             SceneManager.LoadScene("Battlescene");
@@ -301,7 +293,7 @@ public class SceneLoader : MonoBehaviour
 
         if (LoadingScreen.Instance != null)
             LoadingScreen.Instance.LoadSceneWithFade("Explorationscene");
-        else if (FindObjectOfType<LoadingScreen>() is LoadingScreen ls3)
+        else if (FindFirstObjectByType<LoadingScreen>() is LoadingScreen ls3)
             ls3.LoadSceneWithFade("Explorationscene");
         else
             SceneManager.LoadScene("Explorationscene");
@@ -315,13 +307,13 @@ public class SceneLoader : MonoBehaviour
     }
     public void LoadSceneUI(string sceneName)
     {
-        if(LoadingScreen.Instance != null)
+        if (LoadingScreen.Instance != null)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
             LoadingScreen.Instance.LoadSceneWithFade(sceneName);
         }
-        else if (FindObjectOfType<LoadingScreen>() is LoadingScreen ls)
+        else if (FindFirstObjectByType<LoadingScreen>() is LoadingScreen ls)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;

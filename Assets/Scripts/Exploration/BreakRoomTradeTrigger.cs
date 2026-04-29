@@ -144,13 +144,13 @@ namespace CardBattle
 
         private static void SetEnemiesActive(bool enabled)
         {
-            foreach (var enemy in Object.FindObjectsOfType<MonoBehaviour>())
+            foreach (var enemy in Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
             {
                 string t = enemy.GetType().Name.ToLower();
                 if (t.Contains("enemy") || t.Contains("follow") || t.Contains("patrol"))
                     enemy.enabled = enabled;
             }
-            foreach (var agent in Object.FindObjectsOfType<UnityEngine.AI.NavMeshAgent>())
+            foreach (var agent in Object.FindObjectsByType<UnityEngine.AI.NavMeshAgent>(FindObjectsSortMode.None))
                 agent.isStopped = !enabled;
         }
     }

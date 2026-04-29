@@ -135,7 +135,7 @@ namespace CardBattle
             if (BattleManager.Instance == null) return 0;
 
             // Access overflow buffer through the scene
-            OverflowBuffer overflow = FindObjectOfType<OverflowBuffer>();
+            OverflowBuffer overflow = FindFirstObjectByType<OverflowBuffer>();
             if (overflow == null || overflow.Current <= 0) return 0;
 
             return RageBurstCalculator.CalculateBonusDamage(baseDamage, overflow.Current);

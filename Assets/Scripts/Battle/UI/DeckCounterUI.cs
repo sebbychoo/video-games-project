@@ -97,9 +97,9 @@ namespace CardBattle
             if (deckManager == null) return;
 
             if (drawPileCountText != null)
-                drawPileCountText.text = $"INBOX {deckManager.DeckCount}";
+                drawPileCountText.text = $"INBOX  {deckManager.DeckCount}";
             if (discardPileCountText != null)
-                discardPileCountText.text = $"ARCHIVE {deckManager.DiscardCount}";
+                discardPileCountText.text = $"ARCHIVE  {deckManager.DiscardCount}";
         }
 
         /// <summary>Show the draw pile contents sorted alphabetically (no order reveal).</summary>

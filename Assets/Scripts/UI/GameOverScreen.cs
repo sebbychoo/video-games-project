@@ -36,19 +36,19 @@ namespace CardBattle
 
             // Read cached stats from DeathScreen static fields
             if (titleText != null)
-                titleText.text = "GAME OVER";
+                titleText.text = "DRAGGED BACK TO YOUR DESK";
 
             if (floorText != null)
-                floorText.text = $"Floor Reached: {DeathScreen.LastFloorReached}";
+                floorText.text = $"FLOOR REACHED  ·  {DeathScreen.LastFloorReached}";
 
             if (enemiesText != null)
-                enemiesText.text = $"Enemies Defeated: {DeathScreen.LastEnemiesDefeated}";
+                enemiesText.text = $"ENEMIES DEALT WITH  ·  {DeathScreen.LastEnemiesDefeated}";
 
             if (hoursText != null)
-                hoursText.text = $"Hours Earned: {DeathScreen.LastHoursEarned}";
+                hoursText.text = $"HOURS EARNED  ·  {DeathScreen.LastHoursEarned}";
 
             if (badReviewsText != null)
-                badReviewsText.text = $"Bad Reviews Earned: {DeathScreen.LastBadReviewsEarned}";
+                badReviewsText.text = $"BAD REVIEWS FILED  ·  {DeathScreen.LastBadReviewsEarned}";
 
             // Wire buttons
             if (newRunButton != null)
@@ -69,21 +69,19 @@ namespace CardBattle
 
         private void OnNewRun()
         {
-            // Wipe run state for a fresh start
+            // Wipe run state — return to Menu where the hub lives.
+            // Player upgrades there, then NEW RUN goes to Explorationscene (deck carousel).
             if (SaveManager.Instance != null)
+            {
                 SaveManager.Instance.WipeRun();
+                SaveManager.Instance.CurrentRun.currentFloor = 1;
+                SaveManager.Instance.CurrentRun.hasCustomSpawn = false;
+            }
 
-            // Load Explorationscene — RunStartController handles deck selection
             if (SceneLoader.Instance != null)
-            {
-                SceneLoader.Instance.useDefaultSpawn = true;
-                SceneLoader.Instance.enemyDefeated = false;
-                SceneLoader.Instance.LoadSceneUI("Explorationscene");
-            }
+                SceneLoader.Instance.LoadSceneMenu("Menu");
             else
-            {
-                SceneManager.LoadScene("Explorationscene");
-            }
+                UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
         }
 
         private void OnMainMenu()

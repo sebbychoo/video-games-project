@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 154aa4f86be312148af124d3aa7065b5, type: 3}
+  m_Name: ErgonomicChair
+  m_EditorClassIdentifier: CardBattle::CardBattle.CardData
+  cardName: Ergonomic Chair
+  overtimeCost: 2
+  description: Lumbar-supported survivability. Gain 10 Block. On parry, restore 2
+    OT.
+  cardType: 1
+  cardRarity: 1
+  effectValue: 0
+  blockValue: 10
+  parryMatchTags:
+  - melee
+  - ranged
+  targetMode: 2
+  cardSprite: {fileID: 0}
+  statusEffectId: 
+  statusDuration: 0
+  specialCardId: 
+  utilityEffectType: 0
+  onParryEffect: 2
+  onParryEffectValue: 2
+  isTechnologyThemed: 0

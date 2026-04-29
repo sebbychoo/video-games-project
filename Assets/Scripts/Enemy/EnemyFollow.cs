@@ -40,6 +40,11 @@ public class EnemyFollow : MonoBehaviour
     private CardBattle.SpriteFrameAnimation _walkAnim;
     private bool _wasMoving;
 
+    // Throttle the BattleManager singleton check — only re-evaluate every N frames
+    private const int BattleCheckInterval = 10;
+    private bool _battleActive;
+    private int _battleCheckFrame;
+
     private void Start()
     {
         _agent = GetComponent<NavMeshAgent>();
@@ -70,7 +75,16 @@ public class EnemyFollow : MonoBehaviour
     private void Update()
     {
         if (player == null) return;
-        if (CardBattle.BattleManager.Instance != null && !CardBattle.BattleManager.Instance.IsBattleOver)
+
+        // Throttle the BattleManager singleton check to once every BattleCheckInterval frames
+        if (Time.frameCount >= _battleCheckFrame)
+        {
+            _battleCheckFrame = Time.frameCount + BattleCheckInterval;
+            _battleActive = CardBattle.BattleManager.Instance != null
+                            && !CardBattle.BattleManager.Instance.IsBattleOver;
+        }
+
+        if (_battleActive)
         {
             _agent.isStopped = true;
             return;

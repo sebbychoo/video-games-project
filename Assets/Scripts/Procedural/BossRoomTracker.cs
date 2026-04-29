@@ -19,7 +19,7 @@ namespace Procedural
 
         private void Start()
         {
-            _gate = FindObjectOfType<BossFloorGate>();
+            _gate = FindFirstObjectByType<BossFloorGate>();
         }
 
         /// <summary>

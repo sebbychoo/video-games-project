@@ -18,9 +18,12 @@ public class InteractionTooltip : MonoBehaviour
     [SerializeField] private float interactRange = 8f;
     [SerializeField] private float showDelay = 0.3f;
     [SerializeField] private string defaultPrompt = "Press E to interact";
+    [SerializeField] [Range(0.02f, 0.2f)] private float raycastInterval = 0.08f;
 
     private float _hoverTimer;
+    private float _raycastTimer;
     private IInteractable _currentTarget;
+    private IInteractable _cachedRaycastResult;
     private HashSet<IInteractable> _insideTriggers = new HashSet<IInteractable>();
 
     private void Start()
@@ -61,26 +64,44 @@ public class InteractionTooltip : MonoBehaviour
         IInteractable best = null;
         foreach (var i in _insideTriggers)
         {
-            // Skip destroyed objects
             if (i == null || (i as MonoBehaviour) == null) continue;
             best = i;
             break;
         }
 
-        // Priority 2: raycast for distant objects
+        // Priority 2: throttled raycast for distant objects (runs every raycastInterval seconds)
         if (best == null && playerCamera != null)
         {
-            Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, interactRange, ~0, QueryTriggerInteraction.Collide))
+            _raycastTimer += Time.deltaTime;
+            if (_raycastTimer >= raycastInterval)
             {
-                var interactable = hit.collider.GetComponentInParent<IInteractable>();
-                if (interactable != null)
+                _raycastTimer = 0f;
+                Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+                if (Physics.Raycast(ray, out RaycastHit hit, interactRange, ~0, QueryTriggerInteraction.Collide))
                 {
-                    float range = interactable.InteractRange > 0 ? interactable.InteractRange : interactRange;
-                    if (hit.distance <= range)
-                        best = interactable;
+                    var interactable = hit.collider.GetComponentInParent<IInteractable>();
+                    if (interactable != null)
+                    {
+                        float range = interactable.InteractRange > 0 ? interactable.InteractRange : interactRange;
+                        _cachedRaycastResult = hit.distance <= range ? interactable : null;
+                    }
+                    else
+                    {
+                        _cachedRaycastResult = null;
+                    }
+                }
+                else
+                {
+                    _cachedRaycastResult = null;
                 }
             }
+            best = _cachedRaycastResult;
+        }
+        else if (best != null)
+        {
+            // Inside a trigger — clear cached raycast so we don't ghost-show it later
+            _cachedRaycastResult = null;
+            _raycastTimer = 0f;
         }
 
         if (best != null)
@@ -104,8 +125,9 @@ public class InteractionTooltip : MonoBehaviour
             HideTooltip();
         }
 
-        // Clean up destroyed references
-        _insideTriggers.RemoveWhere(i => i == null || (i as MonoBehaviour) == null);
+        // Periodically clean up destroyed references (not every frame)
+        if (Time.frameCount % 60 == 0)
+            _insideTriggers.RemoveWhere(i => i == null || (i as MonoBehaviour) == null);
     }
 
     private void ShowTooltip(string text)

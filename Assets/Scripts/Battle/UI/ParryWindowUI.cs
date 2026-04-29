@@ -89,11 +89,11 @@ namespace CardBattle
         {
             // Auto-locate dependencies if not wired in Inspector
             if (parrySystem == null)
-                parrySystem = FindObjectOfType<ParrySystem>();
+                parrySystem = FindFirstObjectByType<ParrySystem>();
             if (handManager == null)
-                handManager = FindObjectOfType<HandManager>();
+                handManager = FindFirstObjectByType<HandManager>();
             if (cardAnimator == null)
-                cardAnimator = FindObjectOfType<CardAnimator>();
+                cardAnimator = FindFirstObjectByType<CardAnimator>();
 
             SubscribeToEvents();
         }
@@ -122,13 +122,13 @@ namespace CardBattle
             if (parrySystem == null)
             {
                 // Try to find it again in case it was initialized late
-                parrySystem = FindObjectOfType<ParrySystem>();
+                parrySystem = FindFirstObjectByType<ParrySystem>();
                 if (parrySystem == null) return;
             }
             if (handManager == null)
-                handManager = FindObjectOfType<HandManager>();
+                handManager = FindFirstObjectByType<HandManager>();
             if (cardAnimator == null)
-                cardAnimator = FindObjectOfType<CardAnimator>();
+                cardAnimator = FindFirstObjectByType<CardAnimator>();
 
             bool isActive = parrySystem.IsParryWindowActive;
 

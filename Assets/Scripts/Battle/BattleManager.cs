@@ -42,13 +42,12 @@ namespace CardBattle
         [Header("UI")]
         [SerializeField] PlayerHPStack         playerHPStack;
         [SerializeField] EnemyHPBar            playerHPBar;
-        [SerializeField] PlayerBadgeHP         playerBadge;
+        [SerializeField] PlayerHPPanel         playerHPPanel;
         [SerializeField] EnemyHPBar            screenEnemyHPBar;
         [SerializeField] EnemyIntentDisplay    screenEnemyIntent;
         [SerializeField] StatusEffectIconStack enemyStatusEffectIcons;
         [SerializeField] OvertimeMeterUI       overtimeMeterUI;
         [SerializeField] DeckCounterUI         deckCounterUI;
-        [SerializeField] GameObject            enemyBadgePrefab;
         [SerializeField] BlockDisplay          blockDisplay;
         [SerializeField] TurnCounterUI         turnCounterUI;
         [SerializeField] VictoryScreen         victoryScreen;
@@ -68,7 +67,6 @@ namespace CardBattle
         // ── State ─────────────────────────────────────────────────────────────
         private List<EnemyCombatant>    _enemies = new List<EnemyCombatant>();
         private List<EnemyHPBar>        _enemyHPBars = new List<EnemyHPBar>();
-        private List<EnemyBadgeHP>      _enemyBadges = new List<EnemyBadgeHP>();
         private List<EnemyIntentDisplay> _enemyIntents = new List<EnemyIntentDisplay>();
         private int                  _handSize;
         private int                  _lastEndTurnFrame = -1;
@@ -162,7 +160,7 @@ namespace CardBattle
             // Ensure CardTargetingManager exists
             if (CardTargetingManager.Instance == null)
             {
-                CardTargetingManager existing = FindObjectOfType<CardTargetingManager>();
+                CardTargetingManager existing = FindFirstObjectByType<CardTargetingManager>();
                 if (existing == null)
                     gameObject.AddComponent<CardTargetingManager>();
             }
@@ -561,8 +559,8 @@ namespace CardBattle
                 playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
             if (playerHPBar != null && playerHealth != null)
                 playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
-            if (playerBadge != null && playerHealth != null)
-                playerBadge.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+            if (playerHPPanel != null && playerHealth != null)
+                playerHPPanel.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
 
             // Check for boss phase transitions after damage (Req 9.3, 9.9, 9.10)
             foreach (var enemy in GetLivingEnemies())
@@ -860,8 +858,8 @@ namespace CardBattle
                         playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
                     if (playerHPBar != null && playerHealth != null)
                         playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
-                    if (playerBadge != null && playerHealth != null)
-                        playerBadge.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+                    if (playerHPPanel != null && playerHealth != null)
+                        playerHPPanel.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
 
                     // Refresh OT UI after damage-to-OT gain
                     if (overtimeMeterUI != null)
@@ -980,8 +978,8 @@ namespace CardBattle
                     playerHPStack.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
                 if (playerHPBar != null && playerHealth != null)
                     playerHPBar.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
-                if (playerBadge != null && playerHealth != null)
-                    playerBadge.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+                if (playerHPPanel != null && playerHealth != null)
+                    playerHPPanel.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
 
                 if (BattleEventBus.Instance != null)
                 {
@@ -1135,8 +1133,8 @@ namespace CardBattle
             }
             if (playerHPBar != null && playerHealth != null)
                 playerHPBar.Initialize(playerHealth.currentHealth, playerHealth.maxHealth);
-            if (playerBadge != null && playerHealth != null)
-                playerBadge.UpdateHP(playerHealth.currentHealth, playerHealth.maxHealth);
+            if (playerHPPanel != null && playerHealth != null)
+                playerHPPanel.Initialize(playerObject ?? gameObject, playerHealth.currentHealth, playerHealth.maxHealth);
         }
 
         private void SpawnEnemies(EncounterData encounter)
@@ -1149,14 +1147,13 @@ namespace CardBattle
             }
             _enemies.Clear();
             _enemyHPBars.Clear();
-            _enemyBadges.Clear();
             _enemyIntents.Clear();
 
             // If no enemy prefab is set, try to use existing scene enemies
             if (enemyPrefab == null)
             {
                 // Find pre-placed enemies in the scene
-                Health[] sceneEnemies = FindObjectsOfType<Health>();
+                Health[] sceneEnemies = FindObjectsByType<Health>(FindObjectsSortMode.None);
                 List<GameObject> candidateEnemies = new List<GameObject>();
                 foreach (Health h in sceneEnemies)
                 {
@@ -1263,36 +1260,6 @@ namespace CardBattle
             {
                 worldBubble.Hide();
                 worldBubble.enabled = false;
-            }
-
-            // Set up enemy badge
-            if (enemyBadgePrefab != null)
-            {
-                // Parent under the same Canvas as the player badge to ensure
-                // consistent CanvasScaler behavior across resolutions.
-                Canvas canvas = playerBadge != null
-                    ? playerBadge.GetComponentInParent<Canvas>()
-                    : FindObjectOfType<Canvas>();
-                if (canvas != null)
-                {
-                    GameObject badgeGO = Instantiate(enemyBadgePrefab, canvas.transform);
-                    badgeGO.SetActive(false); // Start hidden, ShowBattleUI will reveal
-                    EnemyBadgeHP badge = badgeGO.GetComponent<EnemyBadgeHP>();
-                    if (badge != null)
-                    {
-                        badge.Initialize(
-                            enemyData.enemyName,
-                            combatant.CurrentHP,
-                            combatant.MaxHP,
-                            enemyData.badgeHealthy,
-                            enemyData.badgeConcerned,
-                            enemyData.badgeStressed,
-                            enemyData.badgeCritical,
-                            enemyData.badgeDead
-                        );
-                        _enemyBadges.Add(badge);
-                    }
-                }
             }
 
             // Initialize screen-space enemy HP bar for first enemy
@@ -1488,10 +1455,6 @@ namespace CardBattle
             if (idx >= 0 && idx < _enemyHPBars.Count && _enemyHPBars[idx] != null)
                 _enemyHPBars[idx].UpdateHP(enemy.CurrentHP, enemy.MaxHP);
 
-            // Update enemy badge
-            if (idx >= 0 && idx < _enemyBadges.Count && _enemyBadges[idx] != null)
-                _enemyBadges[idx].UpdateHP(enemy.CurrentHP, enemy.MaxHP);
-
             // Update screen-space enemy HP bar if it's tracking this enemy
             if (screenEnemyHPBar != null && screenEnemyHPBar.TrackedEnemy == enemy)
                 screenEnemyHPBar.UpdateHP(enemy.CurrentHP, enemy.MaxHP);
@@ -1499,26 +1462,18 @@ namespace CardBattle
 
         private void ShowBattleUI()
         {
-            if (playerBadge != null)
-                playerBadge.gameObject.SetActive(true);
-
-            foreach (var badge in _enemyBadges)
-                if (badge != null) badge.gameObject.SetActive(true);
+            if (playerHPPanel != null)
+                playerHPPanel.gameObject.SetActive(true);
         }
 
         private void HideBattleUI()
         {
-            // Hide player badge
-            if (playerBadge != null)
-                playerBadge.gameObject.SetActive(false);
-
-            // Destroy enemy badges
-            foreach (var badge in _enemyBadges)
-                if (badge != null) Destroy(badge.gameObject);
-            _enemyBadges.Clear();
+            // Hide player HP panel
+            if (playerHPPanel != null)
+                playerHPPanel.gameObject.SetActive(false);
 
             // Hide the pile folder UI so it doesn't bleed through loading screen
-            PileFolderUI folder = FindObjectOfType<PileFolderUI>();
+            PileFolderUI folder = FindFirstObjectByType<PileFolderUI>();
             if (folder != null) folder.Hide();
         }
 

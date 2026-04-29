@@ -27,12 +27,34 @@ namespace CardBattle
         }
 
         /// <summary>
+        /// Normalize an effectId to a canonical casing so that data assets authored
+        /// with lowercase ids (e.g. "bleed", "burn", "stun") match the system constants.
+        /// </summary>
+        private static string Normalize(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return id;
+            if (string.Equals(id, Burn, System.StringComparison.OrdinalIgnoreCase)) return Burn;
+            if (string.Equals(id, Stun, System.StringComparison.OrdinalIgnoreCase)) return Stun;
+            if (string.Equals(id, Bleed, System.StringComparison.OrdinalIgnoreCase)) return Bleed;
+            return id;
+        }
+
+        /// <summary>
         /// Apply a status effect to a target. If the same effectId already exists
         /// on the target, refresh its duration and value (no stacking).
+        /// effectId is normalized to canonical casing before comparison.
         /// </summary>
         public void Apply(GameObject target, StatusEffectInstance effect)
         {
             if (target == null) return;
+
+            // Normalize casing so "bleed", "Bleed", "BLEED" all map to the same effect
+            effect = new StatusEffectInstance
+            {
+                effectId = Normalize(effect.effectId),
+                duration = effect.duration,
+                value = effect.value
+            };
 
             if (!_effects.ContainsKey(target))
                 _effects[target] = new List<StatusEffectInstance>();
@@ -152,16 +174,17 @@ namespace CardBattle
         }
 
         /// <summary>
-        /// Check if a target has a specific effect active.
+        /// Check if a target has a specific effect active. effectId is normalized before comparison.
         /// </summary>
         public bool HasEffect(GameObject target, string effectId)
         {
             if (target == null) return false;
             if (!_effects.TryGetValue(target, out List<StatusEffectInstance> list)) return false;
 
+            string normalized = Normalize(effectId);
             for (int i = 0; i < list.Count; i++)
             {
-                if (list[i].effectId == effectId)
+                if (list[i].effectId == normalized)
                     return true;
             }
             return false;
@@ -183,16 +206,17 @@ namespace CardBattle
         }
 
         /// <summary>
-        /// Remove a specific effect from a target by effectId.
+        /// Remove a specific effect from a target by effectId. effectId is normalized before comparison.
         /// </summary>
         public void Remove(GameObject target, string effectId)
         {
             if (target == null) return;
             if (!_effects.TryGetValue(target, out List<StatusEffectInstance> list)) return;
 
+            string normalized = Normalize(effectId);
             for (int i = list.Count - 1; i >= 0; i--)
             {
-                if (list[i].effectId == effectId)
+                if (list[i].effectId == normalized)
                 {
                     RaiseEvent(target, list[i], isRemoval: true);
                     list.RemoveAt(i);

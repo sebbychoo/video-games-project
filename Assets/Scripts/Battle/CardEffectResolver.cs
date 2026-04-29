@@ -80,7 +80,7 @@ namespace CardBattle
                     ResolveDefense(data);
                     break;
                 case CardType.Effect:
-                    ResolveEffect(data, target);
+                    ResolveEffect(data, target, allEnemies);
                     break;
                 case CardType.Utility:
                     ResolveUtility(data, source, target);
@@ -200,17 +200,56 @@ namespace CardBattle
 
         // ── Effect ──────────────────────────────────────────────────────────
 
-        private void ResolveEffect(CardData data, GameObject target)
+        private void ResolveEffect(CardData data, GameObject target, List<EnemyCombatant> allEnemies)
         {
-            if (statusEffectSystem != null && target != null)
+            if (statusEffectSystem == null) return;
+            if (string.IsNullOrEmpty(data.statusEffectId)) return;
+
+            switch (data.targetMode)
             {
-                statusEffectSystem.Apply(target, new StatusEffectInstance
-                {
-                    effectId = data.statusEffectId,
-                    duration = data.statusDuration,
-                    value = data.effectValue
-                });
+                case TargetMode.AllEnemies:
+                    // Apply the status effect to every living enemy in the encounter.
+                    if (allEnemies == null) return;
+                    for (int i = 0; i < allEnemies.Count; i++)
+                    {
+                        if (allEnemies[i] != null && allEnemies[i].IsAlive)
+                            ApplyStatusEffect(data, allEnemies[i].gameObject);
+                    }
+                    break;
+
+                case TargetMode.SingleEnemy:
+                    // Requires a specific clicked target.
+                    if (target != null)
+                        ApplyStatusEffect(data, target);
+                    break;
+
+                case TargetMode.Self:
+                    // Apply to the player — target is the player GO passed by PlayCardOnSelf.
+                    if (target != null)
+                        ApplyStatusEffect(data, target);
+                    break;
+
+                case TargetMode.NoTarget:
+                    // Self-buffs with no explicit target are player-targeted by convention.
+                    // Prefer a resolved player target if one is provided; fall back to BattleManager.
+                    GameObject selfTarget = target;
+                    if (selfTarget == null && BattleManager.Instance != null)
+                        selfTarget = BattleManager.Instance.gameObject;
+                    if (selfTarget != null)
+                        ApplyStatusEffect(data, selfTarget);
+                    break;
             }
+        }
+
+        /// <summary>Apply the status effect from a CardData onto a single target.</summary>
+        private void ApplyStatusEffect(CardData data, GameObject effectTarget)
+        {
+            statusEffectSystem.Apply(effectTarget, new StatusEffectInstance
+            {
+                effectId  = data.statusEffectId,
+                duration  = data.statusDuration,
+                value     = data.effectValue
+            });
         }
 
         // ── Utility ─────────────────────────────────────────────────────────

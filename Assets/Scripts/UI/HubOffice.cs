@@ -272,11 +272,11 @@ namespace CardBattle
 
         private void OnBackClicked()
         {
-            // If there's an active run starting, go to exploration.
+            // If there's an active run, go to exploration.
             // Otherwise (accessed from main menu), return to menu.
             bool hasActiveRun = SaveManager.Instance != null
                 && SaveManager.Instance.CurrentRun != null
-                && SaveManager.Instance.CurrentRun.currentFloor >= 1;
+                && SaveManager.Instance.CurrentRun.isActive;
 
             if (hasActiveRun)
             {

@@ -48,7 +48,7 @@ namespace CardBattle
         private void UpdateDisplay(int turnNumber)
         {
             if (turnText != null)
-                turnText.text = $"Turn {turnNumber}";
+                turnText.text = $"SHIFT {turnNumber}";
         }
     }
 }

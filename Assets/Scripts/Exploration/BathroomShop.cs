@@ -356,7 +356,7 @@ namespace CardBattle
                 SaveManager.Instance.SaveRun();
 
             // Immediately update exploration gloves visual
-            ExplorationGlovesController glovesController = FindObjectOfType<ExplorationGlovesController>();
+            ExplorationGlovesController glovesController = FindFirstObjectByType<ExplorationGlovesController>();
             if (glovesController != null)
                 glovesController.ApplyBloodTint(0f);
 

@@ -1,0 +1,568 @@
+/*
+    OVERTIME — Main Menu Stylesheet
+    ═══════════════════════════════════════════════════════════════════════════
+    PALETTE
+      Void       #0B0908   Near-black warm office dark
+      Paper      #E1D29E   Aged manila / carbon-copy beige
+      Ink        #181209   Near-black stamp ink
+      Fluorescent #C4D200  Sickly yellow-green tube light
+      Crimson    #C01400   Warning red / CTA
+      Dust       #685840   Faded warm brown — secondary text
+      Dim        #28200F   Dark paper shadow for right panel
+    ═══════════════════════════════════════════════════════════════════════════
+*/
+
+/* ── Animations ─────────────────────────────────────────────────────────── */
+
+@keyframes flicker {
+    0%   { opacity: 0.90; }
+    4%   { opacity: 0.95; }
+    8%   { opacity: 0.60; }
+    10%  { opacity: 0.90; }
+    11%  { opacity: 0.45; }
+    13%  { opacity: 0.90; }
+    50%  { opacity: 0.90; }
+    80%  { opacity: 0.90; }
+    88%  { opacity: 0.78; }
+    90%  { opacity: 0.90; }
+    100% { opacity: 0.90; }
+}
+
+@keyframes stamp-breathe {
+    0%   { opacity: 0.10; rotate: -38deg; }
+    50%  { opacity: 0.14; rotate: -38deg; }
+    100% { opacity: 0.10; rotate: -38deg; }
+}
+
+@keyframes warning-blink {
+    0%   { opacity: 0.55; }
+    48%  { opacity: 0.55; }
+    50%  { opacity: 0.15; }
+    52%  { opacity: 0.55; }
+    100% { opacity: 0.55; }
+}
+
+@keyframes hint-pulse {
+    0%   { opacity: 0.30; }
+    50%  { opacity: 0.55; }
+    100% { opacity: 0.30; }
+}
+
+/* ── ROOT ───────────────────────────────────────────────────────────────── */
+
+.root {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: stretch;
+    background-color: rgb(11, 9, 8);
+    overflow: hidden;
+}
+
+/* ── VIGNETTE ───────────────────────────────────────────────────────────── */
+
+.vignette {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    border-color: rgba(0, 0, 0, 0.70);
+    border-width: 90px;
+}
+
+/* ── LEFT PANEL ─────────────────────────────────────────────────────────── */
+
+.left-panel {
+    width: 380px;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: stretch;
+    background-color: rgb(225, 210, 158);
+    overflow: hidden;
+
+    /* Slide transition — translate on the X axis */
+    transition-property: translate;
+    transition-duration: 0.38s;
+    transition-timing-function: ease-in-out;
+    translate: 0 0;
+}
+
+/* Applied by C# when desk is in focus */
+.left-panel--hidden {
+    translate: -110% 0;
+}
+
+/* ── FLICKER BAR ────────────────────────────────────────────────────────── */
+
+.flicker-bar {
+    position: absolute;
+    left: 0; top: 0; right: 0;
+    height: 3px;
+    background-color: rgb(196, 210, 0);
+    animation-name: flicker;
+    animation-duration: 3200ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: steps(1);
+}
+
+/* ── DOC HEADER ─────────────────────────────────────────────────────────── */
+
+.doc-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 22px 28px 14px 28px;
+    flex-shrink: 0;
+}
+
+.form-number {
+    color: rgb(104, 88, 64);
+    font-size: 8px;
+    letter-spacing: 1.8px;
+    margin-bottom: 8px;
+    -unity-font-style: bold;
+    -unity-text-align: upper-left;
+}
+
+/* Ghost stamp */
+.stamp-mark {
+    position: absolute;
+    right: -24px;
+    top: 72px;
+    width: 220px;
+    color: rgba(192, 20, 0, 0.10);
+    font-size: 48px;
+    -unity-font-style: bold;
+    letter-spacing: 6px;
+    -unity-text-align: middle-center;
+    rotate: -38deg;
+    animation-name: stamp-breathe;
+    animation-duration: 4000ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+}
+
+.title-block {
+    flex-direction: row;
+    align-items: flex-end;
+    margin-bottom: 4px;
+    rotate: -1.4deg;
+    translate: -3px 0;
+}
+
+.title-label {
+    color: rgb(24, 18, 9);
+    font-size: 84px;
+    -unity-font-style: bold;
+    letter-spacing: -1px;
+    -unity-text-align: lower-left;
+    -unity-text-outline-width: 1.5px;
+    -unity-text-outline-color: rgba(24, 18, 9, 0.18);
+}
+
+.dept-label {
+    color: rgb(104, 88, 64);
+    font-size: 8px;
+    letter-spacing: 1.4px;
+    margin-top: 4px;
+}
+
+/* ── HEADER RULE ────────────────────────────────────────────────────────── */
+
+.header-rule {
+    height: 3px;
+    background-color: rgb(24, 18, 9);
+    flex-shrink: 0;
+}
+
+/* ── DOC BODY ───────────────────────────────────────────────────────────── */
+
+.doc-body {
+    flex-direction: column;
+    flex-grow: 1;
+    padding: 18px 28px 12px 28px;
+    overflow: hidden;
+}
+
+.section-label {
+    color: rgb(104, 88, 64);
+    font-size: 8px;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    -unity-font-style: bold;
+}
+
+/* ── BUTTON LIST ────────────────────────────────────────────────────────── */
+
+.button-list {
+    flex-direction: column;
+    align-items: stretch;
+    flex-grow: 1;
+}
+
+/* ── MENU ITEM ROW ──────────────────────────────────────────────────────── */
+
+.menu-item {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+    padding: 2px 0;
+    border-left-color: rgba(0, 0, 0, 0);
+    border-left-width: 3px;
+    transition-property: border-left-color, background-color;
+    transition-duration: 120ms;
+}
+
+.menu-item:hover {
+    background-color: rgba(104, 88, 64, 0.08);
+    border-left-color: rgba(104, 88, 64, 0.50);
+}
+
+/* Primary row (NEW RUN) */
+.menu-item--primary {
+    border-left-color: rgb(192, 20, 0);
+    background-color: rgba(192, 20, 0, 0.07);
+}
+
+.menu-item--primary:hover {
+    background-color: rgba(192, 20, 0, 0.14);
+    border-left-color: rgb(192, 20, 0);
+}
+
+/* Quit row — extra top margin, fades to crimson on hover */
+.menu-item--quit {
+    margin-top: 4px;
+}
+
+.menu-item--quit:hover {
+    background-color: rgba(192, 20, 0, 0.06);
+    border-left-color: rgba(192, 20, 0, 0.60);
+}
+
+/* ── INDEX BADGE ────────────────────────────────────────────────────────── */
+
+.item-index {
+    width: 24px;
+    color: rgb(160, 138, 90);
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    -unity-text-align: middle-left;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.item-index--quit {
+    color: rgba(192, 20, 0, 0.45);
+}
+
+/* ── MENU BUTTON ────────────────────────────────────────────────────────── */
+
+.menu-button {
+    flex-grow: 1;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(104, 88, 64, 0.40);
+    border-radius: 0;
+    color: rgb(24, 18, 9);
+    font-size: 14px;
+    -unity-font-style: bold;
+    letter-spacing: 2.5px;
+    -unity-text-align: middle-left;
+    padding: 7px 4px;
+    margin: 0;
+    transition-property: color, border-bottom-color;
+    transition-duration: 120ms;
+}
+
+.menu-button:hover {
+    background-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgba(104, 88, 64, 0.70);
+    color: rgb(24, 18, 9);
+}
+
+.menu-button:active {
+    background-color: rgba(0, 0, 0, 0);
+    color: rgb(104, 88, 64);
+}
+
+/* Primary button (NEW RUN) */
+.menu-button--primary {
+    color: rgb(192, 20, 0);
+    font-size: 15px;
+    letter-spacing: 3px;
+    border-bottom-color: rgba(192, 20, 0, 0.40);
+}
+
+.menu-button--primary:hover {
+    color: rgb(218, 30, 0);
+    border-bottom-color: rgba(192, 20, 0, 0.70);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* Quit button — muted until hover */
+.menu-button--quit {
+    color: rgb(104, 88, 64);
+    font-size: 12px;
+    letter-spacing: 2px;
+    border-bottom-color: rgba(192, 20, 0, 0.20);
+}
+
+.menu-button--quit:hover {
+    color: rgb(192, 20, 0);
+    border-bottom-color: rgba(192, 20, 0, 0.50);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* ── ITEM TAG ───────────────────────────────────────────────────────────── */
+
+.item-tag {
+    color: rgb(160, 138, 90);
+    font-size: 7px;
+    letter-spacing: 1.2px;
+    flex-shrink: 0;
+    margin-left: 6px;
+    -unity-text-align: middle-right;
+}
+
+.item-tag--quit {
+    color: rgba(192, 20, 0, 0.50);
+}
+
+/* ── QUIT SEPARATOR ─────────────────────────────────────────────────────── */
+
+.quit-sep {
+    height: 1px;
+    background-color: rgba(104, 88, 64, 0.30);
+    margin: 8px 0 8px 30px;
+}
+
+/* ── WARNING BLOCK ──────────────────────────────────────────────────────── */
+
+.warning-block {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top-width: 1px;
+    border-top-color: rgba(192, 20, 0, 0.20);
+}
+
+.warning-text {
+    color: rgba(192, 20, 0, 0.50);
+    font-size: 7px;
+    letter-spacing: 0.8px;
+    white-space: normal;
+    animation-name: warning-blink;
+    animation-duration: 5200ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: steps(1);
+}
+
+/* ── DOC FOOTER ─────────────────────────────────────────────────────────── */
+
+.doc-footer {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 28px 12px 28px;
+    border-top-width: 1px;
+    border-top-color: rgba(104, 88, 64, 0.30);
+    flex-shrink: 0;
+}
+
+.footer-text {
+    color: rgba(104, 88, 64, 0.50);
+    font-size: 7px;
+    letter-spacing: 1px;
+}
+
+.footer-spacer {
+    flex-grow: 1;
+}
+
+/* ── PANEL DIVIDER ──────────────────────────────────────────────────────── */
+
+/* Shares .left-panel so it slides with the nav panel */
+.panel-divider {
+    width: 4px;
+    background-color: rgb(24, 18, 9);
+    /* Override left-panel's manila background */
+    background-color: rgb(24, 18, 9);
+    flex-shrink: 0;
+    margin-left: -4px;   /* sits flush against the right edge of left-panel */
+}
+
+/* ── RIGHT PANEL ────────────────────────────────────────────────────────── */
+
+.right-panel {
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: stretch;
+    background-color: rgb(18, 14, 10);
+    overflow: hidden;
+    position: relative;
+}
+
+/* ── HUB HINT ───────────────────────────────────────────────────────────── */
+
+.hub-hint-block {
+    position: absolute;
+    top: 18px;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.hub-hint {
+    color: rgba(196, 210, 0, 0.35);
+    font-size: 9px;
+    letter-spacing: 2px;
+    -unity-font-style: bold;
+    animation-name: hint-pulse;
+    animation-duration: 2800ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+}
+
+/* Hides the hint when desk is focused */
+.hub-hint-block--hidden {
+    display: none;
+}
+
+/* ── DESK SURFACE ───────────────────────────────────────────────────────── */
+
+.desk-surface {
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── RETURN HINT ────────────────────────────────────────────────────────── */
+
+.return-hint {
+    color: rgba(196, 210, 0, 0.45);
+    font-size: 9px;
+    letter-spacing: 2px;
+    -unity-font-style: bold;
+    margin-bottom: 28px;
+    animation-name: hint-pulse;
+    animation-duration: 2400ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+    transition-property: opacity;
+    transition-duration: 280ms;
+}
+
+/* ── DESK GRID ──────────────────────────────────────────────────────────── */
+
+.desk-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 760px;
+    margin: auto;
+}
+
+/* ── DESK ITEM ──────────────────────────────────────────────────────────── */
+
+.desk-item {
+    width: 160px;
+    height: 140px;
+    margin: 10px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(28, 22, 14);
+    border-color: rgba(104, 88, 64, 0.20);
+    border-width: 1px;
+    border-radius: 2px;
+    transition-property: border-color, background-color;
+    transition-duration: 160ms;
+}
+
+.desk-item:hover {
+    border-color: rgba(196, 210, 0, 0.50);
+    background-color: rgb(34, 28, 18);
+}
+
+.desk-item--active {
+    border-color: rgba(196, 210, 0, 0.40);
+    background-color: rgb(32, 26, 16);
+}
+
+.desk-item--active:hover {
+    border-color: rgba(196, 210, 0, 0.80);
+    background-color: rgb(40, 34, 20);
+}
+
+.desk-item-icon {
+    font-size: 36px;
+    color: rgba(225, 210, 158, 0.60);
+    margin-bottom: 8px;
+    -unity-text-align: middle-center;
+}
+
+.desk-item--active .desk-item-icon {
+    color: rgba(196, 210, 0, 0.80);
+}
+
+.desk-item-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    -unity-font-style: bold;
+    color: rgba(225, 210, 158, 0.55);
+    -unity-text-align: middle-center;
+    margin-bottom: 6px;
+}
+
+.desk-item-status {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: rgba(196, 210, 0, 0.70);
+    -unity-text-align: middle-center;
+}
+
+.desk-item-status--locked {
+    color: rgba(104, 88, 64, 0.50);
+}
+
+/* ── NAMEPLATE ──────────────────────────────────────────────────────────── */
+
+.nameplate {
+    flex-direction: column;
+    align-items: center;
+    margin-top: 24px;
+    padding: 8px 20px;
+    border-top-width: 1px;
+    border-top-color: rgba(104, 88, 64, 0.20);
+}
+
+.nameplate-name {
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 4px;
+    color: rgba(225, 210, 158, 0.50);
+    -unity-text-align: middle-center;
+}
+
+.nameplate-title {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: rgba(104, 88, 64, 0.40);
+    -unity-text-align: middle-center;
+    margin-top: 4px;
+}
+
+/* ── BUILD INFO ─────────────────────────────────────────────────────────── */
+
+.build-info {
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
+    color: rgba(104, 88, 64, 0.30);
+    font-size: 8px;
+    letter-spacing: 1.5px;
+}
+
+/* ── UTILITY ────────────────────────────────────────────────────────────── */
+
+/* display:none — no layout cost, toggled by C# */
+.hidden {
+    display: none;
+}

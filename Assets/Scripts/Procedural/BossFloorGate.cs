@@ -30,7 +30,7 @@ namespace Procedural
         private void Start()
         {
             // Find the boss room tracker in the scene (placed by LevelGenerator in the boss room).
-            _bossTracker = FindObjectOfType<BossRoomTracker>();
+            _bossTracker = FindFirstObjectByType<BossRoomTracker>();
             RefreshVisuals();
         }
 

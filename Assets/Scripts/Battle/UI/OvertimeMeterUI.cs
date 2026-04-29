@@ -38,8 +38,6 @@ namespace CardBattle
         [SerializeField] Color overflow3Color = new Color(1f, 0.5f, 0f);
         [SerializeField] Color overflow4PlusColor = new Color(1f, 0.1f, 0.1f);
 
-        [Header("Tooltip")]
-        [SerializeField] string tooltipLabel = "This is your Overtime";
 
         private readonly List<Image> _dots = new List<Image>();
 
@@ -81,21 +79,14 @@ namespace CardBattle
             BattleEventBus.Instance.OnDamageReceived -= OnDamage;
         }
 
-        private bool _findAttempted;
-
         private void Update()
         {
+            // Lazy-resolve references once — no per-frame allocations after that
             if (overtimeMeter == null)
-            {
-                if (_findAttempted) return;
-                _findAttempted = true;
-                overtimeMeter = FindObjectOfType<OvertimeMeter>();
-                if (overtimeMeter == null) return;
-            }
-            if (overflowBuffer == null && !_findAttempted)
-                overflowBuffer = FindObjectOfType<OverflowBuffer>();
-            UpdateDotColors();
-            UpdateManaText();
+                overtimeMeter = FindFirstObjectByType<OvertimeMeter>();
+
+            if (overflowBuffer == null)
+                overflowBuffer = FindFirstObjectByType<OverflowBuffer>();
         }
 
         private void OnEvent(CardPlayedEvent e) => Refresh();
@@ -225,11 +216,18 @@ namespace CardBattle
 
         public void OnPointerEnter(PointerEventData eventData)
         {
-            if (tooltipText != null)
-            {
-                tooltipText.text = tooltipLabel;
-                tooltipText.gameObject.SetActive(true);
-            }
+            if (tooltipText == null) return;
+
+            int current  = overtimeMeter != null ? overtimeMeter.Current : 0;
+            int max      = overtimeMeter != null ? overtimeMeter.Max     : 0;
+            int overflow = overflowBuffer != null ? overflowBuffer.Current : 0;
+
+            string text = $"Overtime: {current}/{max}";
+            if (overflow > 0)
+                text += $"\nOverflow: {overflow} (Rage Burst ready)";
+
+            tooltipText.text = text;
+            tooltipText.gameObject.SetActive(true);
         }
 
         public void OnPointerExit(PointerEventData eventData)
