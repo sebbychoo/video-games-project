@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: TestEnemy 1
   m_EditorClassIdentifier: CardBattle::CardBattle.EnemyCombatantData
   enemyName: Intern
-  maxHP: 10
+  maxHP: 40
   hoursReward: 67
   variant: 0
   sprite: {fileID: 0}

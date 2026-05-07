@@ -281,6 +281,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: CardBattle::EnemyBillboard
   frontSprite: {fileID: 21300000, guid: 5bb4138a8818f0e4d8d05f7bd3eb11d4, type: 3}
-  backSprite: {fileID: 21300000, guid: 024e7a5601dcb3f42b21e8d15e0ab441, type: 3}
-  sideSprite: {fileID: 21300000, guid: e07e9ad4faf8c79408b1a8219ad84b16, type: 3}
+  backSprite: {fileID: 21300000, guid: 07e31f660cd28ca44bf8e1791487c792, type: 3}
+  sideSprite: {fileID: 21300000, guid: d6f77ff8138285940866a1bd49f82977, type: 3}
   spriteRenderer: {fileID: 0}

@@ -65,13 +65,14 @@ public class ExplorationHPBar : MonoBehaviour
     public void Refresh()
     {
         RunState run = GetRunState();
-        if (run == null || run.playerMaxHP <= 0)
+        if (run == null || run.playerMaxHP <= 0 || run.playerHP <= 0)
         {
-            // No active run — show full bar
-            SetValues(1, 1);
+            // No active run or HP not yet written — hide rather than show wrong values
+            gameObject.SetActive(false);
             return;
         }
 
+        gameObject.SetActive(true);
         int current = Mathf.Max(run.playerHP, 0);
         int max     = run.playerMaxHP;
         SetValues(current, max);

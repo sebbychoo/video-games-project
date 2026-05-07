@@ -30,6 +30,44 @@ namespace CardBattle
         private int _maxHP;
         private GameObject _playerTarget;
 
+        // ── Lifecycle ─────────────────────────────────────────────────────────
+
+        private void Awake()
+        {
+            // Snap to live Health values in Awake so the bar is correct before
+            // any Start() runs — including BattleManager.Start().
+            SnapToPlayerHealth();
+        }
+
+        private void Start()
+        {
+            // Re-snap in Start as a safety net in case the Player GameObject
+            // wasn't ready yet during Awake (e.g. spawned at runtime).
+            if (_playerTarget == null)
+                SnapToPlayerHealth();
+        }
+
+        private void SnapToPlayerHealth()
+        {
+            if (_playerTarget != null) return; // Already initialized externally.
+
+            GameObject player = GameObject.FindWithTag("Player");
+            if (player == null) return;
+
+            Health h = player.GetComponent<Health>();
+            if (h == null) return;
+
+            int cur = h.currentHealth > 0 ? h.currentHealth : h.maxHealth;
+            int max = Mathf.Max(h.maxHealth, 1);
+            _playerTarget = player;
+            _maxHP = max;
+            _targetFill = _currentFill = (float)cur / max;
+            ApplyFill(_currentFill);
+            UpdateText(cur, max);
+            RefreshFinalNotice(cur, max);
+            RefreshBlock(0);
+        }
+
         // ── Initialization ────────────────────────────────────────────────────
 
         /// <summary>Initialize the panel with a player reference and starting HP values.</summary>

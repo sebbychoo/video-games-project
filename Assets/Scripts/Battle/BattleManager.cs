@@ -44,6 +44,7 @@ namespace CardBattle
         [SerializeField] EnemyHPBar            playerHPBar;
         [SerializeField] PlayerHPPanel         playerHPPanel;
         [SerializeField] EnemyHPBar            screenEnemyHPBar;
+        [SerializeField] EnemyHUDFollow        enemyHUDFollow;
         [SerializeField] EnemyIntentDisplay    screenEnemyIntent;
         [SerializeField] StatusEffectIconStack enemyStatusEffectIcons;
         [SerializeField] OvertimeMeterUI       overtimeMeterUI;
@@ -1265,6 +1266,10 @@ namespace CardBattle
             // Initialize screen-space enemy HP bar for first enemy
             if (screenEnemyHPBar != null && _enemies.Count == 1)
                 screenEnemyHPBar.Initialize(combatant);
+
+            // Set enemy name on the HUD dossier label for first enemy
+            if (enemyHUDFollow != null && _enemies.Count == 1)
+                enemyHUDFollow.SetEnemyName(enemyData.enemyName);
 
             // Initialize screen-space enemy intent display for first enemy
             if (screenEnemyIntent != null && _enemies.Count == 1)
